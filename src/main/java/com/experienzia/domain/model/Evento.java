@@ -117,20 +117,30 @@ public class Evento {
     }
 
     /**
-     * Incrementa el aforo del evento tras un registro exitoso.
+     * Verifica si el evento aún tiene cupo disponible.
      */
-    public void incrementarAforo() {
-        validarAforo();
+    public boolean tieneCupoDisponible() {
+        return this.aforoActual < this.aforoMaximo;
+    }
+
+    /**
+     * Incrementa el aforo del evento tras una inscripción exitosa.
+     */
+    public void aumentarAforo() {
+        if (!tieneCupoDisponible()) {
+            throw new IllegalStateException("El evento ha alcanzado su aforo máximo.");
+        }
         this.aforoActual++;
     }
 
     /**
-     * Valida que aún haya cupos disponibles.
+     * Disminuye el aforo del evento tras la cancelación de una inscripción.
      */
-    public void validarAforo() {
-        if (this.aforoActual >= this.aforoMaximo) {
-            throw new IllegalStateException("El evento ha alcanzado su aforo máximo.");
+    public void disminuirAforo() {
+        if (this.aforoActual <= 0) {
+            throw new IllegalStateException("El aforo actual no puede ser menor a 0.");
         }
+        this.aforoActual--;
     }
 
     /**
