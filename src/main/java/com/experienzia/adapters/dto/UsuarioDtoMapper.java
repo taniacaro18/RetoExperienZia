@@ -25,15 +25,19 @@ public class UsuarioDtoMapper {
         dto.setTelefono(usuario.getTelefono());
         dto.setTipoDocumento(usuario.getTipoDocumento());
         dto.setNumeroDocumento(usuario.getNumeroDocumento());
-        
+
         if (usuario.getRol() != null) {
             dto.setRol(usuario.getRol().name());
         }
-        
+
         if (usuario.getEstado() != null) {
             dto.setEstado(usuario.getEstado().name());
         }
-        
+
+        // Solo presente cuando el usuario es STAFF
+        dto.setOrganizadorId(usuario.getOrganizadorId());
+
         return dto;
     }
 }
+

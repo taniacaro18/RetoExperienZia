@@ -38,10 +38,14 @@ public class UsuarioEntity {
     @Enumerated(EnumType.STRING)
     private Estado estado;
 
+    /** ID del organizador que creó este STAFF. Null para otros roles. */
+    @Column(name = "organizador_id")
+    private Long organizadorId;
+
     public UsuarioEntity() {
     }
 
-    public UsuarioEntity(Long id, String nombre, String email, String password, String telefono, 
+    public UsuarioEntity(Long id, String nombre, String email, String password, String telefono,
                          String tipoDocumento, String numeroDocumento, Rol rol, Estado estado) {
         this.id = id;
         this.nombre = nombre;
@@ -52,6 +56,13 @@ public class UsuarioEntity {
         this.numeroDocumento = numeroDocumento;
         this.rol = rol;
         this.estado = estado;
+    }
+
+    public UsuarioEntity(Long id, String nombre, String email, String password, String telefono,
+                         String tipoDocumento, String numeroDocumento, Rol rol, Estado estado,
+                         Long organizadorId) {
+        this(id, nombre, email, password, telefono, tipoDocumento, numeroDocumento, rol, estado);
+        this.organizadorId = organizadorId;
     }
 
     // --- Getters y Setters ---
@@ -126,5 +137,13 @@ public class UsuarioEntity {
 
     public void setEstado(Estado estado) {
         this.estado = estado;
+    }
+
+    public Long getOrganizadorId() {
+        return organizadorId;
+    }
+
+    public void setOrganizadorId(Long organizadorId) {
+        this.organizadorId = organizadorId;
     }
 }

@@ -10,6 +10,8 @@ public class Usuario {
     private String numeroDocumento;
     private Rol rol;
     private Estado estado;
+    /** Referencia al organizador que creó este STAFF. Null para otros roles. */
+    private Long organizadorId;
 
     public Usuario() {
     }
@@ -25,6 +27,13 @@ public class Usuario {
         this.numeroDocumento = numeroDocumento;
         this.rol = rol;
         this.estado = estado;
+    }
+
+    public Usuario(Long id, String nombre, String email, String password, String telefono,
+                   String tipoDocumento, String numeroDocumento, Rol rol, Estado estado,
+                   Long organizadorId) {
+        this(id, nombre, email, password, telefono, tipoDocumento, numeroDocumento, rol, estado);
+        this.organizadorId = organizadorId;
     }
 
     // --- Métodos de Negocio (basados en Historias de Usuario) ---
@@ -49,11 +58,29 @@ public class Usuario {
     }
 
     /**
-     * Activa la cuenta del usuario (usado por el administrador para 
+     * Activa la cuenta del usuario (usado por el administrador para
      * aprobar organizadores u otros flujos).
      */
     public void activarUsuario() {
         this.estado = Estado.ACTIVO;
+    }
+
+    /**
+     * HU-002b: Rechazo de solicitud de Organizador.
+     * El administrador rechaza la solicitud; el estado queda en RECHAZADO.
+     */
+    public void rechazarUsuario() {
+        this.estado = Estado.RECHAZADO;
+    }
+
+    /**
+     * HU-004: Creación de STAFF por un Organizador.
+     * Asigna rol STAFF, activa la cuenta y vincula al organizador que lo creó.
+     */
+    public void asignarRolStaff(Long organizadorId) {
+        this.rol = Rol.STAFF;
+        this.estado = Estado.ACTIVO;
+        this.organizadorId = organizadorId;
     }
 
     // --- Getters y Setters ---
@@ -128,5 +155,13 @@ public class Usuario {
 
     public void setEstado(Estado estado) {
         this.estado = estado;
+    }
+
+    public Long getOrganizadorId() {
+        return organizadorId;
+    }
+
+    public void setOrganizadorId(Long organizadorId) {
+        this.organizadorId = organizadorId;
     }
 }

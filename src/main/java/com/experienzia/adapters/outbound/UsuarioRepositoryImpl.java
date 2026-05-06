@@ -27,6 +27,11 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     }
 
     @Override
+    public Optional<Usuario> buscarPorId(Long id) {
+        return usuarioJpaRepository.findById(id).map(this::toDomain);
+    }
+
+    @Override
     public Optional<Usuario> buscarPorEmail(String email) {
         return usuarioJpaRepository.findByEmail(email).map(this::toDomain);
     }
@@ -63,7 +68,8 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
                 usuario.getTipoDocumento(),
                 usuario.getNumeroDocumento(),
                 usuario.getRol(),
-                usuario.getEstado()
+                usuario.getEstado(),
+                usuario.getOrganizadorId()
         );
     }
 
@@ -80,7 +86,8 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
                 entity.getTipoDocumento(),
                 entity.getNumeroDocumento(),
                 entity.getRol(),
-                entity.getEstado()
+                entity.getEstado(),
+                entity.getOrganizadorId()
         );
     }
 }
