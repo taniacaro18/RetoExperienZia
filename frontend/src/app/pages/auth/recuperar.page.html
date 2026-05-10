@@ -1,0 +1,110 @@
+<div class="min-h-screen flex flex-col bg-brand-400">
+  <header class="h-16 px-4 lg:px-8 bg-brand-500 flex items-center justify-between gap-4">
+    <a routerLink="/login" class="flex items-center">
+      <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
+    </a>
+    <div class="hidden md:flex flex-1 max-w-xl mx-2">
+      <div class="relative w-full flex items-center bg-white rounded-full pr-1">
+        <input type="text" placeholder="Busca aquí"
+               class="flex-1 h-9 pl-4 pr-3 bg-transparent rounded-full focus:outline-none text-sm text-surface-900 placeholder:text-surface-400" />
+        <button type="button"
+                class="h-8 px-4 rounded-full bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition flex items-center gap-1.5">
+          <i class="pi pi-search text-[10px]"></i>
+          <span>Search</span>
+        </button>
+      </div>
+    </div>
+    <nav class="flex items-center gap-2 text-sm">
+      <a routerLink="/registro"
+         class="px-4 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center transition">
+        Regístrate
+      </a>
+      <a routerLink="/login"
+         class="px-4 h-9 rounded-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs flex items-center transition">
+        Iniciar Sesión
+      </a>
+    </nav>
+  </header>
+
+  <div class="flex-1 flex min-h-0">
+    <aside class="hidden lg:flex flex-col w-56 shrink-0 bg-brand-500">
+      <nav class="flex-1 px-3 py-5">
+        <ul class="space-y-2">
+          <li>
+            <a routerLink="/registro" class="sidebar-item">
+              <i class="pi pi-user-plus text-xs"></i><span>Registro</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/login" class="sidebar-item">
+              <i class="pi pi-sign-in text-xs"></i><span>Inicio Sesión</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <div class="p-4 flex items-center justify-center">
+        <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
+      </div>
+    </aside>
+
+    <main class="flex-1 min-w-0 p-4 lg:p-6 overflow-auto">
+      <div class="bg-white rounded-2xl shadow-card p-6 lg:p-8 min-h-full flex items-center justify-center">
+        <div class="w-full max-w-sm">
+          <h1 class="text-center text-lg font-bold tracking-wider text-brand-800 font-display uppercase mb-1">
+            Recuperar Contraseña
+          </h1>
+          <p class="text-center text-surface-600 text-xs mb-5">
+            Ingresa tu correo y número de documento
+          </p>
+
+          @if (passwordTemporal(); as p) {
+            <div class="bg-emerald-50 border border-emerald-200 rounded-md p-3 mb-4">
+              <div class="text-emerald-700 text-xs font-bold mb-1">
+                <i class="pi pi-check-circle mr-1 text-[10px]"></i>
+                Tu contraseña temporal
+              </div>
+              <div class="font-mono text-base font-bold text-surface-900 tracking-wider">
+                {{ p }}
+              </div>
+              <div class="text-[11px] text-surface-500 mt-1">
+                Cópiala, inicia sesión y cámbiala desde tu perfil.
+              </div>
+            </div>
+
+            <a routerLink="/login" class="ez-btn-primary ez-btn-lg w-full uppercase tracking-widest">
+              <i class="pi pi-sign-in text-[10px]"></i> Ir a Iniciar Sesión
+            </a>
+          } @else {
+            <form [formGroup]="formulario" (ngSubmit)="enviar()" class="space-y-3" novalidate>
+              <div class="ez-field !mb-0">
+                <label class="ez-field-label">Correo Electrónico</label>
+                <input type="email" formControlName="email" class="ez-input" placeholder="ESCRIBA AQUÍ" />
+              </div>
+              <div class="ez-field !mb-0">
+                <label class="ez-field-label">Número de Documento</label>
+                <input formControlName="numeroDocumento" class="ez-input" placeholder="DIGITE AQUÍ" />
+              </div>
+
+              <button type="submit" class="ez-btn-primary ez-btn-lg w-full uppercase tracking-widest"
+                      [disabled]="cargando()">
+                @if (cargando()) { <i class="pi pi-spin pi-spinner text-[10px]"></i> }
+                @else { <i class="pi pi-key text-[10px]"></i> }
+                Generar Contraseña
+              </button>
+
+              <p class="text-center text-xs text-surface-500">
+                <a routerLink="/login" class="text-brand-700 hover:text-brand-800 font-bold underline">
+                  Volver a iniciar sesión
+                </a>
+              </p>
+            </form>
+          }
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="bg-brand-500 px-6 py-3 flex items-center justify-center">
+    <img src="/logo.png" alt="ExperienZia" class="h-8 w-auto object-contain bg-white/90 rounded-md p-1" />
+  </footer>
+</div>

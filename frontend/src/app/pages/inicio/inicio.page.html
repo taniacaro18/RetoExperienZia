@@ -1,0 +1,169 @@
+<div class="space-y-5">
+  <!-- Saludo -->
+  <div>
+    <h1 class="ez-section-title">Hola, {{ store.usuario()?.nombre }}</h1>
+    <p class="ez-page-subtitle !mb-0">
+      Esto es lo que tienes en ExperienZia esta semana.
+    </p>
+  </div>
+
+  @if (cargando()) {
+    <div class="flex justify-center py-16">
+      <p-progressSpinner styleClass="!w-12 !h-12" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else {
+    <!-- KPIs del asistente -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <app-stat-card
+        label="Próximos eventos"
+        [value]="proximasCount()"
+        sublabel="Inscripciones activas a futuro"
+        icon="pi-calendar-plus"
+      ></app-stat-card>
+      <app-stat-card
+        label="Eventos asistidos"
+        [value]="asistidosCount()"
+        sublabel="Donde marcaste check-in"
+        icon="pi-check-circle"
+      ></app-stat-card>
+      <app-stat-card
+        label="Certificados"
+        [value]="certificadosCount()"
+        sublabel="Obtenidos hasta hoy"
+        icon="pi-id-card"
+      ></app-stat-card>
+    </div>
+
+    <!-- Próximo evento destacado -->
+    @if (proximoEvento(); as p) {
+      <div class="ez-card ez-card-lg bg-gradient-to-r from-brand-50 to-white border-brand-200">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div class="flex items-start gap-4 min-w-0 flex-1">
+            <div class="w-14 h-14 rounded-xl bg-brand-600 text-white font-display font-extrabold text-xl flex items-center justify-center shrink-0">
+              {{ primeraLetra(p.evento.nombre) }}
+            </div>
+            <div class="min-w-0">
+              <div class="ez-field-label !mb-1">Tu próximo evento</div>
+              <h2 class="font-display font-extrabold text-xl text-brand-800 truncate">
+                {{ p.evento.nombre }}
+              </h2>
+              <div class="flex items-center gap-3 text-xs text-surface-600 mt-1 flex-wrap">
+                <span class="flex items-center gap-1">
+                  <i class="pi pi-calendar text-brand-500 text-[10px]"></i>
+                  {{ p.evento.fecha | date: 'dd MMM yyyy · HH:mm' }}
+                </span>
+                @if (p.evento.ubicacion) {
+                  <span class="flex items-center gap-1">
+                    <i class="pi pi-map-marker text-brand-500 text-[10px]"></i>
+                    {{ p.evento.ubicacion }}
+                  </span>
+                }
+                @if (p.evento.duracionHoras) {
+                  <span class="flex items-center gap-1">
+                    <i class="pi pi-clock text-brand-500 text-[10px]"></i>
+                    {{ p.evento.duracionHoras }} h
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <a routerLink="/mis-inscripciones" class="ez-btn-outline ez-btn-sm">
+              <i class="pi pi-qrcode text-[10px]"></i> Ver mi QR
+            </a>
+            <a [routerLink]="['/eventos', p.evento.id]" class="ez-btn-primary ez-btn-sm">
+              <i class="pi pi-arrow-right text-[10px]"></i> Detalles
+            </a>
+          </div>
+        </div>
+      </div>
+    } @else if (inscripcionesActivas().length === 0) {
+      <div class="ez-card bg-brand-50 border-brand-200 flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-3">
+          <i class="pi pi-calendar-times text-2xl text-brand-400"></i>
+          <div>
+            <div class="font-bold text-brand-800">Aún no te has inscrito a ningún evento.</div>
+            <div class="text-xs text-surface-600">Explora el catálogo y encuentra tu primer evento.</div>
+          </div>
+        </div>
+        <a routerLink="/eventos" class="ez-btn-primary">
+          <i class="pi pi-search text-[10px]"></i> Explorar eventos
+        </a>
+      </div>
+    }
+
+    <!-- Eventos sugeridos del catálogo -->
+    @if (sugeridos().length > 0) {
+      <section>
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="ez-card-title !mb-0">Eventos que podrían gustarte</h2>
+          <a routerLink="/eventos" class="text-brand-700 text-xs font-bold underline hover:text-brand-800">
+            Ver catálogo completo
+          </a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          @for (e of sugeridos(); track e.id) {
+            <a [routerLink]="['/eventos', e.id]"
+               class="ez-event-card hover:shadow-card transition">
+              <div class="ez-event-card-header">
+                <span class="ez-event-card-badge">{{ primeraLetra(e.nombre) }}</span>
+                <span class="ez-event-card-title truncate">{{ e.nombre }}</span>
+              </div>
+              <div class="ez-event-card-body space-y-1.5 text-xs text-surface-600">
+                <div class="flex items-center gap-1.5">
+                  <i class="pi pi-calendar text-brand-500 text-[10px]"></i>
+                  <span>{{ e.fecha | date: 'dd MMM · HH:mm' }}</span>
+                </div>
+                @if (e.ubicacion) {
+                  <div class="flex items-center gap-1.5">
+                    <i class="pi pi-map-marker text-brand-500 text-[10px]"></i>
+                    <span class="truncate">{{ e.ubicacion }}</span>
+                  </div>
+                }
+                <div class="flex items-center gap-1.5">
+                  <i class="pi pi-users text-brand-500 text-[10px]"></i>
+                  <span>{{ e.aforoActual }}/{{ e.aforoMaximo }} inscritos</span>
+                </div>
+              </div>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Accesos rápidos -->
+    <section>
+      <h2 class="ez-card-title">Accesos rápidos</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <a routerLink="/eventos" class="ez-card-sm flex flex-col items-center text-center hover:shadow-card transition">
+          <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center mb-2">
+            <i class="pi pi-search"></i>
+          </div>
+          <div class="font-bold text-surface-900 text-sm">Explorar</div>
+          <div class="text-[11px] text-surface-500">Catálogo de eventos</div>
+        </a>
+        <a routerLink="/mis-inscripciones" class="ez-card-sm flex flex-col items-center text-center hover:shadow-card transition">
+          <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center mb-2">
+            <i class="pi pi-ticket"></i>
+          </div>
+          <div class="font-bold text-surface-900 text-sm">Mis inscripciones</div>
+          <div class="text-[11px] text-surface-500">Códigos QR de tus eventos</div>
+        </a>
+        <a routerLink="/mis-certificados" class="ez-card-sm flex flex-col items-center text-center hover:shadow-card transition">
+          <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center mb-2">
+            <i class="pi pi-id-card"></i>
+          </div>
+          <div class="font-bold text-surface-900 text-sm">Certificados</div>
+          <div class="text-[11px] text-surface-500">Descarga tus constancias</div>
+        </a>
+        <a routerLink="/perfil" class="ez-card-sm flex flex-col items-center text-center hover:shadow-card transition">
+          <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center mb-2">
+            <i class="pi pi-user"></i>
+          </div>
+          <div class="font-bold text-surface-900 text-sm">Mi perfil</div>
+          <div class="text-[11px] text-surface-500">Datos y contraseña</div>
+        </a>
+      </div>
+    </section>
+  }
+</div>

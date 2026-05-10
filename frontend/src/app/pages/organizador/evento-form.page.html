@@ -1,0 +1,265 @@
+<div class="space-y-6">
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="ez-section-title">
+        {{ tituloFigma() }}
+      </h1>
+      <p class="text-surface-500 text-sm mt-1">
+        @if (editando()) {
+          Los cambios marcarán el evento como PENDIENTE hasta nueva aprobación.
+        } @else {
+          Tu solicitud quedará PENDIENTE hasta ser aprobada por el administrador.
+        }
+      </p>
+    </div>
+  </div>
+
+  @if (cargandoInicial()) {
+    <div class="flex justify-center py-16">
+      <p-progressSpinner styleClass="!w-12 !h-12" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else {
+    <form [formGroup]="formulario" (ngSubmit)="enviar()" class="space-y-5" novalidate>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Columna izquierda (datos) -->
+        <div class="lg:col-span-2 space-y-5">
+          <div class="ez-card space-y-3">
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Nombre del evento</label>
+              <input formControlName="nombre" class="ez-input" placeholder="ESCRIBA AQUÍ" maxlength="120" />
+              <div class="flex justify-between text-[11px] mt-1">
+                @if (formulario.controls.nombre.touched && formulario.controls.nombre.invalid) {
+                  <p class="text-coral-600">Mínimo 3 caracteres.</p>
+                } @else { <span></span> }
+                <span class="text-surface-400">{{ formulario.controls.nombre.value.length }}/120</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="ez-field !mb-0">
+                <label class="ez-field-label"><span class="req">*</span>Categoría</label>
+                <p-select
+                  formControlName="categoria"
+                  [options]="categorias"
+                  optionLabel="label"
+                  optionValue="value"
+                  styleClass="w-full"
+                  placeholder="SELECCIONA UNO"
+                  appendTo="body"
+                ></p-select>
+              </div>
+              <div class="ez-field !mb-0">
+                <label class="ez-field-label"><span class="req">*</span>Tipo de evento</label>
+                <p-select
+                  formControlName="tipoEvento"
+                  [options]="tiposEvento"
+                  optionLabel="label"
+                  optionValue="value"
+                  styleClass="w-full"
+                  appendTo="body"
+                ></p-select>
+              </div>
+            </div>
+
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Descripción</label>
+              <textarea
+                rows="5"
+                formControlName="descripcion"
+                class="ez-textarea"
+                [class.!border-coral-400]="formulario.controls.descripcion.touched && formulario.controls.descripcion.invalid"
+                placeholder="CUÉNTALE A LOS ASISTENTES QUÉ ENCONTRARÁN EN TU EVENTO..."
+                maxlength="2000"
+              ></textarea>
+              <div class="flex justify-between text-[11px] mt-1">
+                @if (formulario.controls.descripcion.touched && formulario.controls.descripcion.invalid) {
+                  <p class="text-coral-600">
+                    Mínimo 10 caracteres (tienes {{ formulario.controls.descripcion.value.length }}).
+                  </p>
+                } @else { <span></span> }
+                <span [class.text-coral-600]="formulario.controls.descripcion.value.length < 10"
+                      [class.text-surface-400]="formulario.controls.descripcion.value.length >= 10">
+                  {{ formulario.controls.descripcion.value.length }}/2000
+                </span>
+              </div>
+            </div>
+
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label">Ubicación</label>
+              <input formControlName="ubicacion" class="ez-input" [placeholder]="ubicacionDefecto" maxlength="200" />
+              <p class="text-[11px] text-surface-500 mt-1">
+                <i class="pi pi-info-circle text-[10px]"></i>
+                Si lo dejas vacío, se asignará "{{ ubicacionDefecto }}".
+              </p>
+            </div>
+
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label">Imagen del evento (URL)</label>
+              <input formControlName="imagen" class="ez-input" placeholder="HTTPS://..." />
+              <p class="text-[11px] text-surface-500 mt-1">
+                Sugerencia: pega una URL pública. Próximamente: subida directa.
+              </p>
+
+              @if (imagenUrl(); as url) {
+                <div class="mt-3 rounded-xl overflow-hidden border border-brand-100 bg-brand-50 max-w-sm">
+                  <img [src]="url" alt="Vista previa" (error)="onImagenError()"
+                       class="w-full h-40 object-cover" />
+                </div>
+              } @else if (imagenError()) {
+                <p class="text-[11px] text-coral-600 mt-2">
+                  <i class="pi pi-exclamation-triangle"></i>
+                  No se pudo cargar la imagen. Verifica la URL.
+                </p>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna derecha -->
+        <div class="space-y-4">
+          <div class="ez-card space-y-3">
+            <h3 class="ez-card-title !mb-1">Configuración</h3>
+
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Aforo máximo</label>
+              <p-inputnumber
+                formControlName="aforoMaximo"
+                [min]="1"
+                [max]="aforoMaximoPermitido"
+                [showButtons]="true"
+                styleClass="w-full"
+                inputStyleClass="w-full"
+              ></p-inputnumber>
+              <p class="text-[11px] text-surface-500 mt-1">
+                <i class="pi pi-info-circle"></i>
+                Máximo permitido: {{ aforoMaximoPermitido }} personas.
+              </p>
+              @if (formulario.controls.aforoMaximo.touched && formulario.controls.aforoMaximo.errors?.['max']) {
+                <p class="text-coral-600 text-[11px] mt-1">
+                  El aforo no puede superar las {{ aforoMaximoPermitido }} personas.
+                </p>
+              }
+            </div>
+
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Seleccione la fecha</label>
+              <p-datepicker
+                formControlName="fecha"
+                styleClass="w-full"
+                appendTo="body"
+                dateFormat="dd/mm/yy"
+                [showIcon]="true"
+                [minDate]="minFecha"
+                placeholder="dd/mm/yyyy"
+              ></p-datepicker>
+              @if (formulario.controls.fecha.touched && formulario.controls.fecha.errors?.['fechaPasada']) {
+                <p class="text-coral-600 text-[11px] mt-1">La fecha no puede ser pasada.</p>
+              }
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="ez-field !mb-0">
+                <label class="ez-field-label"><span class="req">*</span>Hora inicio</label>
+                <p-datepicker
+                  formControlName="horaInicio"
+                  styleClass="w-full"
+                  appendTo="body"
+                  [timeOnly]="true"
+                  hourFormat="24"
+                  [showIcon]="true"
+                  icon="pi pi-clock"
+                  placeholder="HH:mm"
+                ></p-datepicker>
+              </div>
+              <div class="ez-field !mb-0">
+                <label class="ez-field-label"><span class="req">*</span>Hora fin</label>
+                <p-datepicker
+                  formControlName="horaFin"
+                  styleClass="w-full"
+                  appendTo="body"
+                  [timeOnly]="true"
+                  hourFormat="24"
+                  [showIcon]="true"
+                  icon="pi pi-clock"
+                  placeholder="HH:mm"
+                ></p-datepicker>
+              </div>
+            </div>
+            @if (!horaFinValida()) {
+              <div class="bg-coral-50 border border-coral-200 rounded-md px-3 py-2 -mt-2">
+                <p class="text-coral-700 text-[11px] flex items-start gap-1 m-0">
+                  <i class="pi pi-exclamation-triangle text-[10px] mt-[2px]"></i>
+                  <span>La hora de fin debe ser <strong>posterior</strong> a la de inicio.
+                  Si el evento dura toda la noche, marca la fecha siguiente.</span>
+                </p>
+              </div>
+            }
+
+            <!-- Resumen calculado: duración + costo -->
+            <div class="bg-white rounded-xl border border-brand-200 p-4 space-y-2">
+              <div class="text-[11px] uppercase tracking-wider text-brand-700 font-bold">
+                Cálculo automático
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-surface-600 flex items-center gap-1">
+                  <i class="pi pi-clock text-brand-500"></i>
+                  Duración
+                </span>
+                <span class="font-bold text-surface-900">
+                  @if (duracionCalculada() > 0) {
+                    {{ duracionCalculada() }} {{ duracionCalculada() === 1 ? 'hora' : 'horas' }}
+                  } @else {
+                    <span class="text-surface-400 text-xs italic">Selecciona horarios</span>
+                  }
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-surface-600 flex items-center gap-1">
+                  <i class="pi pi-dollar text-brand-500"></i>
+                  Costo del evento
+                </span>
+                <span class="font-extrabold text-brand-700">
+                  @if (costoCalculado() > 0) {
+                    $ {{ costoCalculado() | number: '1.0-0' }} COP
+                  } @else {
+                    <span class="text-surface-400 text-xs italic">—</span>
+                  }
+                </span>
+              </div>
+              <p class="text-[11px] text-surface-500 pt-1 border-t border-surface-100">
+                <i class="pi pi-info-circle"></i>
+                Tarifa fija de $ {{ precioPorHora | number: '1.0-0' }} COP por hora.
+                Tras la aprobación deberás subir un comprobante de pago para activar el evento.
+              </p>
+            </div>
+          </div>
+
+          <div class="ez-card-sm text-xs text-surface-700">
+            <div class="flex items-start gap-2">
+              <i class="pi pi-info-circle text-brand-600 mt-0.5 text-[10px]"></i>
+              <div>
+                @if (formulario.controls.tipoEvento.value === 'PUBLICO') {
+                  Este evento aparecerá en el catálogo general una vez aprobado.
+                } @else {
+                  Solo los asistentes creados por ti podrán ver este evento.
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" (click)="volver()" class="ez-btn-ghost ez-btn-lg" [disabled]="guardando()">
+          Volver
+        </button>
+        <button type="submit" class="ez-btn-primary ez-btn-lg" [disabled]="guardando()">
+          @if (guardando()) { <i class="pi pi-spin pi-spinner text-[10px]"></i> }
+          @else { <i class="pi pi-check text-[10px]"></i> }
+          @if (editando()) { Guardar cambios } @else { Solicitar Creación }
+        </button>
+      </div>
+    </form>
+  }
+</div>

@@ -1,0 +1,113 @@
+<div class="space-y-5">
+  <div class="flex items-end justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="ez-section-title">Eventos disponibles</h1>
+      <p class="ez-page-subtitle !mb-0">Explora y participa en los eventos públicos.</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="ez-card">
+    <form [formGroup]="filtros" (ngSubmit)="buscar()"
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div class="ez-field !mb-0">
+        <label class="ez-field-label">Nombre</label>
+        <input formControlName="nombre" class="ez-input" placeholder="BUSCAR..." />
+      </div>
+      <div class="ez-field !mb-0">
+        <label class="ez-field-label">Categoría</label>
+        <input formControlName="categoria" class="ez-input" placeholder="TECNOLOGÍA, MÚSICA..." />
+      </div>
+      <div class="ez-field !mb-0">
+        <label class="ez-field-label">Tipo</label>
+        <p-select
+          formControlName="tipoEvento"
+          [options]="tiposEvento"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+          appendTo="body"
+        ></p-select>
+      </div>
+      <div class="ez-field !mb-0">
+        <label class="ez-field-label">Desde</label>
+        <p-datepicker formControlName="fechaDesde" styleClass="w-full" appendTo="body" dateFormat="dd/mm/yy"></p-datepicker>
+      </div>
+      <div class="ez-field !mb-0">
+        <label class="ez-field-label">Hasta</label>
+        <p-datepicker formControlName="fechaHasta" styleClass="w-full" appendTo="body" dateFormat="dd/mm/yy"></p-datepicker>
+      </div>
+
+      <div class="lg:col-span-5 flex justify-end gap-2 pt-1">
+        <button type="button" class="ez-btn-ghost" (click)="limpiar()">
+          <i class="pi pi-eraser text-[10px]"></i> Limpiar
+        </button>
+        <button type="submit" class="ez-btn-primary">
+          <i class="pi pi-search text-[10px]"></i> Buscar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  @if (cargando()) {
+    <div class="flex justify-center py-12">
+      <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else if (eventos().length === 0) {
+    <div class="text-center py-12">
+      <i class="pi pi-calendar-times text-4xl text-brand-300 mb-2"></i>
+      <p class="text-surface-500">No hay eventos que coincidan con tu búsqueda.</p>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      @for (e of eventos(); track e.id) {
+        <article class="ez-event-card cursor-pointer hover:shadow-card transition" (click)="abrir(e)">
+          <header class="ez-event-card-header">
+            <span class="ez-event-card-badge">A</span>
+            <h3 class="ez-event-card-title leading-tight line-clamp-2 flex-1 min-w-0">
+              {{ e.nombre }}
+            </h3>
+          </header>
+
+          @if (e.imagen) {
+            <img [src]="e.imagen" [alt]="e.nombre" class="w-full h-40 object-cover" />
+          } @else {
+            <div class="w-full h-40 bg-brand-gradient flex items-center justify-center text-white">
+              <i class="pi pi-calendar text-4xl opacity-90"></i>
+            </div>
+          }
+
+          <div class="ez-event-card-body space-y-2 text-[13px]">
+            <div class="text-surface-700">
+              <div class="font-bold">{{ e.fecha | date: 'dd' }} de {{ e.fecha | date: 'MMMM' }} de {{ e.fecha | date: 'yyyy' }}</div>
+              <div class="text-surface-500 text-xs">{{ e.fecha | date: 'h:mm a' }}</div>
+            </div>
+
+            @if (e.descripcion) {
+              <p class="text-surface-600 line-clamp-2">{{ e.descripcion }}</p>
+            }
+
+            <div class="pt-1">
+              <div class="flex items-center justify-between text-[11px] text-surface-500 mb-1">
+                <span class="uppercase tracking-wider font-bold">Aforo</span>
+                <span>{{ e.aforoActual }} / {{ e.aforoMaximo }}</span>
+              </div>
+              <div class="h-1.5 bg-surface-100 rounded-full overflow-hidden">
+                <div class="h-full bg-brand-600" [style.width.%]="porcentajeOcupacion(e)"></div>
+              </div>
+            </div>
+          </div>
+
+          <footer class="ez-event-card-footer">
+            <button type="button" class="ez-btn-outline ez-btn-sm" (click)="abrir(e); $event.stopPropagation()">
+              Ver Detalles
+            </button>
+            <button type="button" class="ez-btn-primary ez-btn-sm" (click)="abrir(e); $event.stopPropagation()">
+              Inscríbete
+            </button>
+          </footer>
+        </article>
+      }
+    </div>
+  }
+</div>

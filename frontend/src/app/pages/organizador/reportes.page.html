@@ -1,0 +1,165 @@
+<div class="space-y-6">
+  <div class="flex items-end justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="ez-section-title">
+        Reportes
+      </h1>
+      <p class="text-surface-500 text-sm mt-1">Análisis de rendimiento por evento.</p>
+    </div>
+    @if (reporte()) {
+      <div class="flex items-center gap-2 flex-wrap">
+        <button type="button" (click)="descargarExcel()" class="ez-btn-success">
+          <i class="pi pi-file-excel text-[10px]"></i> Excel
+        </button>
+        <button type="button" (click)="descargarPdf()" class="ez-btn-danger">
+          <i class="pi pi-file-pdf text-[10px]"></i> PDF
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Selector evento -->
+  <div class="ez-card">
+    <label class="ez-field-label">
+      Evento
+    </label>
+    @if (cargando()) {
+      <p class="text-sm text-surface-500"><i class="pi pi-spin pi-spinner mr-1"></i> Cargando…</p>
+    } @else if (opciones().length === 0) {
+      <p class="text-sm text-surface-500">No tienes eventos activos o finalizados aún.</p>
+    } @else {
+      <p-select [options]="opciones()"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="eventoSeleccionado()"
+                (ngModelChange)="cambiarEvento($event)"
+                styleClass="w-full max-w-xl"
+                appendTo="body"></p-select>
+    }
+  </div>
+
+  @if (cargandoReporte()) {
+    <div class="flex justify-center py-16">
+      <p-progressSpinner styleClass="!w-12 !h-12" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else if (reporte(); as r) {
+    <h2 class="ez-card-title !mb-0">
+      Análisis de Rendimiento: {{ r.nombreEvento }}
+    </h2>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <app-stat-card
+        label="Tasa de asistencia"
+        [value]="r.porcentajeAsistencia.toFixed(1) + '%'"
+        [sublabel]="r.asistieron + ' de ' + r.inscritos + ' inscritos'"
+        icon="pi-percentage"
+      ></app-stat-card>
+      <app-stat-card
+        label="Check-ins totales"
+        [value]="r.checkInsTotal"
+        [sublabel]="'QR: ' + r.checkInsPorQR + ' · Manual: ' + r.checkInsManuales"
+        icon="pi-sign-in"
+      ></app-stat-card>
+      <app-stat-card
+        label="Check-outs"
+        [value]="r.checkOutsTotal"
+        [sublabel]="porcentajeAsistenciaSalida(r) + '% del total'"
+        icon="pi-sign-out"
+      ></app-stat-card>
+      <app-stat-card
+        label="Aforo"
+        [value]="r.porcentajeOcupacion.toFixed(1) + '%'"
+        [sublabel]="r.inscritos + '/' + r.aforoMaximo"
+        icon="pi-users"
+      ></app-stat-card>
+    </div>
+
+    <!-- Donuts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="ez-card">
+        <h3 class="text-sm font-bold text-brand-700 font-display uppercase tracking-wider mb-3">
+          Asistieron vs. Faltaron
+        </h3>
+        <app-donut [data]="donutAsistencia()" leyendaCentro="Asistencia"></app-donut>
+      </div>
+      <div class="ez-card">
+        <h3 class="text-sm font-bold text-brand-700 font-display uppercase tracking-wider mb-3">
+          Tipo de Check-in
+        </h3>
+        <app-donut [data]="donutCheckIn()" leyendaCentro="QR"></app-donut>
+      </div>
+    </div>
+
+    <!-- Curva de ingreso -->
+    <div class="ez-card">
+      <h3 class="text-sm font-bold text-brand-700 font-display uppercase tracking-wider mb-3">
+        Curva de Ingreso
+      </h3>
+      @if (r.curvaIngreso.length === 0) {
+        <p class="text-sm text-surface-500">No hay datos horarios registrados aún.</p>
+      } @else {
+        <div class="flex items-end gap-2 h-48 overflow-x-auto pb-2">
+          @for (p of r.curvaIngreso; track p.hora) {
+            <div class="flex flex-col items-center gap-1 min-w-[44px]">
+              <div class="flex-1 w-full flex flex-col justify-end gap-0.5">
+                <div class="w-full bg-brand-500 rounded-t"
+                     [style.height.%]="(p.ingresos / maxIngresos()) * 100"
+                     [title]="'Ingresos: ' + p.ingresos"></div>
+                <div class="w-full bg-coral-400"
+                     [style.height.%]="(p.salidas / maxIngresos()) * 100"
+                     [title]="'Salidas: ' + p.salidas"></div>
+              </div>
+              <div class="text-[10px] text-surface-500">{{ formatearHora(p.hora) }}</div>
+            </div>
+          }
+        </div>
+        <div class="flex items-center gap-4 mt-2 text-xs">
+          <span class="flex items-center gap-1">
+            <span class="w-3 h-3 bg-brand-500 rounded"></span>
+            Ingresos
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="w-3 h-3 bg-coral-400 rounded"></span>
+            Salidas
+          </span>
+        </div>
+      }
+    </div>
+
+    <!-- Desempeño staff -->
+    <div class="ez-card">
+      <h3 class="text-sm font-bold text-brand-700 font-display uppercase tracking-wider mb-3">
+        Desempeño del Staff
+      </h3>
+      @if (r.desempenoStaff.length === 0) {
+        <p class="text-sm text-surface-500">No hubo staff con registros para este evento.</p>
+      } @else {
+        <div class="space-y-3">
+          @for (s of r.desempenoStaff; track s.staffUsuarioId) {
+            <div>
+              <div class="flex items-center justify-between text-xs mb-1">
+                <div>
+                  <span class="text-surface-900 font-semibold">{{ s.nombre ?? 'Staff #' + s.staffUsuarioId }}</span>
+                  <span class="text-brand-600 ml-2">· {{ funcionLabel(s.funcion) }}</span>
+                </div>
+                <span class="text-surface-700">
+                  {{ s.checkInsRegistrados }} CI · {{ s.checkOutsRegistrados }} CO
+                </span>
+              </div>
+              <div class="h-2 bg-surface-100 rounded-full overflow-hidden">
+                <div class="h-full bg-brand-500"
+                     [style.width.%]="((s.checkInsRegistrados + s.checkOutsRegistrados) / maxStaff()) * 100"></div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else if (eventoSeleccionado()) {
+    <div class="bg-brand-50 border border-brand-200 rounded-xl p-10 text-center">
+      <i class="pi pi-chart-bar text-5xl text-brand-300 mb-3"></i>
+      <p class="text-surface-700">No fue posible cargar el reporte para este evento.</p>
+    </div>
+  }
+</div>

@@ -1,0 +1,140 @@
+<div class="min-h-screen flex flex-col bg-brand-400">
+  <!-- ============== HEADER VIOLETA ============== -->
+  <header
+    class="h-16 px-4 lg:px-8 bg-brand-500 flex items-center justify-between gap-4 sticky top-0 z-30"
+  >
+    <!-- Brand -->
+    <div class="flex items-center gap-3">
+      <button
+        class="lg:hidden p-2 rounded-md hover:bg-white/15 text-white"
+        (click)="toggleSidebar()"
+        aria-label="Abrir menú"
+      >
+        <i class="pi pi-bars"></i>
+      </button>
+      <a routerLink="/inicio" class="flex items-center">
+        <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
+      </a>
+    </div>
+
+    <!-- Buscador central (sólo cuando el rol tiene listados que filtrar) -->
+    @if (mostrarBuscador()) {
+      <div class="hidden md:flex flex-1 max-w-xl mx-2">
+        <div class="relative w-full flex items-center bg-white rounded-full pr-1">
+          <input
+            type="text"
+            placeholder="Busca eventos por nombre..."
+            class="flex-1 h-9 pl-4 pr-3 bg-transparent rounded-full focus:outline-none text-sm text-surface-900 placeholder:text-surface-400"
+            [(ngModel)]="textoBusqueda"
+            (keyup.enter)="buscar()"
+          />
+          <button
+            type="button"
+            (click)="buscar()"
+            class="h-8 px-4 rounded-full bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition flex items-center gap-1.5"
+          >
+            <i class="pi pi-search text-[10px]"></i>
+            <span>Buscar</span>
+          </button>
+        </div>
+      </div>
+    } @else {
+      <div class="flex-1"></div>
+    }
+
+    <!-- Acciones derecha -->
+    <div class="flex items-center gap-2">
+      @if (store.usuario(); as u) {
+        <!-- Campanita de notificaciones -->
+        <a
+          routerLink="/notificaciones"
+          class="relative h-9 w-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white flex items-center justify-center transition"
+          title="Notificaciones"
+        >
+          <i class="pi pi-bell text-[14px]"></i>
+          @if (notif.noLeidas() > 0) {
+            <span
+              class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center border-2 border-brand-500"
+            >
+              {{ notif.noLeidas() > 99 ? '99+' : notif.noLeidas() }}
+            </span>
+          }
+        </a>
+        <p-menu #menu [model]="menuPerfil" [popup]="true"></p-menu>
+        <button
+          type="button"
+          (click)="menu.toggle($event)"
+          class="px-3 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition flex items-center gap-2"
+        >
+          <p-avatar
+            [label]="iniciales(u.nombre)"
+            styleClass="!bg-white !text-brand-700 font-bold !w-6 !h-6 !text-[10px]"
+            shape="circle"
+          ></p-avatar>
+          <span class="hidden md:inline">Perfil</span>
+        </button>
+        <button
+          type="button"
+          (click)="cerrarSesion()"
+          class="px-3 h-9 rounded-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs transition flex items-center gap-1.5"
+        >
+          <i class="pi pi-sign-out text-[10px]"></i>
+          <span class="hidden md:inline">Cerrar Sesión</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- ============== CUERPO ============== -->
+  <div class="flex-1 flex min-h-0">
+    <!-- Sidebar VIOLETA -->
+    <aside
+      [class.translate-x-0]="sidebarAbierto()"
+      [class.-translate-x-full]="!sidebarAbierto()"
+      class="lg:translate-x-0 fixed lg:static inset-y-0 left-0 top-16 lg:top-0 z-20 w-56 shrink-0 bg-brand-500 transition-transform duration-200 ease-out lg:flex lg:flex-col"
+    >
+      <nav class="flex-1 px-3 py-5 overflow-y-auto">
+        <ul class="space-y-2">
+          @for (item of itemsVisibles(); track item.ruta) {
+            <li>
+              <a
+                [routerLink]="item.ruta"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: false }"
+                class="sidebar-item"
+                (click)="cerrarSidebarMobile()"
+              >
+                <i class="pi text-xs" [ngClass]="item.icono"></i>
+                <span>{{ item.etiqueta }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+
+      <div class="p-4 flex items-center justify-center">
+        <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
+      </div>
+    </aside>
+
+    @if (sidebarAbierto()) {
+      <div
+        class="lg:hidden fixed inset-0 top-16 bg-black/40 z-10"
+        (click)="cerrarSidebarMobile()"
+      ></div>
+    }
+
+    <!-- Canvas blanco con contenido -->
+    <main class="flex-1 min-w-0 p-4 lg:p-5 overflow-auto">
+      <div class="bg-white rounded-2xl shadow-card p-4 lg:p-6 min-h-full">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============== FOOTER VIOLETA ============== -->
+  <footer class="bg-brand-500 px-6 py-2.5 flex items-center justify-between text-white/80 text-[11px]">
+    <span>© {{ anio }} ExperienZia · Plataforma de eventos</span>
+    <span class="hidden md:inline">v1.0</span>
+  </footer>
+</div>

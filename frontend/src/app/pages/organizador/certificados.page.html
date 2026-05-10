@@ -1,0 +1,188 @@
+<p-confirmDialog></p-confirmDialog>
+
+<div class="space-y-6">
+  <div>
+    <h1 class="ez-section-title">
+      Generación de Certificados
+    </h1>
+    <p class="text-surface-500 text-sm mt-1">
+      Emite certificados de asistencia para los eventos finalizados.
+    </p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <app-stat-card label="En curso" [value]="stats().enCurso" sublabel="Aún no aptos" icon="pi-clock"></app-stat-card>
+    <app-stat-card label="Listos para enviar" [value]="stats().listos" sublabel="Pendientes de emisión" icon="pi-bookmark"></app-stat-card>
+    <app-stat-card label="Enviados" [value]="stats().enviados" sublabel="Certificados emitidos" icon="pi-check-circle"></app-stat-card>
+  </div>
+
+  @if (cargando()) {
+    <div class="flex justify-center py-16">
+      <p-progressSpinner styleClass="!w-12 !h-12" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else if (eventosConCerts().length === 0) {
+    <div class="bg-brand-50 border border-brand-200 rounded-xl p-10 text-center">
+      <i class="pi pi-verified text-5xl text-brand-300 mb-3"></i>
+      <p class="text-surface-700 font-medium">No tienes eventos para certificar todavía.</p>
+    </div>
+  } @else {
+    <h2 class="ez-card-title !mb-0">
+      Eventos del organizador
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      @for (item of eventosConCerts(); track item.evento.id) {
+        <article class="bg-white border border-brand-100 rounded-2xl p-5 shadow-soft hover:shadow-card transition flex flex-col cursor-pointer"
+                 (click)="abrirDetalle(item)">
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <h3 class="font-semibold text-surface-900 line-clamp-2 flex-1">{{ item.evento.nombre }}</h3>
+            <p-tag [value]="estadoLabel(item.estado)" [severity]="estadoSeverity(item.estado)"></p-tag>
+          </div>
+          <div class="text-sm text-surface-600 flex items-center gap-2 mb-3">
+            <i class="pi pi-calendar text-brand-500 text-xs"></i>
+            <span>{{ item.evento.fecha | date: 'dd MMM yyyy' }}</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="bg-brand-50 rounded-lg p-3">
+              <div class="text-[10px] uppercase tracking-wider text-brand-700 font-bold">Asistieron</div>
+              <div class="text-2xl font-extrabold text-surface-900">{{ item.asistencias }}</div>
+            </div>
+            <div class="bg-brand-50 rounded-lg p-3">
+              <div class="text-[10px] uppercase tracking-wider text-brand-700 font-bold">Emitidos</div>
+              <div class="text-2xl font-extrabold text-surface-900">
+                {{ item.certificados }}
+                <span class="text-xs text-surface-500 font-normal">/ {{ item.asistencias }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Barra de progreso -->
+          <div class="mb-4">
+            <div class="flex justify-between text-[11px] mb-1">
+              <span class="text-surface-500">Progreso de emisión</span>
+              <span class="text-surface-700 font-semibold">{{ progreso(item) }}%</span>
+            </div>
+            <div class="h-2 bg-surface-100 rounded-full overflow-hidden">
+              <div class="h-full transition-all"
+                   [class]="item.estado === 'ENVIADO' ? 'bg-accent-500' : 'bg-brand-500'"
+                   [style.width.%]="progreso(item)"></div>
+            </div>
+          </div>
+
+          <div class="mt-auto" (click)="$event.stopPropagation()">
+            @if (item.estado === 'EN_CURSO') {
+              <button type="button"
+                      disabled
+                      class="w-full h-10 rounded-full bg-surface-100 text-surface-500 font-semibold text-sm cursor-not-allowed">
+                Aún no disponible
+              </button>
+            } @else if (item.estado === 'ENVIADO') {
+              <div class="text-center text-accent-700 font-semibold text-sm flex items-center justify-center gap-2">
+                <i class="pi pi-check-circle"></i>
+                Todos emitidos · clic para ver
+              </div>
+            } @else {
+              <button type="button"
+                      (click)="generarMasivo(item, $event)"
+                      [disabled]="procesando() === item.evento.id"
+                      class="w-full h-10 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+                @if (procesando() === item.evento.id) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-send"></i>
+                }
+                @if (item.estado === 'PARCIAL') {
+                  Emitir restantes
+                } @else {
+                  Generar y enviar
+                }
+              </button>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>
+
+<!-- Modal detalle -->
+<p-dialog
+  [visible]="modalDetalle() !== null"
+  (visibleChange)="!$event && cerrarDetalle()"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '720px' }"
+  styleClass="!max-w-[95vw]"
+>
+  <ng-template pTemplate="header">
+    @if (modalDetalle(); as data) {
+      <div>
+        <h3 class="font-bold text-brand-700 font-display uppercase tracking-wider">
+          Certificados emitidos
+        </h3>
+        <p class="text-xs text-surface-500 mt-0.5">{{ data.evento.nombre }}</p>
+      </div>
+    }
+  </ng-template>
+
+  @if (modalDetalle(); as data) {
+    <div class="space-y-4 pt-2">
+      <div class="flex items-end justify-between flex-wrap gap-2">
+        <div class="text-sm text-surface-600">
+          {{ data.certificados }} de {{ data.asistencias }} asistentes con certificado.
+        </div>
+        @if (certificadosDetalle().length > 0) {
+          <button type="button"
+                  (click)="exportarListado()"
+                  class="px-4 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs flex items-center gap-2">
+            <i class="pi pi-download text-[10px]"></i>
+            Exportar CSV
+          </button>
+        }
+      </div>
+
+      @if (cargandoDetalle()) {
+        <div class="flex justify-center py-8">
+          <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
+        </div>
+      } @else if (certificadosDetalle().length === 0) {
+        <div class="text-center text-surface-500 text-sm py-6">
+          Sin certificados aún.
+        </div>
+      } @else {
+        <div class="border border-brand-100 rounded-xl overflow-hidden max-h-[420px] overflow-y-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-brand-50 text-brand-800 sticky top-0">
+              <tr>
+                <th class="text-left px-4 py-2 font-semibold uppercase text-[11px] tracking-wider">Asistente</th>
+                <th class="text-left px-4 py-2 font-semibold uppercase text-[11px] tracking-wider">Documento</th>
+                <th class="text-left px-4 py-2 font-semibold uppercase text-[11px] tracking-wider">Código</th>
+                <th class="text-left px-4 py-2 font-semibold uppercase text-[11px] tracking-wider">Emitido</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of certificadosDetalle(); track c.id) {
+                <tr class="hover:bg-brand-50/40">
+                  <td class="px-4 py-2 font-medium text-surface-900">
+                    {{ c.nombreAsistente ?? '—' }}
+                  </td>
+                  <td class="px-4 py-2 text-xs text-surface-700">
+                    {{ c.numeroDocumento ?? '—' }}
+                  </td>
+                  <td class="px-4 py-2 text-xs">
+                    <code class="bg-brand-50 text-brand-700 px-1.5 py-0.5 rounded">{{ c.codigo }}</code>
+                  </td>
+                  <td class="px-4 py-2 text-xs text-surface-600">
+                    {{ c.fechaGeneracion | date: 'dd/MM/yyyy HH:mm' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</p-dialog>

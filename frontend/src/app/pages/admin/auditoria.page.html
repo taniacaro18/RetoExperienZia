@@ -1,0 +1,107 @@
+<div class="space-y-6">
+  <div class="flex items-end justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="ez-section-title">
+        Auditoría
+      </h1>
+      <p class="text-surface-500 text-sm mt-1">Historial completo de acciones registradas en la plataforma.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button (click)="exportarCsv()"
+              class="px-4 h-10 rounded-full bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 font-semibold flex items-center gap-2 transition">
+        <i class="pi pi-download"></i> Exportar CSV
+      </button>
+      <a routerLink="/admin/dashboard"
+         class="ez-btn-secondary">
+        <i class="pi pi-arrow-left"></i> Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <app-stat-card label="Total registros" [value]="conteo().total" icon="pi-history"></app-stat-card>
+    <app-stat-card label="Hoy" [value]="conteo().hoy" icon="pi-clock" tone="warn"></app-stat-card>
+    <app-stat-card label="Última semana" [value]="conteo().semana" icon="pi-calendar" tone="info"></app-stat-card>
+    <app-stat-card label="Entidades" [value]="conteo().entidades" icon="pi-database"></app-stat-card>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white border border-brand-100 rounded-2xl p-4 shadow-soft flex flex-wrap items-end gap-4">
+    <div class="flex-1 min-w-[240px]">
+      <label class="ez-field-label">
+        Buscar
+      </label>
+      <span class="block relative">
+        <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400"></i>
+        <input pInputText
+               [ngModel]="busqueda()"
+               (ngModelChange)="busqueda.set($event)"
+               class="w-full pl-9"
+               placeholder="Acción, usuario, entidad o ID" />
+      </span>
+    </div>
+    <div class="min-w-[200px]">
+      <label class="ez-field-label">
+        Entidad
+      </label>
+      <div class="flex flex-wrap gap-1.5">
+        <button (click)="filtroEntidad.set('TODAS')"
+                [class]="filtroEntidad() === 'TODAS' ? 'bg-brand-600 text-white' : 'bg-white border border-surface-200 hover:bg-brand-50'"
+                class="px-3 h-9 rounded-full font-semibold text-xs transition">Todas</button>
+        @for (e of entidades(); track e) {
+          <button (click)="filtroEntidad.set(e)"
+                  [class]="filtroEntidad() === e ? 'bg-brand-600 text-white' : 'bg-white border border-surface-200 hover:bg-brand-50'"
+                  class="px-3 h-9 rounded-full font-semibold text-xs transition">
+            {{ e }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Línea de tiempo -->
+  <div class="bg-white border border-brand-100 rounded-2xl shadow-soft p-5">
+    @if (cargando()) {
+      <div class="flex justify-center py-12">
+        <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
+      </div>
+    } @else if (registrosFiltrados().length === 0) {
+      <div class="text-center py-12">
+        <i class="pi pi-inbox text-5xl text-brand-300 mb-2"></i>
+        <p class="text-surface-700 font-medium">No hay registros con estos filtros</p>
+        <p class="text-surface-400 text-xs">Ajusta el filtro o limpia la búsqueda.</p>
+      </div>
+    } @else {
+      <div class="space-y-2">
+        @for (r of registrosFiltrados(); track r.id) {
+          <div class="flex items-start gap-3 p-3 rounded-xl hover:bg-brand-50/50 transition border border-transparent hover:border-brand-100">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                 [class]="iconoAccion(r.accion).tone">
+              <i class="pi" [ngClass]="iconoAccion(r.accion).icon"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-semibold text-surface-900 text-sm">{{ r.accion }}</span>
+                <span class="text-[11px] bg-brand-100 text-brand-700 rounded-full px-2 py-0.5 font-semibold">
+                  {{ r.entidad }}
+                  @if (r.entidadId != null) { #{{ r.entidadId }} }
+                </span>
+              </div>
+              <div class="text-xs text-surface-500 mt-0.5">
+                <span class="font-medium text-surface-700">{{ nombreUsuario(r.usuarioId) }}</span>
+                @if (rolUsuario(r.usuarioId)) {
+                  <span class="text-[10px] text-brand-600 ml-1">({{ rolUsuario(r.usuarioId) }})</span>
+                }
+              </div>
+            </div>
+            <div class="text-[11px] text-surface-500 text-right shrink-0">
+              <div>{{ r.fecha | date: 'dd MMM yyyy' }}</div>
+              <div class="font-semibold text-surface-700">{{ r.fecha | date: 'HH:mm:ss' }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

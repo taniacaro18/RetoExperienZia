@@ -1,0 +1,225 @@
+<div class="space-y-6">
+  <p-confirmDialog></p-confirmDialog>
+
+  <div class="flex items-end justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="ez-section-title">
+        Gestión de usuarios
+      </h1>
+      <p class="text-surface-500 text-sm mt-1">Aprueba organizadores, controla estados y cambia roles.</p>
+    </div>
+    <a routerLink="/admin/dashboard"
+       class="ez-btn-secondary">
+      <i class="pi pi-arrow-left"></i> Dashboard
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+    <app-stat-card label="Total" [value]="conteo().total" icon="pi-users"></app-stat-card>
+    <app-stat-card label="Pendientes" [value]="conteo().pendientes" icon="pi-clock" tone="warn"></app-stat-card>
+    <app-stat-card label="Activos" [value]="conteo().activos" icon="pi-check-circle" tone="success"></app-stat-card>
+    <app-stat-card label="Inactivos" [value]="conteo().inactivos" icon="pi-ban" tone="danger"></app-stat-card>
+    <app-stat-card label="Organizadores" [value]="conteo().organizadores" icon="pi-id-card" tone="info"></app-stat-card>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white border border-brand-100 rounded-2xl p-4 shadow-soft flex flex-wrap items-end gap-4">
+    <div class="flex-1 min-w-[240px]">
+      <label class="ez-field-label">
+        Buscar
+      </label>
+      <span class="block relative">
+        <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400"></i>
+        <input pInputText
+               [ngModel]="busqueda()"
+               (ngModelChange)="busqueda.set($event)"
+               class="w-full pl-9"
+               placeholder="Nombre, email o documento" />
+      </span>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button (click)="filtroRol.set('TODOS')"
+              [class]="filtroRol() === 'TODOS' ? 'bg-brand-600 text-white' : 'bg-white border border-surface-200 hover:bg-brand-50'"
+              class="px-3 h-9 rounded-full font-semibold text-xs transition">Todos los roles</button>
+      <button (click)="filtroRol.set('ORGANIZADOR')"
+              [class]="filtroRol() === 'ORGANIZADOR' ? 'bg-sky-600 text-white' : 'bg-white border border-surface-200 hover:bg-sky-50'"
+              class="px-3 h-9 rounded-full font-semibold text-xs transition">Organizadores</button>
+      <button (click)="filtroRol.set('ASISTENTE')"
+              [class]="filtroRol() === 'ASISTENTE' ? 'bg-emerald-600 text-white' : 'bg-white border border-surface-200 hover:bg-emerald-50'"
+              class="px-3 h-9 rounded-full font-semibold text-xs transition">Asistentes</button>
+      <button (click)="filtroRol.set('STAFF')"
+              [class]="filtroRol() === 'STAFF' ? 'bg-amber-500 text-white' : 'bg-white border border-surface-200 hover:bg-amber-50'"
+              class="px-3 h-9 rounded-full font-semibold text-xs transition">Staff</button>
+      <button (click)="filtroRol.set('ADMIN')"
+              [class]="filtroRol() === 'ADMIN' ? 'bg-rose-500 text-white' : 'bg-white border border-surface-200 hover:bg-rose-50'"
+              class="px-3 h-9 rounded-full font-semibold text-xs transition">Admin</button>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button (click)="filtroEstado.set('TODOS')"
+              [class]="filtroEstado() === 'TODOS' ? 'bg-brand-700 text-white' : 'bg-white border border-surface-200 hover:bg-brand-50'"
+              class="px-3 h-9 rounded-full font-semibold text-xs transition">Todos</button>
+      <button (click)="filtroEstado.set('PENDIENTE')"
+              [class]="filtroEstado() === 'PENDIENTE' ? 'bg-amber-500 text-white' : 'bg-white border border-surface-200 hover:bg-amber-50'"
+              class="px-3 h-9 rounded-full font-semibold text-xs transition">Pendientes</button>
+      <button (click)="filtroEstado.set('ACTIVO')"
+              [class]="filtroEstado() === 'ACTIVO' ? 'bg-emerald-600 text-white' : 'bg-white border border-surface-200 hover:bg-emerald-50'"
+              class="px-3 h-9 rounded-full font-semibold text-xs transition">Activos</button>
+      <button (click)="filtroEstado.set('INACTIVO')"
+              [class]="filtroEstado() === 'INACTIVO' ? 'bg-rose-500 text-white' : 'bg-white border border-surface-200 hover:bg-rose-50'"
+              class="px-3 h-9 rounded-full font-semibold text-xs transition">Inactivos</button>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="ez-card !p-0 overflow-hidden">
+    @if (cargando()) {
+      <div class="flex justify-center py-12">
+        <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
+      </div>
+    } @else if (usuariosFiltrados().length === 0) {
+      <div class="text-center py-12">
+        <i class="pi pi-users text-5xl text-brand-300 mb-2"></i>
+        <p class="text-surface-700 font-medium">No hay usuarios para mostrar</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="ez-table w-full"><thead>
+            <tr>
+              <th class="text-left px-4 py-3 font-bold">Usuario</th>
+              <th class="text-left px-4 py-3 font-bold hidden md:table-cell">Documento</th>
+              <th class="text-left px-4 py-3 font-bold">Rol</th>
+              <th class="text-left px-4 py-3 font-bold">Estado</th>
+              <th class="text-right px-4 py-3 font-bold">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of usuariosFiltrados(); track u.id) {
+              <tr class="border-t border-surface-100 hover:bg-brand-50/40 transition">
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs">
+                      {{ iniciales(u.nombre) }}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="font-semibold text-surface-900 line-clamp-1">{{ u.nombre }}</div>
+                      <div class="text-xs text-surface-500 truncate">{{ u.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3 hidden md:table-cell text-xs text-surface-600">
+                  @if (u.numeroDocumento) {
+                    {{ u.tipoDocumento }} {{ u.numeroDocumento }}
+                  } @else {
+                    <span class="text-surface-300">—</span>
+                  }
+                </td>
+                <td>
+                  <p-tag [value]="rolLabel(u.rol)" [severity]="rolSeverity(u.rol)"></p-tag>
+                </td>
+                <td>
+                  <p-tag [value]="u.estado" [severity]="usuarioEstadoSeverity(u.estado)"></p-tag>
+                </td>
+                <td class="!text-right">
+                  <div class="inline-flex flex-wrap gap-1.5 justify-end">
+                    @if (u.rol === 'ORGANIZADOR' && u.estado === 'PENDIENTE') {
+                      <button (click)="aprobarOrganizador(u)"
+                              [disabled]="procesando() === u.id"
+                              class="ez-btn-success ez-btn-sm">
+                        <i class="pi pi-check text-[10px]"></i> Aprobar
+                      </button>
+                      <button (click)="rechazarOrganizador(u)"
+                              [disabled]="procesando() === u.id"
+                              class="ez-btn-danger ez-btn-sm">
+                        <i class="pi pi-times text-[10px]"></i> Rechazar
+                      </button>
+                    }
+                    @if (u.estado === 'ACTIVO') {
+                      <button (click)="desactivar(u)"
+                              [disabled]="procesando() === u.id"
+                              class="ez-btn-ghost ez-btn-sm !text-rose-600 hover:!bg-rose-50 !border-rose-200">
+                        <i class="pi pi-ban text-[10px]"></i> Desactivar
+                      </button>
+                    }
+                    @if (u.estado === 'INACTIVO') {
+                      <button (click)="reactivar(u)"
+                              [disabled]="procesando() === u.id"
+                              class="ez-btn-success ez-btn-sm">
+                        <i class="pi pi-refresh text-[10px]"></i> Reactivar
+                      </button>
+                    }
+                    <button (click)="abrirCambioRol(u)"
+                            [disabled]="procesando() === u.id"
+                            class="ez-btn-ghost ez-btn-sm !text-brand-700 hover:!bg-brand-50 !border-brand-200">
+                      <i class="pi pi-id-card text-[10px]"></i> Rol
+                    </button>
+                    <button (click)="reenviarCredenciales(u)"
+                            [disabled]="procesando() === u.id"
+                            class="ez-btn-ghost ez-btn-sm !text-amber-700 hover:!bg-amber-50 !border-amber-200">
+                      <i class="pi pi-key text-[10px]"></i> Pwd
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Modal cambio de rol -->
+<p-dialog [visible]="mostrarModalRol()"
+          (visibleChange)="$event ? null : mostrarModalRol.set(false)"
+          [modal]="true"
+          [draggable]="false"
+          [resizable]="false"
+          [style]="{ width: '440px' }"
+          header="Cambiar rol del usuario">
+  @if (usuarioRol()) {
+    <div class="space-y-4">
+      <div>
+        <div class="text-xs text-surface-500">Usuario</div>
+        <div class="font-semibold text-surface-900">{{ usuarioRol()!.nombre }}</div>
+        <div class="text-xs text-surface-500">{{ usuarioRol()!.email }}</div>
+      </div>
+      <div>
+        <div class="text-xs text-surface-500 mb-1">Rol actual</div>
+        <p-tag [value]="rolLabel(usuarioRol()!.rol)" [severity]="rolSeverity(usuarioRol()!.rol)"></p-tag>
+      </div>
+      <div>
+        <label class="ez-field-label">
+          Nuevo rol
+        </label>
+        <p-select [options]="opcionesRol"
+                  [(ngModel)]="rolNuevo"
+                  optionLabel="label"
+                  optionValue="value"
+                  [style]="{ width: '100%' }"
+                  appendTo="body">
+        </p-select>
+      </div>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+        <i class="pi pi-exclamation-triangle"></i>
+        Cambiar el rol modifica los permisos. La acción quedará registrada en auditoría.
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" (click)="mostrarModalRol.set(false)"
+                class="px-4 h-10 rounded-full bg-white border border-surface-200 text-surface-700 hover:bg-surface-100 font-semibold text-sm">
+          Cancelar
+        </button>
+        <button type="button" (click)="confirmarCambioRol()"
+                [disabled]="procesando() === usuarioRol()!.id"
+                class="ez-btn-primary">
+          @if (procesando() === usuarioRol()!.id) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-check"></i>
+          }
+          Confirmar cambio
+        </button>
+      </div>
+    </div>
+  }
+</p-dialog>

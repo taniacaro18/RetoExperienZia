@@ -1,0 +1,165 @@
+<div class="min-h-screen flex flex-col bg-brand-400">
+  <!-- Header violeta -->
+  <header class="h-16 px-4 lg:px-8 bg-brand-500 flex items-center justify-between gap-4">
+    <a routerLink="/login" class="flex items-center">
+      <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
+    </a>
+
+    <div class="hidden md:flex flex-1 max-w-xl mx-2">
+      <div class="relative w-full flex items-center bg-white rounded-full pr-1">
+        <input
+          type="text"
+          placeholder="Busca aquí"
+          class="flex-1 h-9 pl-4 pr-3 bg-transparent rounded-full focus:outline-none text-sm text-surface-900 placeholder:text-surface-400"
+        />
+        <button type="button"
+                class="h-8 px-4 rounded-full bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition flex items-center gap-1.5">
+          <i class="pi pi-search text-[10px]"></i>
+          <span>Search</span>
+        </button>
+      </div>
+    </div>
+
+    <nav class="flex items-center gap-2 text-sm">
+      <a routerLink="/registro"
+         class="px-4 h-9 rounded-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs flex items-center transition">
+        Regístrate
+      </a>
+      <a routerLink="/login"
+         class="px-4 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center transition">
+        Iniciar Sesión
+      </a>
+    </nav>
+  </header>
+
+  <div class="flex-1 flex min-h-0">
+    <!-- Sidebar violeta -->
+    <aside class="hidden lg:flex flex-col w-56 shrink-0 bg-brand-500">
+      <nav class="flex-1 px-3 py-5">
+        <ul class="space-y-2">
+          <li>
+            <a routerLink="/registro" class="sidebar-item active">
+              <i class="pi pi-user-plus text-xs"></i>
+              <span>Registro</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/login" class="sidebar-item">
+              <i class="pi pi-sign-in text-xs"></i>
+              <span>Inicio Sesión</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <div class="p-4 flex items-center justify-center">
+        <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
+      </div>
+    </aside>
+
+    <main class="flex-1 min-w-0 p-4 lg:p-6 overflow-auto">
+      <div class="bg-white rounded-2xl shadow-card p-5 lg:p-8 min-h-full">
+        <div class="max-w-2xl mx-auto">
+          <h1 class="ez-section-title mb-5">Registro</h1>
+
+          <form [formGroup]="formulario" (ngSubmit)="enviar()"
+                class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-3" novalidate>
+
+            <div class="md:col-span-2 ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Nombres completos del usuario</label>
+              <input formControlName="nombre" class="ez-input" placeholder="ESCRIBA AQUÍ" />
+              @if (formulario.controls.nombre.touched && formulario.controls.nombre.invalid) {
+                <p class="text-rose-600 text-[11px] mt-1">Mínimo 3 caracteres.</p>
+              }
+            </div>
+
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Tipo de documento</label>
+              <p-select
+                formControlName="tipoDocumento"
+                [options]="tiposDocumento"
+                optionLabel="label"
+                optionValue="value"
+                styleClass="w-full"
+                placeholder="SELECCIONE UNA OPCIÓN"
+                appendTo="body"
+              ></p-select>
+            </div>
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Número de documento</label>
+              <input formControlName="numeroDocumento" class="ez-input" placeholder="DIGITE AQUÍ" />
+              @if (formulario.controls.numeroDocumento.touched && formulario.controls.numeroDocumento.invalid) {
+                <p class="text-rose-600 text-[11px] mt-1">Mínimo 4 dígitos.</p>
+              }
+            </div>
+
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Correo electrónico</label>
+              <input type="email" formControlName="email" class="ez-input" placeholder="ESCRIBA AQUÍ" autocomplete="email" />
+              @if (formulario.controls.email.touched && formulario.controls.email.invalid) {
+                <p class="text-rose-600 text-[11px] mt-1">Correo no válido.</p>
+              }
+            </div>
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Número de celular</label>
+              <input formControlName="telefono" class="ez-input" placeholder="DIGITE AQUÍ" />
+            </div>
+
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Contraseña</label>
+              <input type="password" formControlName="password" class="ez-input" placeholder="ESCRIBA AQUÍ" autocomplete="new-password" />
+            </div>
+            <div class="ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Confirme la contraseña</label>
+              <input type="password" formControlName="confirmar" class="ez-input" placeholder="ESCRIBA AQUÍ" autocomplete="new-password" />
+              @if (formulario.controls.confirmar.touched && contrasenasNoCoinciden()) {
+                <p class="text-rose-600 text-[11px] mt-1">Las contraseñas no coinciden.</p>
+              }
+            </div>
+
+            <div class="md:col-span-2 ez-field !mb-0">
+              <label class="ez-field-label"><span class="req">*</span>Elegir rol</label>
+              <p-select
+                formControlName="tipo"
+                [options]="tiposCuenta"
+                optionLabel="label"
+                optionValue="value"
+                styleClass="w-full"
+                placeholder="SELECCIONE UNA OPCIÓN"
+                appendTo="body"
+              ></p-select>
+            </div>
+
+            @if (formulario.controls.tipo.value === 'ORGANIZADOR') {
+              <div class="md:col-span-2 bg-brand-50 border border-brand-200 text-brand-800 rounded-md px-3 py-2 text-[11px]">
+                <i class="pi pi-info-circle mr-1"></i>
+                Las cuentas de Organizador deben ser aprobadas por un administrador antes de poder iniciar sesión.
+              </div>
+            }
+
+            <div class="md:col-span-2 flex justify-end pt-2">
+              <button
+                type="submit"
+                class="ez-btn-primary ez-btn-lg px-10"
+                [disabled]="cargando()"
+              >
+                @if (cargando()) { <i class="pi pi-spin pi-spinner mr-2"></i> }
+                Registrarme
+              </button>
+            </div>
+
+            <p class="md:col-span-2 text-center text-xs text-surface-500 mt-2">
+              ¿Ya tienes cuenta?
+              <a routerLink="/login" class="text-brand-700 hover:text-brand-800 font-bold ml-1">
+                Inicia sesión
+              </a>
+            </p>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="bg-brand-500 px-6 py-3 flex items-center justify-center">
+    <img src="/logo.png" alt="ExperienZia" class="h-8 w-auto object-contain bg-white/90 rounded-md p-1" />
+  </footer>
+</div>

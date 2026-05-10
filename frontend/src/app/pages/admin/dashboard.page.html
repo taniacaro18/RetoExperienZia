@@ -1,0 +1,227 @@
+<div class="space-y-6">
+  <div class="flex items-end justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="ez-section-title">
+        Panel del administrador
+      </h1>
+      <p class="text-surface-500 text-sm mt-1">Visión general de la plataforma ExperienZia.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a routerLink="/admin/usuarios"
+         class="ez-btn-secondary">
+        <i class="pi pi-users"></i> Usuarios
+      </a>
+      <a routerLink="/admin/eventos"
+         class="ez-btn-primary">
+        <i class="pi pi-calendar"></i> Eventos
+      </a>
+    </div>
+  </div>
+
+  @if (cargando() && !stats()) {
+    <div class="flex justify-center py-16">
+      <p-progressSpinner styleClass="!w-12 !h-12" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else if (stats()) {
+    <!-- KPIs principales -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <app-stat-card label="Eventos activos" [value]="stats()!.eventosActivos" icon="pi-calendar-plus" tone="success"></app-stat-card>
+      <app-stat-card label="Eventos pendientes" [value]="stats()!.eventosPendientes" sublabel="Esperando aprobación" icon="pi-clock" tone="warn"></app-stat-card>
+      <app-stat-card label="Usuarios totales" [value]="stats()!.usuariosTotales" icon="pi-users"></app-stat-card>
+      <app-stat-card label="Inscripciones" [value]="stats()!.inscripcionesTotales" icon="pi-list" tone="info"></app-stat-card>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <app-stat-card label="Organizadores activos" [value]="stats()!.organizadoresActivos" icon="pi-id-card"></app-stat-card>
+      <app-stat-card label="Asistentes" [value]="stats()!.asistentesTotales" icon="pi-user"></app-stat-card>
+      <app-stat-card label="Staff" [value]="stats()!.staffTotales" icon="pi-shield"></app-stat-card>
+      <app-stat-card label="Cancelados" [value]="stats()!.eventosCancelados" icon="pi-ban" tone="danger"></app-stat-card>
+    </div>
+
+    <!-- Atención -->
+    @if (tieneAtencion()) {
+      <section class="bg-coral-50 border border-coral-200 rounded-2xl p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <i class="pi pi-bell text-coral-600"></i>
+          <h2 class="text-base font-bold text-coral-700 font-display uppercase tracking-wider">
+            Requieren tu atención
+          </h2>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Eventos pendientes -->
+          <div class="bg-white rounded-xl p-4 border border-coral-100">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-brand-700">Eventos pendientes</span>
+              <a routerLink="/admin/eventos" [queryParams]="{ estado: 'PENDIENTE' }"
+                 class="text-[11px] text-brand-700 hover:text-brand-800 font-semibold underline">
+                Ver todos
+              </a>
+            </div>
+            @if (eventosPendientes().length === 0) {
+              <p class="text-xs text-surface-400 italic">No hay eventos por aprobar.</p>
+            } @else {
+              <ul class="space-y-2">
+                @for (e of eventosPendientes(); track e.id) {
+                  <li>
+                    <a [routerLink]="['/admin/eventos']" [queryParams]="{ estado: 'PENDIENTE', focus: e.id }"
+                       class="block hover:bg-brand-50 rounded-lg p-2 transition">
+                      <div class="font-semibold text-surface-900 text-sm line-clamp-1">{{ e.nombre }}</div>
+                      <div class="text-[11px] text-surface-500">
+                        {{ e.fecha | date: 'dd MMM yyyy' }} · {{ e.aforoMaximo }} cupos
+                      </div>
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <!-- Organizadores pendientes -->
+          <div class="bg-white rounded-xl p-4 border border-coral-100">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-brand-700">Organizadores pendientes</span>
+              <a routerLink="/admin/usuarios" [queryParams]="{ rol: 'ORGANIZADOR', estado: 'PENDIENTE' }"
+                 class="text-[11px] text-brand-700 hover:text-brand-800 font-semibold underline">
+                Ver todos
+              </a>
+            </div>
+            @if (organizadoresPendientes().length === 0) {
+              <p class="text-xs text-surface-400 italic">No hay solicitudes pendientes.</p>
+            } @else {
+              <ul class="space-y-2">
+                @for (u of organizadoresPendientes(); track u.id) {
+                  <li class="hover:bg-brand-50 rounded-lg p-2 transition">
+                    <div class="font-semibold text-surface-900 text-sm line-clamp-1">{{ u.nombre }}</div>
+                    <div class="text-[11px] text-surface-500 truncate">{{ u.email }}</div>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <!-- Pagos pendientes -->
+          <div class="bg-white rounded-xl p-4 border border-coral-100">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-brand-700">Pagos por validar</span>
+              <a routerLink="/admin/pagos"
+                 class="text-[11px] text-brand-700 hover:text-brand-800 font-semibold underline">
+                Ver todos
+              </a>
+            </div>
+            @if (pagosPendientes().length === 0) {
+              <p class="text-xs text-surface-400 italic">No hay pagos por revisar.</p>
+            } @else {
+              <ul class="space-y-2">
+                @for (p of pagosPendientes(); track p.id) {
+                  <li class="hover:bg-brand-50 rounded-lg p-2 transition flex items-center gap-2">
+                    <i class="pi pi-wallet text-brand-500"></i>
+                    <div class="flex-1 min-w-0">
+                      <div class="font-semibold text-surface-900 text-sm truncate">
+                        {{ p.nombreEvento || ('Pago #' + p.id) }}
+                      </div>
+                      <div class="text-[11px] text-surface-500 truncate">
+                        {{ p.nombreOrganizador || ('Org. #' + p.organizadorId) }} · {{ p.fecha | date: 'dd MMM' }}
+                      </div>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Series mensuales -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="ez-card">
+        <h3 class="text-sm font-bold text-brand-700 font-display uppercase tracking-wider mb-3">
+          Eventos creados por mes
+        </h3>
+        @if (stats()!.serieMensualEventos.length === 0) {
+          <p class="text-xs text-surface-400 italic">Sin datos para mostrar.</p>
+        } @else {
+          <div class="flex items-end gap-1.5 h-32">
+            @for (p of stats()!.serieMensualEventos; track p.periodo) {
+              <div class="flex-1 flex flex-col items-center gap-1">
+                <div class="w-full bg-brand-500 rounded-t-md transition hover:bg-brand-600"
+                     [style.height.%]="(p.valor / maxEventoSerie()) * 100"
+                     [title]="p.periodo + ': ' + p.valor"></div>
+                <span class="text-[9px] text-surface-500 uppercase">{{ p.periodo.slice(-2) }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="ez-card">
+        <h3 class="text-sm font-bold text-brand-700 font-display uppercase tracking-wider mb-3">
+          Nuevos usuarios por mes
+        </h3>
+        @if (stats()!.serieMensualUsuarios.length === 0) {
+          <p class="text-xs text-surface-400 italic">Sin datos para mostrar.</p>
+        } @else {
+          <div class="flex items-end gap-1.5 h-32">
+            @for (p of stats()!.serieMensualUsuarios; track p.periodo) {
+              <div class="flex-1 flex flex-col items-center gap-1">
+                <div class="w-full bg-accent-500 rounded-t-md transition hover:bg-accent-600"
+                     [style.height.%]="(p.valor / maxUsuarioSerie()) * 100"
+                     [title]="p.periodo + ': ' + p.valor"></div>
+                <span class="text-[9px] text-surface-500 uppercase">{{ p.periodo.slice(-2) }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Accesos rápidos -->
+    <section>
+      <h2 class="text-base font-bold text-brand-700 font-display uppercase tracking-wider mb-3">
+        Accesos rápidos
+      </h2>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <a routerLink="/admin/eventos"
+           class="bg-white rounded-2xl border border-brand-100 hover:border-brand-300 hover:shadow-card p-4 flex items-center gap-3 transition">
+          <div class="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center">
+            <i class="pi pi-calendar"></i>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-surface-900">Eventos</div>
+            <div class="text-[11px] text-surface-500">Aprobar / rechazar</div>
+          </div>
+        </a>
+        <a routerLink="/admin/usuarios"
+           class="bg-white rounded-2xl border border-brand-100 hover:border-brand-300 hover:shadow-card p-4 flex items-center gap-3 transition">
+          <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <i class="pi pi-users"></i>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-surface-900">Usuarios</div>
+            <div class="text-[11px] text-surface-500">Roles y estados</div>
+          </div>
+        </a>
+        <a routerLink="/admin/pagos"
+           class="bg-white rounded-2xl border border-brand-100 hover:border-brand-300 hover:shadow-card p-4 flex items-center gap-3 transition">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+            <i class="pi pi-wallet"></i>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-surface-900">Pagos</div>
+            <div class="text-[11px] text-surface-500">Validación</div>
+          </div>
+        </a>
+        <a routerLink="/admin/auditoria"
+           class="bg-white rounded-2xl border border-brand-100 hover:border-brand-300 hover:shadow-card p-4 flex items-center gap-3 transition">
+          <div class="w-10 h-10 rounded-xl bg-coral-100 text-coral-700 flex items-center justify-center">
+            <i class="pi pi-shield"></i>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-surface-900">Auditoría</div>
+            <div class="text-[11px] text-surface-500">Historial</div>
+          </div>
+        </a>
+      </div>
+    </section>
+  }
+</div>

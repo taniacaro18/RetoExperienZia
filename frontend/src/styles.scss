@@ -1,0 +1,504 @@
+/* ============================================================
+   ExperienZia · Sistema de Diseño Global (replica del Figma)
+   ============================================================
+   Reglas globales y clases utilitarias que TODA pantalla debe
+   usar para mantener consistencia visual con el diseño oficial.
+   ============================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import 'primeicons/primeicons.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+/* -----------------------------------------------------------
+   1. Tokens de diseño · variables CSS
+   ----------------------------------------------------------- */
+:root {
+  /* Colores · paleta del Figma */
+  --brand-50: #F4EEFB;
+  --brand-100: #E8DDF6;
+  --brand-200: #D2BCEB;
+  --brand-300: #BC9CDF;
+  --brand-400: #A77FD3;   /* fondo body / sombra del shell */
+  --brand-500: #9061C2;   /* header / sidebar */
+  --brand-600: #7C49AE;   /* botones primarios */
+  --brand-700: #65378F;
+  --brand-800: #4E2A6F;
+  --brand-900: #372050;
+
+  --coral-500: #EF6C4D;
+  --coral-600: #D8553A;
+
+  --accent-500: #10B981;  /* verde aprobado / activo */
+  --accent-600: #059669;
+
+  --warn-500: #F59E0B;    /* ámbar pendiente */
+  --rose-500: #F43F5E;    /* rojo rechazo */
+
+  --surface-0: #FFFFFF;
+  --surface-50: #FAF8FB;
+  --surface-100: #F3F0F6;
+  --surface-200: #E6E0EC;
+  --surface-300: #CFC6D8;
+  --surface-500: #6B6377;
+  --surface-700: #3B3445;
+  --surface-900: #1B1726;
+
+  /* Tipografía */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Inter', sans-serif;
+
+  /* Radii (Figma: bordes suaves pero NO exagerados) */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill: 9999px;
+
+  /* Sombras */
+  --sh-soft: 0 2px 6px rgba(60, 40, 90, 0.06);
+  --sh-card: 0 1px 2px rgba(60, 40, 90, 0.04), 0 6px 16px rgba(120, 96, 168, 0.10);
+  --sh-violet: 0 6px 18px rgba(101, 55, 143, 0.20);
+
+  /* Heights estándar de controles */
+  --h-input: 40px;
+  --h-button: 40px;
+  --h-button-lg: 44px;
+}
+
+/* -----------------------------------------------------------
+   2. Reset y base
+   ----------------------------------------------------------- */
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  background: var(--brand-400);
+  color: var(--surface-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+button { font-family: inherit; }
+
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* -----------------------------------------------------------
+   3. Helpers de marca
+   ----------------------------------------------------------- */
+.bg-brand-gradient {
+  background-image: linear-gradient(135deg, #C7B9E2 0%, #E8B0B0 50%, #F4C2A8 100%);
+}
+.bg-brand-gradient-strong {
+  background-image: linear-gradient(135deg, #9061C2 0%, #7C49AE 100%);
+}
+.text-brand-gradient {
+  background: linear-gradient(135deg, #9061C2 0%, #7C49AE 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* -----------------------------------------------------------
+   4. Cards · contenedor base
+   ----------------------------------------------------------- */
+.ez-card {
+  background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-soft);
+  padding: 20px;
+}
+.ez-card-lg { padding: 24px; }
+.ez-card-sm { padding: 16px; border-radius: var(--r-lg); }
+
+.ez-card-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--brand-800);
+  margin-bottom: 14px;
+  letter-spacing: 0.01em;
+}
+.ez-section-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--brand-700);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* -----------------------------------------------------------
+   5. Form fields · estilo Figma (label uppercase con asterisco)
+   ----------------------------------------------------------- */
+.ez-field { display: block; margin-bottom: 14px; }
+
+.ez-field-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-800);
+  margin-bottom: 6px;
+}
+.ez-field-label .req { color: var(--rose-500); margin-right: 2px; }
+
+.ez-input,
+.ez-select,
+.ez-textarea {
+  width: 100%;
+  height: var(--h-input);
+  background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-radius: var(--r-md);
+  padding: 0 12px;
+  font-size: 13px;
+  color: var(--surface-900);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ez-input::placeholder,
+.ez-textarea::placeholder { color: var(--surface-300); text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+
+.ez-textarea { height: auto; min-height: 88px; padding: 10px 12px; resize: vertical; }
+
+.ez-input:focus,
+.ez-select:focus,
+.ez-textarea:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px rgba(144, 97, 194, 0.18);
+}
+
+/* PrimeNG inputs alineados con el sistema */
+.p-inputtext,
+.p-password-input,
+.p-select,
+.p-multiselect,
+.p-dropdown {
+  border-radius: var(--r-md) !important;
+}
+.p-inputtext:focus,
+.p-password-input:focus,
+.p-select:focus,
+.p-multiselect:focus,
+.p-dropdown:focus {
+  box-shadow: 0 0 0 3px rgba(144, 97, 194, 0.18) !important;
+  border-color: var(--brand-500) !important;
+}
+
+/* -----------------------------------------------------------
+   6. Botones unificados (siguiendo el Figma)
+   ----------------------------------------------------------- */
+.ez-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--h-button);
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background .15s ease, transform .1s ease, box-shadow .15s ease;
+  white-space: nowrap;
+}
+.ez-btn[disabled],
+.ez-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+.ez-btn-lg { height: var(--h-button-lg); padding: 0 22px; font-size: 14px; }
+.ez-btn-sm { height: 32px; padding: 0 12px; font-size: 12px; }
+
+.ez-btn-primary {
+  @extend .ez-btn;
+  background: var(--brand-600);
+  color: #fff;
+  box-shadow: var(--sh-violet);
+}
+.ez-btn-primary:hover { background: var(--brand-700); }
+
+.ez-btn-secondary {
+  @extend .ez-btn;
+  background: var(--brand-100);
+  color: var(--brand-800);
+}
+.ez-btn-secondary:hover { background: var(--brand-200); }
+
+.ez-btn-outline {
+  @extend .ez-btn;
+  background: transparent;
+  color: var(--brand-700);
+  border-color: var(--brand-500);
+}
+.ez-btn-outline:hover { background: var(--brand-50); }
+
+.ez-btn-ghost {
+  @extend .ez-btn;
+  background: transparent;
+  color: var(--surface-700);
+  border-color: var(--surface-200);
+}
+.ez-btn-ghost:hover { background: var(--surface-50); border-color: var(--surface-300); }
+
+.ez-btn-success {
+  @extend .ez-btn;
+  background: var(--accent-500);
+  color: #fff;
+}
+.ez-btn-success:hover { background: var(--accent-600); }
+
+.ez-btn-danger {
+  @extend .ez-btn;
+  background: var(--rose-500);
+  color: #fff;
+}
+.ez-btn-danger:hover { background: #e11d48; }
+
+/* -----------------------------------------------------------
+   7. Tablas
+   ----------------------------------------------------------- */
+.ez-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.ez-table thead th {
+  background: var(--brand-50);
+  color: var(--brand-800);
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--surface-200);
+}
+.ez-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--surface-100);
+  color: var(--surface-700);
+  vertical-align: middle;
+}
+.ez-table tbody tr:last-child td { border-bottom: 0; }
+.ez-table tbody tr:hover { background: var(--brand-50); transition: background .12s ease; }
+
+/* -----------------------------------------------------------
+   8. Stat cards (Eventos Activos, Inscritos, Aforo Disponible…)
+   ----------------------------------------------------------- */
+.ez-stat {
+  background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--sh-soft);
+}
+.ez-stat-label {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--brand-700);
+}
+.ez-stat-value {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 30px;
+  color: var(--surface-900);
+  line-height: 1.1;
+}
+.ez-stat-sublabel { font-size: 12px; color: var(--surface-500); }
+
+/* -----------------------------------------------------------
+   9. Event card (catálogo y mis inscripciones)
+   ----------------------------------------------------------- */
+.ez-event-card {
+  background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--sh-soft);
+  display: flex;
+  flex-direction: column;
+}
+.ez-event-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--brand-50);
+  border-bottom: 1px solid var(--surface-200);
+}
+.ez-event-card-badge {
+  width: 32px; height: 32px;
+  border-radius: var(--r-pill);
+  background: var(--brand-600);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ez-event-card-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--brand-800);
+}
+.ez-event-card-body { padding: 14px 16px; flex: 1; }
+.ez-event-card-footer { padding: 12px 16px; border-top: 1px solid var(--surface-100); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* -----------------------------------------------------------
+   10. Badges de estado (uniformes en todas las pantallas)
+   ----------------------------------------------------------- */
+.ez-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.ez-badge-activo,
+.ez-badge-aprobado    { background: #DCFCE7; color: #166534; border-color: #86EFAC; }
+.ez-badge-finalizado  { background: var(--brand-50); color: var(--brand-700); border-color: var(--brand-200); }
+.ez-badge-pend-pago   { background: #FEF3C7; color: #92400E; border-color: #FCD34D; }
+.ez-badge-pend-apro,
+.ez-badge-pendiente   { background: #FEF9C3; color: #854D0E; border-color: #FDE68A; }
+.ez-badge-rechazado   { background: #FEE2E2; color: #991B1B; border-color: #FCA5A5; }
+.ez-badge-cancelado   { background: var(--surface-100); color: var(--surface-700); border-color: var(--surface-200); }
+.ez-badge-revision    { background: #DBEAFE; color: #1E40AF; border-color: #93C5FD; }
+.ez-badge-disponible  { background: #ECFDF5; color: #047857; border-color: #6EE7B7; }
+.ez-badge-bloqueada   { background: #FEE2E2; color: #991B1B; border-color: #FCA5A5; }
+.ez-badge-provisional { background: #FEF3C7; color: #92400E; border-color: #FCD34D; }
+.ez-badge-en-pausa    { background: #E0E7FF; color: #3730A3; border-color: #A5B4FC; }
+
+/* -----------------------------------------------------------
+   11. Modales (PrimeNG dialog) coherentes con el Figma
+   ----------------------------------------------------------- */
+.p-dialog .p-dialog-header,
+.p-dialog .p-dialog-content,
+.p-dialog .p-dialog-footer {
+  background: var(--surface-0) !important;
+}
+.p-dialog .p-dialog-header {
+  padding: 18px 22px !important;
+  border-bottom: 1px solid var(--surface-200) !important;
+  font-family: var(--font-display);
+}
+.p-dialog .p-dialog-content { padding: 18px 22px !important; font-size: 13px; }
+.p-dialog .p-dialog-footer  { padding: 14px 22px !important; border-top: 1px solid var(--surface-100) !important; }
+.p-dialog { border-radius: var(--r-xl) !important; overflow: hidden; }
+
+/* -----------------------------------------------------------
+   12. Toasts
+   ----------------------------------------------------------- */
+.p-toast .p-toast-message-success {
+  background: #ECFDF5 !important;
+  border-left: 4px solid var(--accent-500) !important;
+}
+.p-toast .p-toast-message-info {
+  background: var(--brand-50) !important;
+  border-left: 4px solid var(--brand-500) !important;
+}
+.p-toast .p-toast-message-warn {
+  background: #FEF9C3 !important;
+  border-left: 4px solid var(--warn-500) !important;
+}
+.p-toast .p-toast-message-error {
+  background: #FEE2E2 !important;
+  border-left: 4px solid var(--rose-500) !important;
+}
+
+/* -----------------------------------------------------------
+   13. Sidebar item (menú de cada rol)
+   ----------------------------------------------------------- */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--brand-800);
+  font-weight: 600;
+  font-size: 13px;
+  transition: background .15s ease, transform .1s ease;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+.sidebar-item:hover { background: #ffffff; transform: translateX(2px); }
+.sidebar-item.active {
+  background: var(--brand-700);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(50, 25, 80, 0.20);
+  border-color: transparent;
+}
+
+/* -----------------------------------------------------------
+   14. Botón compatibilidad histórica (.btn-violet) → primario
+   ----------------------------------------------------------- */
+.btn-violet {
+  @extend .ez-btn-primary;
+}
+.btn-violet-outline {
+  @extend .ez-btn-outline;
+}
+
+/* -----------------------------------------------------------
+   15. Layout helpers
+   ----------------------------------------------------------- */
+.ez-page { padding: 16px; }
+@media (min-width: 1024px) { .ez-page { padding: 24px; } }
+
+.ez-page-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--brand-800);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.ez-page-subtitle {
+  font-size: 13px;
+  color: var(--surface-500);
+  margin-bottom: 18px;
+}

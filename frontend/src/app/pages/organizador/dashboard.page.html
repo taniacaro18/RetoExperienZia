@@ -1,0 +1,199 @@
+<div class="space-y-5">
+  <div class="flex items-end justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="ez-section-title">Dashboard</h1>
+      <p class="ez-page-subtitle !mb-0">Resumen de tu actividad como organizador.</p>
+    </div>
+    <a routerLink="/organizador/eventos/nuevo" class="ez-btn-primary">
+      <i class="pi pi-plus text-[10px]"></i>
+      <span>Crear Evento</span>
+    </a>
+  </div>
+
+  @if (cargando()) {
+    <div class="flex justify-center py-16">
+      <p-progressSpinner styleClass="!w-12 !h-12" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else {
+    <!-- Stats principales -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <app-stat-card
+        label="Eventos Activos"
+        [value]="stats()?.eventosActivos ?? 0"
+        sublabel="En curso o próximos"
+        icon="pi-calendar-plus"
+      ></app-stat-card>
+      <app-stat-card
+        label="Total Inscritos"
+        [value]="stats()?.totalInscritos ?? 0"
+        sublabel="Personas inscritas a tus eventos"
+        icon="pi-users"
+      ></app-stat-card>
+      <app-stat-card
+        label="Aforo Disponible"
+        [value]="stats()?.aforoDisponibleTotal ?? 0"
+        [sublabel]="'de ' + (stats()?.aforoMaximoTotal ?? 0) + ' totales'"
+        icon="pi-chart-pie"
+      ></app-stat-card>
+      <app-stat-card
+        label="Asistencias 30 días"
+        [value]="stats()?.asistenciasUltimos30Dias ?? 0"
+        sublabel="Check-ins recientes"
+        icon="pi-check-circle"
+      ></app-stat-card>
+    </div>
+
+    <!-- Distribución + atención -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <a routerLink="/organizador/eventos" class="ez-stat hover:shadow-card transition block">
+        <div class="ez-stat-label">Pendientes</div>
+        <div class="flex items-center justify-between mt-1">
+          <div class="ez-stat-value">{{ stats()?.eventosPendientes ?? 0 }}</div>
+          <i class="pi pi-clock text-brand-300 text-xl"></i>
+        </div>
+        <div class="ez-stat-sublabel mt-1">Esperando aprobación</div>
+      </a>
+      <a routerLink="/organizador/eventos" class="ez-stat hover:shadow-card transition block">
+        <div class="ez-stat-label">Cancelados</div>
+        <div class="flex items-center justify-between mt-1">
+          <div class="ez-stat-value">{{ stats()?.eventosCancelados ?? 0 }}</div>
+          <i class="pi pi-times-circle text-rose-300 text-xl"></i>
+        </div>
+        <div class="ez-stat-sublabel mt-1">Eventos cancelados</div>
+      </a>
+      <a routerLink="/organizador/eventos" class="ez-stat hover:shadow-card transition block">
+        <div class="ez-stat-label">Total Histórico</div>
+        <div class="flex items-center justify-between mt-1">
+          <div class="ez-stat-value">{{ stats()?.eventosTotales ?? 0 }}</div>
+          <i class="pi pi-folder text-brand-300 text-xl"></i>
+        </div>
+        <div class="ez-stat-sublabel mt-1">Eventos creados en total</div>
+      </a>
+    </div>
+
+    <!-- Series mensuales -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="ez-card">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="ez-card-title !mb-0">Inscripciones por mes</h3>
+          <i class="pi pi-chart-bar text-brand-400"></i>
+        </div>
+        @if (serieInscripciones().length === 0) {
+          <p class="text-sm text-surface-500">Aún no hay datos.</p>
+        } @else {
+          <div class="flex items-end gap-2 h-32">
+            @for (b of serieInscripciones(); track b.periodo) {
+              <div class="flex-1 flex flex-col items-center gap-1">
+                <div class="w-full bg-surface-100 rounded relative" style="height: 100%">
+                  <div class="absolute bottom-0 inset-x-0 bg-brand-500 rounded transition-all"
+                       [style.height.%]="b.pct"
+                       [title]="b.periodo + ': ' + b.valor"></div>
+                </div>
+                <div class="text-[10px] text-surface-500">{{ b.periodo }}</div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="ez-card">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="ez-card-title !mb-0">Eventos creados por mes</h3>
+          <i class="pi pi-calendar text-brand-400"></i>
+        </div>
+        @if (serieEventos().length === 0) {
+          <p class="text-sm text-surface-500">Aún no hay datos.</p>
+        } @else {
+          <div class="flex items-end gap-2 h-32">
+            @for (b of serieEventos(); track b.periodo) {
+              <div class="flex-1 flex flex-col items-center gap-1">
+                <div class="w-full bg-surface-100 rounded relative" style="height: 100%">
+                  <div class="absolute bottom-0 inset-x-0 bg-coral-400 rounded transition-all"
+                       [style.height.%]="b.pct"
+                       [title]="b.periodo + ': ' + b.valor"></div>
+                </div>
+                <div class="text-[10px] text-surface-500">{{ b.periodo }}</div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Necesitan atención -->
+    @if (necesitaAtencion().length > 0) {
+      <section>
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="ez-card-title !mb-0">Requieren tu atención</h2>
+          <span class="text-xs text-surface-500">{{ necesitaAtencion().length }} evento(s)</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          @for (e of necesitaAtencion(); track e.id) {
+            <a [routerLink]="['/organizador/eventos', e.id, 'editar']"
+               class="bg-rose-50 border border-rose-200 rounded-xl p-3 hover:shadow-soft transition flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="font-bold text-surface-900 truncate">{{ e.nombre }}</div>
+                <div class="text-[11px] text-surface-600 mt-0.5">
+                  {{ e.fecha | date: 'dd MMM yyyy · HH:mm' }}
+                </div>
+                @if (e.motivoRechazo) {
+                  <div class="text-[11px] text-rose-700 mt-1 line-clamp-2">
+                    <i class="pi pi-exclamation-triangle text-[10px]"></i> {{ e.motivoRechazo }}
+                  </div>
+                }
+              </div>
+              <span class="ez-badge"
+                    [ngClass]="{
+                      'ez-badge-pend-apro': e.estado === 'PENDIENTE',
+                      'ez-badge-rechazado': e.estado === 'RECHAZADO',
+                      'ez-badge-aprobado': e.estado === 'APROBADO'
+                    }">
+                {{ estadoLabel(e.estado) }}
+              </span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Próximos eventos -->
+    <section>
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="ez-card-title !mb-0">Próximos eventos</h2>
+        <a routerLink="/organizador/eventos" class="text-brand-700 hover:text-brand-800 text-xs font-bold underline">
+          Ver todos
+        </a>
+      </div>
+      @if (proximos().length === 0) {
+        <div class="bg-brand-50 border border-brand-200 rounded-md p-6 text-center text-surface-600">
+          <i class="pi pi-calendar-times text-2xl text-brand-300 mb-2"></i>
+          <p class="text-[13px]">No tienes eventos próximos. <a routerLink="/organizador/eventos/nuevo" class="text-brand-700 font-bold underline">Crea uno nuevo</a>.</p>
+        </div>
+      } @else {
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          @for (e of proximos(); track e.id) {
+            <a [routerLink]="['/organizador/eventos', e.id, 'editar']" class="ez-card-sm hover:shadow-card transition block">
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <h3 class="font-bold text-surface-900 line-clamp-2 text-[13px]">{{ e.nombre }}</h3>
+                <span class="ez-badge"
+                      [ngClass]="{
+                        'ez-badge-activo': e.estado === 'ACTIVO',
+                        'ez-badge-pend-apro': e.estado === 'PENDIENTE',
+                        'ez-badge-aprobado': e.estado === 'APROBADO',
+                        'ez-badge-finalizado': e.estado === 'FINALIZADO'
+                      }">
+                  {{ estadoLabel(e.estado) }}
+                </span>
+              </div>
+              <div class="text-[12px] text-surface-600 flex items-center gap-2 mb-2">
+                <i class="pi pi-calendar text-brand-500 text-[10px]"></i>
+                <span>{{ e.fecha | date: 'dd MMM yyyy · HH:mm' }}</span>
+              </div>
+              <app-aforo-bar [value]="e.aforoActual" [max]="e.aforoMaximo"></app-aforo-bar>
+            </a>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>

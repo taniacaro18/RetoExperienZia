@@ -1,0 +1,387 @@
+<div class="space-y-6">
+  <div class="flex items-end justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="ez-section-title">
+        Gestión de Asistentes
+      </h1>
+      <p class="text-surface-500 text-sm mt-1">Carga manual o masiva de asistentes a tus eventos.</p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      @if (asistentes().length > 0) {
+        <button type="button" (click)="exportarExcel()" class="ez-btn-success">
+          <i class="pi pi-file-excel text-[10px]"></i> Excel
+        </button>
+        <button type="button" (click)="exportarPdf()" class="ez-btn-danger">
+          <i class="pi pi-file-pdf text-[10px]"></i> PDF
+        </button>
+      }
+      <button type="button" (click)="abrirModalCsv()" class="ez-btn-secondary">
+        <i class="pi pi-upload text-[10px]"></i> Importar
+      </button>
+      <button type="button" (click)="abrirModalManual()" class="ez-btn-primary">
+        <i class="pi pi-user-plus text-[10px]"></i> Registro Manual
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <app-stat-card label="Asistentes registrados" [value]="stats().total" icon="pi-users"></app-stat-card>
+    <app-stat-card label="Inscritos" [value]="stats().inscritos" icon="pi-list"></app-stat-card>
+    <app-stat-card label="Asistieron" [value]="stats().asistieron" icon="pi-check-circle"></app-stat-card>
+    <app-stat-card label="Cancelados" [value]="stats().cancelados" icon="pi-times-circle"></app-stat-card>
+  </div>
+
+  <!-- Selector evento + búsqueda -->
+  <div class="bg-white border border-brand-100 rounded-2xl p-4 shadow-soft flex flex-wrap items-end gap-4">
+    <div class="flex-1 min-w-[240px]">
+      <label class="ez-field-label">
+        Evento
+      </label>
+      @if (cargando()) {
+        <p class="text-sm text-surface-500"><i class="pi pi-spin pi-spinner mr-1"></i> Cargando…</p>
+      } @else if (opcionesEventos().length === 0) {
+        <p class="text-sm text-surface-500">No tienes eventos ACTIVOS aún.</p>
+      } @else {
+        <p-select
+          [options]="opcionesEventos()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="eventoSeleccionado()"
+          (ngModelChange)="cambiarEvento($event)"
+          styleClass="w-full"
+          appendTo="body"
+        ></p-select>
+      }
+    </div>
+
+    <div class="flex-1 min-w-[240px]">
+      <label class="ez-field-label">
+        Buscar
+      </label>
+      <div class="flex gap-2">
+        <input pInputText
+               [ngModel]="busqueda()"
+               (ngModelChange)="busqueda.set($event)"
+               (keyup.enter)="buscarAsistentes()"
+               class="w-full"
+               placeholder="Nombre, correo o documento" />
+        <button type="button"
+                (click)="buscarAsistentes()"
+                class="ez-btn-primary">
+          <i class="pi pi-search text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs por estado -->
+  @if (eventoSeleccionado()) {
+    <div class="flex flex-wrap items-center gap-2 text-xs">
+      <button type="button"
+              (click)="cambiarFiltroEstado('TODOS')"
+              [class]="filtroEstado() === 'TODOS' ? 'bg-brand-600 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-brand-50'"
+              class="px-3 h-8 rounded-full font-semibold transition flex items-center gap-1">
+        Todos <span class="opacity-80">{{ stats().total }}</span>
+      </button>
+      <button type="button"
+              (click)="cambiarFiltroEstado('INSCRITO')"
+              [class]="filtroEstado() === 'INSCRITO' ? 'bg-brand-600 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-brand-50'"
+              class="px-3 h-8 rounded-full font-semibold transition flex items-center gap-1">
+        Inscritos <span class="opacity-80">{{ stats().inscritos }}</span>
+      </button>
+      <button type="button"
+              (click)="cambiarFiltroEstado('ASISTIO')"
+              [class]="filtroEstado() === 'ASISTIO' ? 'bg-brand-600 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-brand-50'"
+              class="px-3 h-8 rounded-full font-semibold transition flex items-center gap-1">
+        Asistieron <span class="opacity-80">{{ stats().asistieron }}</span>
+      </button>
+      <button type="button"
+              (click)="cambiarFiltroEstado('CANCELADO')"
+              [class]="filtroEstado() === 'CANCELADO' ? 'bg-brand-600 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-brand-50'"
+              class="px-3 h-8 rounded-full font-semibold transition flex items-center gap-1">
+        Cancelados <span class="opacity-80">{{ stats().cancelados }}</span>
+      </button>
+    </div>
+  }
+
+  <!-- Tabla -->
+  @if (cargandoAsistentes()) {
+    <div class="flex justify-center py-12">
+      <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else if (!eventoSeleccionado()) {
+    <div class="bg-brand-50 border border-brand-200 rounded-xl p-10 text-center">
+      <i class="pi pi-calendar text-5xl text-brand-300 mb-3"></i>
+      <p class="text-surface-700">Selecciona un evento para ver sus asistentes.</p>
+    </div>
+  } @else if (asistentesFiltrados().length === 0) {
+    <div class="bg-brand-50 border border-brand-200 rounded-xl p-10 text-center">
+      <i class="pi pi-users text-5xl text-brand-300 mb-3"></i>
+      @if (asistentes().length === 0) {
+        <p class="text-surface-700 font-medium mb-1">Sin asistentes registrados</p>
+        <p class="text-surface-500 text-sm">Usa "Registro Manual" o "Importar" para agregarlos.</p>
+      } @else {
+        <p class="text-surface-700 font-medium mb-1">No hay asistentes con este filtro</p>
+        <p class="text-surface-500 text-sm">Cambia la pestaña o limpia la búsqueda.</p>
+      }
+    </div>
+  } @else {
+    <div class="bg-white border border-brand-100 rounded-2xl overflow-hidden shadow-soft">
+      <div class="overflow-x-auto">
+        <table class="ez-table min-w-full"><thead>
+            <tr>
+              <th>Asistente</th>
+              <th>Documento</th>
+              <th>Estado</th>
+              <th>Inscripción</th>
+              <th class="!text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of asistentesFiltrados(); track a.inscripcionId) {
+              <tr>
+                <td>
+                  <div class="font-semibold text-surface-900">{{ a.nombre }}</div>
+                  <div class="text-xs text-surface-500">{{ a.email }}</div>
+                  @if (a.telefono) {
+                    <div class="text-xs text-surface-400">{{ a.telefono }}</div>
+                  }
+                </td>
+                <td class="text-surface-700 !text-xs">
+                  {{ a.tipoDocumento }} {{ a.numeroDocumento }}
+                </td>
+                <td>
+                  <p-tag
+                    [value]="a.estadoInscripcion"
+                    [severity]="estadoSeverity(a.estadoInscripcion)"
+                  ></p-tag>
+                  @if (a.fechaCheckIn) {
+                    <div class="text-[11px] text-accent-600 mt-1">
+                      <i class="pi pi-check-circle text-[10px]"></i>
+                      Check-in {{ a.fechaCheckIn | date: 'dd/MM HH:mm' }}
+                    </div>
+                  }
+                  @if (a.fechaCheckOut) {
+                    <div class="text-[11px] text-brand-600 mt-0.5">
+                      <i class="pi pi-sign-out text-[10px]"></i>
+                      Check-out {{ a.fechaCheckOut | date: 'dd/MM HH:mm' }}
+                    </div>
+                  }
+                </td>
+                <td class="text-surface-700 !text-xs">
+                  {{ a.fechaInscripcion ? (a.fechaInscripcion | date: 'dd/MM/yyyy') : '—' }}
+                </td>
+                <td>
+                  <div class="flex items-center justify-end gap-2 flex-wrap">
+                    <button type="button"
+                            (click)="reenviarCredenciales(a)"
+                            class="ez-btn-secondary ez-btn-sm">
+                      <i class="pi pi-send text-[10px]"></i>
+                      Reenviar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-brand-50/30 text-xs text-surface-500 border-t border-brand-100">
+        Mostrando {{ asistentesFiltrados().length }} de {{ stats().total }} asistentes.
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Modal Registro Manual -->
+<p-dialog
+  [visible]="modalManual()"
+  (visibleChange)="!$event && cerrarModalManual()"
+  [modal]="true"
+  [closable]="true"
+  header="Registrar Nuevo Asistente"
+  [style]="{ width: '500px' }"
+>
+  <form [formGroup]="formManual" (ngSubmit)="enviarManual()" class="space-y-4 pt-2" novalidate>
+    <div class="ez-field !mb-0">
+      <label class="ez-field-label"><span class="req">*</span>Nombre completo</label>
+      <input pInputText formControlName="nombre" class="ez-input" placeholder="Laura Sánchez" />
+    </div>
+    <div class="ez-field !mb-0">
+      <label class="ez-field-label"><span class="req">*</span>Correo electrónico</label>
+      <input pInputText type="email" formControlName="email" class="ez-input" placeholder="laura@correo.com" />
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="ez-field !mb-0">
+        <label class="ez-field-label">Tipo doc.</label>
+        <p-select
+          formControlName="tipoDocumento"
+          [options]="tiposDocumento"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+          appendTo="body"
+        ></p-select>
+      </div>
+      <div class="ez-field !mb-0">
+        <label class="ez-field-label"><span class="req">*</span>Número</label>
+        <input pInputText formControlName="numeroDocumento" class="ez-input" placeholder="1234567890" />
+      </div>
+    </div>
+    <div class="ez-field !mb-0">
+      <label class="ez-field-label">
+        Teléfono <span class="text-surface-400 font-normal">(opcional)</span>
+      </label>
+      <input pInputText formControlName="telefono" class="ez-input" placeholder="3001234567" />
+    </div>
+
+    <div class="bg-brand-50 border border-brand-200 text-brand-800 rounded-md px-3 py-2 text-xs">
+      <i class="pi pi-info-circle mr-1"></i>
+      La contraseña inicial será su número de documento.
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <button type="button"
+              (click)="cerrarModalManual()"
+              class="ez-btn-ghost"
+              [disabled]="procesandoCarga()">
+        Cancelar
+      </button>
+      <button type="submit"
+              class="ez-btn-primary"
+              [disabled]="procesandoCarga()">
+        @if (procesandoCarga()) {
+          <i class="pi pi-spin pi-spinner text-[10px]"></i>
+        }
+        Crear Asistente
+      </button>
+    </div>
+  </form>
+</p-dialog>
+
+<!-- Modal Importación masiva (Excel/CSV) -->
+<p-dialog
+  [visible]="modalCsv()"
+  (visibleChange)="!$event && cerrarModalCsv()"
+  [modal]="true"
+  [closable]="true"
+  header="Importación Masiva (Excel)"
+  [style]="{ width: '500px' }"
+>
+  <div class="space-y-4 pt-2">
+    <p class="text-sm text-surface-600">
+      Sube un archivo <strong>.xlsx</strong>, <strong>.xls</strong> o <strong>.csv</strong> con las columnas:
+      <code class="bg-brand-50 px-1.5 py-0.5 rounded text-brand-700">nombre, email, telefono, tipoDocumento, numeroDocumento</code>.
+    </p>
+
+    <div class="ez-field !mb-0">
+      <label class="ez-field-label">Archivo (.xlsx / .xls / .csv)</label>
+      <input
+        type="file"
+        accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+        (change)="archivoSeleccionado($event)"
+        class="block w-full text-sm border border-surface-200 rounded-md p-2 bg-white
+               file:mr-3 file:px-4 file:py-1.5 file:rounded-full
+               file:border-0 file:bg-brand-600 file:text-white
+               file:font-semibold hover:file:bg-brand-700 file:cursor-pointer"
+      />
+      @if (archivoCsv()) {
+        <p class="text-xs text-surface-500 mt-1.5 flex items-center gap-1">
+          <i class="pi pi-paperclip text-[10px]"></i>
+          {{ archivoCsv()?.name }} ({{ ((archivoCsv()?.size ?? 0) / 1024).toFixed(1) }} KB)
+        </p>
+      }
+    </div>
+
+    <button type="button"
+            (click)="descargarPlantilla()"
+            class="text-brand-700 hover:text-brand-800 font-medium text-sm underline flex items-center gap-1">
+      <i class="pi pi-download text-[10px]"></i>
+      Descargar plantilla Excel (.xlsx)
+    </button>
+
+    <div class="bg-brand-50 border border-brand-200 text-brand-800 rounded-md px-3 py-2 text-xs">
+      <i class="pi pi-info-circle mr-1"></i>
+      Capacidad máxima: 500 registros por carga. La contraseña inicial será el número de documento.
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <button type="button"
+              (click)="cerrarModalCsv()"
+              class="ez-btn-ghost"
+              [disabled]="procesandoCarga()">
+        Cancelar
+      </button>
+      <button type="button"
+              (click)="procesarCsv()"
+              class="ez-btn-primary"
+              [disabled]="!archivoCsv() || procesandoCarga()">
+        @if (procesandoCarga()) {
+          <i class="pi pi-spin pi-spinner text-[10px]"></i>
+        } @else {
+          <i class="pi pi-upload text-[10px]"></i>
+        }
+        Procesar Carga
+      </button>
+    </div>
+  </div>
+</p-dialog>
+
+<!-- Modal Resultado de carga -->
+<p-dialog
+  [visible]="modalResultado() !== null"
+  (visibleChange)="!$event && cerrarResultado()"
+  [modal]="true"
+  [closable]="true"
+  header="Resultado de la importación"
+  [style]="{ width: '520px' }"
+>
+  @if (modalResultado(); as r) {
+    <div class="space-y-4 pt-2">
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-accent-50 border border-accent-200 rounded-md p-3 text-center">
+          <div class="text-xs text-accent-700 font-bold uppercase tracking-wider">Cuentas nuevas</div>
+          <div class="text-2xl font-extrabold text-accent-700 mt-1 font-display">{{ r.cuentasNuevasCreadas }}</div>
+        </div>
+        <div class="bg-brand-50 border border-brand-200 rounded-md p-3 text-center">
+          <div class="text-xs text-brand-700 font-bold uppercase tracking-wider">Inscripciones</div>
+          <div class="text-2xl font-extrabold text-brand-700 mt-1 font-display">{{ r.inscripcionesRegistradas }}</div>
+        </div>
+        <div class="bg-surface-100 border border-surface-200 rounded-xl p-3 text-center">
+          <div class="text-xs text-surface-700 font-bold uppercase tracking-wider">Omitidos</div>
+          <div class="text-2xl font-extrabold text-surface-700 mt-1">{{ r.filasOmitidasDuplicadoUOtros }}</div>
+        </div>
+      </div>
+
+      @if (r.errores.length > 0) {
+        <div class="bg-coral-50 border border-coral-200 rounded-md p-3">
+          <div class="text-xs font-bold text-coral-700 uppercase tracking-wider mb-2">
+            Errores ({{ r.errores.length }})
+          </div>
+          <ul class="space-y-1 text-[11px] text-coral-700 max-h-40 overflow-y-auto">
+            @for (err of r.errores; track $index) {
+              <li class="flex items-start gap-1">
+                <i class="pi pi-exclamation-triangle text-[10px] mt-0.5"></i>
+                <span>{{ err }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      } @else {
+        <div class="bg-accent-50 border border-accent-200 rounded-md p-3 text-accent-700 text-sm flex items-center gap-2">
+          <i class="pi pi-check-circle"></i>
+          La carga finalizó sin errores.
+        </div>
+      }
+
+      <div class="flex justify-end">
+        <button type="button"
+                (click)="cerrarResultado()"
+                class="ez-btn-primary">
+          Aceptar
+        </button>
+      </div>
+    </div>
+  }
+</p-dialog>

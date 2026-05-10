@@ -1,0 +1,332 @@
+<p-confirmDialog></p-confirmDialog>
+
+<div class="space-y-6">
+  <div class="flex items-end justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="ez-section-title">
+        Gestión de Staff
+      </h1>
+      <p class="text-surface-500 text-sm mt-1">Crea miembros de staff y asígnalos a tus eventos.</p>
+    </div>
+    <button type="button"
+            (click)="abrirCrear()"
+            class="ez-btn-primary">
+      <i class="pi pi-user-plus"></i>
+      Crear Staff
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <app-stat-card label="Personal Total" [value]="stats().total" icon="pi-id-card"></app-stat-card>
+    <app-stat-card label="Activos" [value]="stats().activos" icon="pi-check-circle"></app-stat-card>
+    <app-stat-card label="Inactivos" [value]="stats().inactivos" icon="pi-ban"></app-stat-card>
+    <app-stat-card label="Asignados" [value]="stats().asignados" sublabel="Al menos un evento" icon="pi-link"></app-stat-card>
+  </div>
+
+  <!-- Filtros -->
+  @if (staffs().length > 0) {
+    <div class="bg-white border border-brand-100 rounded-2xl p-4 shadow-soft flex flex-wrap items-end gap-3">
+      <div class="flex-1 min-w-[240px]">
+        <label class="ez-field-label">
+          Buscar
+        </label>
+        <span class="block relative">
+          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400"></i>
+          <input pInputText
+                 [ngModel]="busqueda()"
+                 (ngModelChange)="busqueda.set($event)"
+                 class="w-full pl-9"
+                 placeholder="Nombre, correo o documento" />
+        </span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button"
+                (click)="filtroEstado.set('TODOS')"
+                [class]="filtroEstado() === 'TODOS' ? 'bg-brand-600 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-brand-50'"
+                class="px-3 h-9 rounded-full font-semibold text-xs transition">
+          Todos
+        </button>
+        <button type="button"
+                (click)="filtroEstado.set('ACTIVO')"
+                [class]="filtroEstado() === 'ACTIVO' ? 'bg-accent-500 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-accent-50'"
+                class="px-3 h-9 rounded-full font-semibold text-xs transition">
+          Activos
+        </button>
+        <button type="button"
+                (click)="filtroEstado.set('INACTIVO')"
+                [class]="filtroEstado() === 'INACTIVO' ? 'bg-coral-500 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-coral-50'"
+                class="px-3 h-9 rounded-full font-semibold text-xs transition">
+          Inactivos
+        </button>
+        @if (busqueda() || filtroEstado() !== 'TODOS') {
+          <button type="button"
+                  (click)="limpiarFiltros()"
+                  class="px-3 h-9 rounded-full text-surface-600 hover:bg-surface-100 text-xs font-semibold flex items-center gap-1">
+            <i class="pi pi-filter-slash text-[10px]"></i> Limpiar
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <h2 class="ez-card-title !mb-0">
+    Personal de Staff
+  </h2>
+
+  @if (cargando()) {
+    <div class="flex justify-center py-12">
+      <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else if (staffs().length === 0) {
+    <div class="bg-brand-50 border border-brand-200 rounded-xl p-10 text-center">
+      <i class="pi pi-id-card text-5xl text-brand-300 mb-3"></i>
+      <p class="text-surface-700 font-medium mb-1">Aún no has creado staff</p>
+      <p class="text-surface-500 text-sm mb-3">Crea tu primer miembro de staff para asignarlo a eventos.</p>
+      <button type="button"
+              (click)="abrirCrear()"
+              class="ez-btn-primary">
+        <i class="pi pi-user-plus"></i>
+        Crear primer Staff
+      </button>
+    </div>
+  } @else if (staffsFiltrados().length === 0) {
+    <div class="bg-brand-50 border border-brand-200 rounded-xl p-10 text-center">
+      <i class="pi pi-search text-5xl text-brand-300 mb-3"></i>
+      <p class="text-surface-700 font-medium mb-1">Sin coincidencias</p>
+      <p class="text-surface-500 text-sm">Prueba con otra búsqueda o limpia los filtros.</p>
+    </div>
+  } @else {
+    <div class="bg-white border border-brand-100 rounded-2xl overflow-hidden shadow-soft">
+      <div class="overflow-x-auto">
+        <table class="ez-table min-w-full"><thead>
+            <tr>
+              <th>Staff</th>
+              <th>Documento</th>
+              <th>Estado</th>
+              <th>Asignaciones</th>
+              <th class="!text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of staffsFiltrados(); track s.usuario.id) {
+              <tr class="hover:bg-brand-50/40 transition" [class.opacity-60]="s.usuario.estado === 'INACTIVO'">
+                <td>
+                  <div class="font-semibold text-surface-900">{{ s.usuario.nombre }}</div>
+                  <div class="text-xs text-surface-500">{{ s.usuario.email }}</div>
+                  @if (s.usuario.telefono) {
+                    <div class="text-xs text-surface-400">{{ s.usuario.telefono }}</div>
+                  }
+                </td>
+                <td class="text-surface-700 !text-xs">
+                  {{ s.usuario.tipoDocumento }} {{ s.usuario.numeroDocumento }}
+                </td>
+                <td>
+                  <p-tag [value]="s.usuario.estado" [severity]="estadoSeverity(s.usuario.estado)"></p-tag>
+                </td>
+                <td class="px-4 py-3" style="min-width: 240px;">
+                  <div class="flex items-center gap-1 mb-1">
+                    <span class="text-[10px] uppercase tracking-wider text-brand-700 font-bold">
+                      {{ s.asignaciones.length }} evento(s)
+                    </span>
+                  </div>
+                  @if (s.asignaciones.length === 0) {
+                    <span class="text-xs text-surface-400 italic">Sin asignaciones</span>
+                  } @else {
+                    <div class="space-y-1">
+                      @for (a of s.asignaciones; track a.eventoId) {
+                        <div class="flex items-center justify-between gap-2 bg-brand-50 border border-brand-100 rounded-lg px-2 py-1">
+                          <div class="min-w-0 flex-1">
+                            <div class="text-xs font-semibold text-surface-900 truncate">{{ a.eventoNombre }}</div>
+                            <div class="text-[10px] text-brand-700">{{ funcionLabel(a.funcion) }}</div>
+                          </div>
+                          <button type="button"
+                                  (click)="desasignar(s.usuario.id, a.eventoId)"
+                                  class="p-1 rounded-full hover:bg-coral-100 text-coral-600 shrink-0"
+                                  title="Quitar asignación">
+                            <i class="pi pi-times text-[10px]"></i>
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  }
+                </td>
+                <td>
+                  <div class="flex items-center justify-end gap-2 flex-wrap">
+                    @if (s.usuario.estado === 'ACTIVO') {
+                      <button type="button"
+                              (click)="abrirAsignar(s.usuario.id, s.usuario.nombre)"
+                              class="px-3 h-8 rounded-full bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold flex items-center gap-1">
+                        <i class="pi pi-link text-[10px]"></i>
+                        Asignar
+                      </button>
+                      <button type="button"
+                              (click)="toggleEstado(s)"
+                              class="px-3 h-8 rounded-full bg-coral-100 hover:bg-coral-200 text-coral-700 text-xs font-semibold flex items-center gap-1">
+                        <i class="pi pi-ban text-[10px]"></i>
+                        Desactivar
+                      </button>
+                    } @else if (s.usuario.estado === 'INACTIVO') {
+                      <button type="button"
+                              (click)="toggleEstado(s)"
+                              class="px-3 h-8 rounded-full bg-accent-100 hover:bg-accent-200 text-accent-700 text-xs font-semibold flex items-center gap-1">
+                        <i class="pi pi-check text-[10px]"></i>
+                        Reactivar
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-brand-50/30 text-xs text-surface-500 border-t border-brand-100">
+        Mostrando {{ staffsFiltrados().length }} de {{ stats().total }} miembros.
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Modal Crear Staff -->
+<p-dialog
+  [visible]="modalCrear()"
+  (visibleChange)="!$event && cerrarCrear()"
+  [modal]="true"
+  [closable]="true"
+  header="Registrar Nuevo Miembro de Staff"
+  [style]="{ width: '500px' }"
+>
+  <form [formGroup]="formCrear" (ngSubmit)="enviarCrear()" class="space-y-4 pt-2" novalidate>
+    <div>
+      <label class="ez-field-label">
+        Nombre completo
+      </label>
+      <input pInputText formControlName="nombre" class="w-full" placeholder="Nataly Forero" />
+    </div>
+    <div>
+      <label class="ez-field-label">
+        Correo electrónico
+      </label>
+      <input pInputText type="email" formControlName="email" class="w-full" placeholder="staff@correo.com" />
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="ez-field-label">
+          Tipo doc.
+        </label>
+        <p-select formControlName="tipoDocumento" [options]="tiposDocumento" optionLabel="label" optionValue="value" styleClass="w-full" appendTo="body"></p-select>
+      </div>
+      <div>
+        <label class="ez-field-label">
+          Número
+        </label>
+        <input pInputText formControlName="numeroDocumento" class="w-full" placeholder="1234567890"
+               (blur)="precargarPasswordConDoc()" />
+      </div>
+    </div>
+    <div>
+      <label class="ez-field-label">
+        Teléfono <span class="text-surface-400 font-normal">(opcional)</span>
+      </label>
+      <input pInputText formControlName="telefono" class="w-full" placeholder="3001234567" />
+    </div>
+    <div>
+      <label class="ez-field-label">
+        Contraseña inicial
+      </label>
+      <p-password
+        formControlName="password"
+        [feedback]="false"
+        [toggleMask]="true"
+        inputStyleClass="w-full"
+        styleClass="w-full"
+      ></p-password>
+      <p class="text-[11px] text-surface-500 mt-1">
+        Sugerencia: usa el número de documento como contraseña inicial.
+      </p>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <button type="button"
+              (click)="cerrarCrear()"
+              class="px-5 h-10 rounded-full border-2 border-surface-200 text-surface-700 font-semibold hover:bg-surface-100"
+              [disabled]="procesando()">
+        Cancelar
+      </button>
+      <button type="submit"
+              class="ez-btn-primary"
+              [disabled]="procesando()">
+        @if (procesando()) {
+          <i class="pi pi-spin pi-spinner"></i>
+        }
+        Registrar Staff
+      </button>
+    </div>
+  </form>
+</p-dialog>
+
+<!-- Modal Asignar -->
+<p-dialog
+  [visible]="modalAsignar() !== null"
+  (visibleChange)="!$event && cerrarAsignar()"
+  [modal]="true"
+  [closable]="true"
+  header="Asignación de Responsabilidades"
+  [style]="{ width: '460px' }"
+>
+  @if (modalAsignar(); as data) {
+    <form [formGroup]="formAsignar" (ngSubmit)="enviarAsignar()" class="space-y-4 pt-2" novalidate>
+      <p class="text-sm text-surface-600">
+        Asigna a <strong class="text-brand-700">{{ data.staffNombre }}</strong> a un evento.
+      </p>
+
+      <div>
+        <label class="ez-field-label">
+          Evento
+        </label>
+        <p-select formControlName="eventoId"
+                  [options]="opcionesEventos()"
+                  optionLabel="label"
+                  optionValue="value"
+                  styleClass="w-full"
+                  placeholder="Selecciona un evento"
+                  appendTo="body"></p-select>
+      </div>
+
+      <div>
+        <label class="ez-field-label">
+          Función
+        </label>
+        <p-select formControlName="funcion"
+                  [options]="funciones"
+                  optionLabel="label"
+                  optionValue="value"
+                  styleClass="w-full"
+                  appendTo="body"></p-select>
+      </div>
+
+      <div class="bg-brand-50 border border-brand-200 text-brand-800 rounded-lg px-3 py-2 text-xs">
+        <i class="pi pi-info-circle mr-1"></i>
+        Si el staff ya está asignado a este evento, su función será actualizada.
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button"
+                (click)="cerrarAsignar()"
+                class="px-5 h-10 rounded-full border-2 border-surface-200 text-surface-700 font-semibold hover:bg-surface-100"
+                [disabled]="procesando()">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="ez-btn-primary"
+                [disabled]="procesando()">
+          @if (procesando()) {
+            <i class="pi pi-spin pi-spinner"></i>
+          }
+          Confirmar Asignación
+        </button>
+      </div>
+    </form>
+  }
+</p-dialog>

@@ -1,0 +1,216 @@
+<div class="space-y-5 max-w-3xl mx-auto">
+  <div class="flex items-end justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="ez-section-title">Validador de QR</h1>
+      <p class="ez-page-subtitle !mb-0">
+        Escanea o pega el código QR de un asistente para registrar entrada o salida.
+      </p>
+    </div>
+    <a routerLink="/staff/eventos" class="ez-btn-secondary">
+      <i class="pi pi-list text-[10px]"></i>
+      Volver a mis eventos
+    </a>
+  </div>
+
+  <!-- Panel principal -->
+  <div class="ez-card space-y-4">
+    <!-- Selector de evento -->
+    <div>
+      <label class="ez-field-label">
+        Evento
+      </label>
+      @if (eventos().length === 0) {
+        <div class="bg-coral-50 border border-coral-200 text-coral-700 rounded-xl p-3 text-sm">
+          <i class="pi pi-exclamation-triangle"></i>
+          No tienes eventos asignados todavía.
+        </div>
+      } @else {
+        <p-select
+          [options]="opcionesEventos()"
+          [ngModel]="eventoSeleccionado()"
+          (onChange)="eventoSeleccionado.set($event.value)"
+          placeholder="Selecciona un evento"
+          [style]="{ width: '100%' }"
+          appendTo="body">
+        </p-select>
+        @if (miFuncion()) {
+          <div class="text-xs text-brand-700 font-semibold mt-2 flex items-center gap-1">
+            <i class="pi pi-tag text-[10px]"></i>
+            Tu función: {{ miFuncion() }}
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Modo -->
+    <div>
+      <label class="ez-field-label">
+        Modo de validación
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <button type="button"
+                (click)="cambiarModo('CHECK_IN')"
+                [disabled]="!puedeCheckIn()"
+                class="rounded-2xl px-4 py-4 border-2 font-bold flex items-center gap-3 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                [class]="modo() === 'CHECK_IN'
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                  : 'border-surface-200 bg-white text-surface-700 hover:border-emerald-300'">
+          <span class="w-10 h-10 rounded-full flex items-center justify-center"
+                [class]="modo() === 'CHECK_IN' ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-600'">
+            <i class="pi pi-sign-in"></i>
+          </span>
+          <span class="text-left">
+            <span class="block">Check-in</span>
+            <span class="block text-xs font-medium opacity-80">Registrar entrada</span>
+          </span>
+        </button>
+        <button type="button"
+                (click)="cambiarModo('CHECK_OUT')"
+                [disabled]="!puedeCheckOut()"
+                class="rounded-2xl px-4 py-4 border-2 font-bold flex items-center gap-3 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                [class]="modo() === 'CHECK_OUT'
+                  ? 'border-coral-500 bg-coral-50 text-coral-700'
+                  : 'border-surface-200 bg-white text-surface-700 hover:border-coral-300'">
+          <span class="w-10 h-10 rounded-full flex items-center justify-center"
+                [class]="modo() === 'CHECK_OUT' ? 'bg-coral-500 text-white' : 'bg-coral-100 text-coral-600'">
+            <i class="pi pi-sign-out"></i>
+          </span>
+          <span class="text-left">
+            <span class="block">Check-out</span>
+            <span class="block text-xs font-medium opacity-80">Registrar salida</span>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Cámara para escanear QR en vivo -->
+    <div>
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+        <label class="ez-field-label !mb-0">Cámara</label>
+        <div class="flex items-center gap-2 flex-wrap">
+          @if (camaras().length > 1) {
+            <select [ngModel]="camaraId()"
+                    (ngModelChange)="cambiarCamara($event)"
+                    class="text-[11px] border border-surface-200 rounded-md px-2 h-8 bg-white">
+              @for (c of camaras(); track c.deviceId) {
+                <option [value]="c.deviceId">
+                  {{ c.label || 'Cámara ' + ($index + 1) }}
+                </option>
+              }
+            </select>
+          }
+          @if (camaraActiva()) {
+            <button type="button" (click)="detenerCamara()" class="ez-btn-danger ez-btn-sm">
+              <i class="pi pi-pause text-[10px]"></i> Detener
+            </button>
+          } @else {
+            <button type="button" (click)="inicializarCamara()" class="ez-btn-success ez-btn-sm">
+              <i class="pi pi-play text-[10px]"></i> Iniciar
+            </button>
+          }
+        </div>
+      </div>
+      <div class="relative bg-black rounded-xl overflow-hidden aspect-video max-h-[340px] mx-auto border border-brand-200">
+        <video #video class="w-full h-full object-cover" autoplay playsinline muted></video>
+        @if (!camaraActiva() && !camaraError()) {
+          <div class="absolute inset-0 flex items-center justify-center text-white/80 text-sm bg-black/40">
+            <span><i class="pi pi-camera mr-1"></i> Iniciando cámara…</span>
+          </div>
+        }
+        @if (camaraActiva()) {
+          <!-- Marco visual centrado -->
+          <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div class="w-2/3 max-w-[260px] aspect-square border-4 border-emerald-400/80 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"></div>
+          </div>
+          <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+            EN VIVO
+          </span>
+        }
+      </div>
+      @if (camaraError()) {
+        <p class="text-xs text-rose-700 mt-2 flex items-start gap-1">
+          <i class="pi pi-exclamation-triangle text-[10px] mt-[2px]"></i>
+          <span>{{ camaraError() }} Verifica permisos del navegador y vuelve a intentar.</span>
+        </p>
+      } @else {
+        <p class="text-xs text-surface-500 mt-2 flex items-center gap-1">
+          <i class="pi pi-info-circle"></i>
+          Apunta el QR del asistente al recuadro. Se valida automáticamente al detectarlo.
+        </p>
+      }
+    </div>
+
+    <!-- Input de código (alternativa: pegar / lector USB) -->
+    <div>
+      <label class="ez-field-label">Código QR (manual)</label>
+      <div class="flex gap-2">
+        <span class="relative flex-1">
+          <i class="pi pi-qrcode absolute left-3 top-1/2 -translate-y-1/2 text-brand-400"></i>
+          <input
+            [ngModel]="codigo()"
+            (ngModelChange)="codigo.set($event)"
+            (keyup.enter)="validar()"
+            [disabled]="procesando()"
+            placeholder="PEGA O ESCANEA EL CÓDIGO AQUÍ"
+            autofocus
+            class="ez-input pl-9 font-mono" />
+        </span>
+        <button type="button" (click)="validar()"
+                [disabled]="procesando() || !codigo().trim()"
+                [class]="modo() === 'CHECK_IN' ? 'ez-btn-success' : 'ez-btn-danger'">
+          @if (procesando()) { <i class="pi pi-spin pi-spinner text-[10px]"></i> }
+          @else { <i class="pi pi-check-circle text-[10px]"></i> }
+          Validar
+        </button>
+      </div>
+      <p class="text-[11px] text-surface-500 mt-2 flex items-center gap-1">
+        <i class="pi pi-info-circle text-[10px]"></i>
+        Tip: con un lector USB, el código se enviará automáticamente al presionar Enter.
+      </p>
+    </div>
+  </div>
+
+  <!-- Historial -->
+  @if (historial().length > 0) {
+    <div class="bg-white border border-brand-100 rounded-2xl shadow-soft p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="ez-card-title !mb-0">
+          Últimos registros
+        </h2>
+        <button type="button"
+                (click)="limpiarHistorial()"
+                class="text-xs text-surface-500 hover:text-rose-600 underline">
+          Limpiar
+        </button>
+      </div>
+      <div class="space-y-2">
+        @for (r of historial(); track r.id) {
+          <div class="flex items-start gap-3 p-3 rounded-xl border"
+               [class]="r.exito ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                 [class]="r.exito
+                   ? (r.modo === 'CHECK_IN' ? 'bg-emerald-500 text-white' : 'bg-coral-500 text-white')
+                   : 'bg-rose-500 text-white'">
+              <i class="pi" [ngClass]="r.exito ? (r.modo === 'CHECK_IN' ? 'pi-sign-in' : 'pi-sign-out') : 'pi-times'"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span class="text-sm font-semibold"
+                      [class]="r.exito ? 'text-emerald-700' : 'text-rose-700'">
+                  {{ r.mensaje }}
+                </span>
+                <span class="text-[11px] text-surface-500">
+                  {{ r.fecha | date: 'HH:mm:ss' }}
+                </span>
+              </div>
+              <div class="text-xs text-surface-500 font-mono truncate">
+                {{ r.codigo }}
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,220 @@
+<div class="space-y-6">
+  <div class="flex items-end justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="ez-section-title">
+        Reportes globales
+      </h1>
+      <p class="text-surface-500 text-sm mt-1">Métricas de la plataforma y desempeño detallado por evento.</p>
+    </div>
+    <a routerLink="/admin/dashboard"
+       class="ez-btn-secondary">
+      <i class="pi pi-arrow-left"></i> Dashboard
+    </a>
+  </div>
+
+  @if (cargando() && !stats()) {
+    <div class="flex justify-center py-16">
+      <p-progressSpinner styleClass="!w-12 !h-12" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else if (stats()) {
+    <!-- Resumen plataforma -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="ez-card-title !mb-0">
+          Resumen de la plataforma
+        </h2>
+        <div class="flex items-center gap-2">
+          <button (click)="exportarResumenExcel()" class="ez-btn-success ez-btn-sm">
+            <i class="pi pi-file-excel text-[10px]"></i> Excel
+          </button>
+          <button (click)="exportarResumenPdf()" class="ez-btn-danger ez-btn-sm">
+            <i class="pi pi-file-pdf text-[10px]"></i> PDF
+          </button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <app-stat-card label="Eventos totales" [value]="stats()!.eventosTotales" icon="pi-calendar"></app-stat-card>
+        <app-stat-card label="Inscripciones" [value]="stats()!.inscripcionesTotales" icon="pi-list" tone="info"></app-stat-card>
+        <app-stat-card label="Usuarios activos" [value]="stats()!.usuariosActivos" icon="pi-users" tone="success"></app-stat-card>
+        <app-stat-card label="Organizadores" [value]="stats()!.organizadoresActivos" icon="pi-id-card"></app-stat-card>
+      </div>
+    </section>
+
+    <!-- Top eventos populares -->
+    <section class="ez-card">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="ez-card-title !mb-0">
+          Top eventos por inscripciones
+        </h2>
+        @if (populares().length > 0) {
+          <div class="flex items-center gap-2">
+            <button (click)="exportarPopularesExcel()" class="ez-btn-success ez-btn-sm">
+              <i class="pi pi-file-excel text-[10px]"></i> Excel
+            </button>
+            <button (click)="exportarPopularesPdf()" class="ez-btn-danger ez-btn-sm">
+              <i class="pi pi-file-pdf text-[10px]"></i> PDF
+            </button>
+          </div>
+        }
+      </div>
+      @if (populares().length === 0) {
+        <p class="text-sm text-surface-500 italic text-center py-6">Sin eventos con inscripciones todavía.</p>
+      } @else {
+        <ul class="space-y-3">
+          @for (p of populares(); track p.eventoId; let i = $index) {
+            <li class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm shrink-0">
+                {{ i + 1 }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                  <span class="font-semibold text-surface-900 text-sm truncate">{{ p.nombre }}</span>
+                  <span class="text-brand-700 font-bold text-sm">{{ p.totalInscritos }}</span>
+                </div>
+                <div class="bg-brand-50 rounded-full h-2 overflow-hidden">
+                  <div class="h-full bg-brand-500 transition-all"
+                       [style.width.%]="(p.totalInscritos / maxPopulares()) * 100"></div>
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <!-- Reporte avanzado por evento -->
+    <section class="ez-card">
+      <h2 class="text-base font-bold text-brand-700 font-display uppercase tracking-wider mb-4">
+        Reporte avanzado por evento
+      </h2>
+      <div class="flex flex-wrap items-end gap-3 mb-4">
+        <div class="flex-1 min-w-[260px]">
+          <label class="ez-field-label">
+            Selecciona un evento
+          </label>
+          <p-select [options]="opcionesEventos()"
+                    [ngModel]="eventoSeleccionado()"
+                    (onChange)="eventoSeleccionado.set($event.value)"
+                    placeholder="Elige un evento activo o finalizado"
+                    [filter]="true"
+                    [style]="{ width: '100%' }"
+                    appendTo="body">
+          </p-select>
+        </div>
+        <button (click)="cargarAvanzado()"
+                [disabled]="!eventoSeleccionado() || cargandoAvanzado()"
+                class="ez-btn-primary">
+          @if (cargandoAvanzado()) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-chart-bar"></i>
+          }
+          Generar reporte
+        </button>
+      </div>
+
+      @if (cargandoAvanzado()) {
+        <div class="flex justify-center py-12">
+          <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
+        </div>
+      } @else if (reporteAvanzado()) {
+        <div class="space-y-4">
+          <!-- Cabecera del reporte -->
+          <div class="bg-brand-gradient-strong text-white rounded-md p-4">
+            <div class="text-[11px] uppercase tracking-widest opacity-80">Evento</div>
+            <div class="text-lg font-bold font-display">{{ reporteAvanzado()!.nombreEvento }}</div>
+            <div class="text-xs opacity-90">
+              {{ reporteAvanzado()!.fechaEvento | date: 'dd MMM yyyy · HH:mm' }}
+            </div>
+          </div>
+
+          <!-- KPIs -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <app-stat-card label="Inscritos" [value]="reporteAvanzado()!.inscritos" icon="pi-users"></app-stat-card>
+            <app-stat-card label="Asistieron" [value]="reporteAvanzado()!.asistieron" icon="pi-check-circle" tone="success"></app-stat-card>
+            <app-stat-card label="Faltaron" [value]="reporteAvanzado()!.faltaron" icon="pi-times-circle" tone="danger"></app-stat-card>
+            <app-stat-card label="% Ocupación" [value]="reporteAvanzado()!.porcentajeOcupacion + '%'" icon="pi-percentage" tone="info"></app-stat-card>
+          </div>
+
+          <!-- Donuts -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-brand-50 border border-brand-200 rounded-md p-4">
+              <div class="ez-field-label !mb-2">Asistencia</div>
+              <app-donut [data]="segmentosAsistencia()" leyendaCentro="Asistieron"></app-donut>
+            </div>
+            <div class="bg-brand-50 border border-brand-200 rounded-md p-4">
+              <div class="ez-field-label !mb-2">Tipo de check-in</div>
+              <app-donut [data]="segmentosCheckIn()" leyendaCentro="Por QR"></app-donut>
+            </div>
+          </div>
+
+          <!-- Curva de ingreso -->
+          @if (reporteAvanzado()!.curvaIngreso.length > 0) {
+            <div class="ez-card-sm">
+              <div class="ez-field-label !mb-3">Curva de ingreso por hora</div>
+              <div class="flex items-end gap-2 h-32">
+                @for (c of reporteAvanzado()!.curvaIngreso; track c.hora) {
+                  <div class="flex-1 flex flex-col items-center gap-1">
+                    <div class="w-full flex flex-col gap-0.5">
+                      <div class="bg-emerald-500 rounded-t-sm"
+                           [style.height.px]="(c.ingresos / maxCurva()) * 80"
+                           [title]="'Ingresos: ' + c.ingresos"></div>
+                      <div class="bg-coral-400 rounded-t-sm"
+                           [style.height.px]="(c.salidas / maxCurva()) * 30"
+                           [title]="'Salidas: ' + c.salidas"></div>
+                    </div>
+                    <span class="text-[9px] text-surface-500">{{ c.hora }}h</span>
+                  </div>
+                }
+              </div>
+              <div class="flex items-center gap-3 mt-2 text-[11px] text-surface-600">
+                <span class="flex items-center gap-1">
+                  <span class="w-3 h-3 bg-emerald-500 rounded"></span> Ingresos
+                </span>
+                <span class="flex items-center gap-1">
+                  <span class="w-3 h-3 bg-coral-400 rounded"></span> Salidas
+                </span>
+              </div>
+            </div>
+          }
+
+          <!-- Desempeño staff -->
+          @if (reporteAvanzado()!.desempenoStaff.length > 0) {
+            <div class="ez-card-sm">
+              <div class="ez-field-label !mb-3">Desempeño del staff</div>
+              <table class="w-full text-sm">
+                <thead class="text-xs text-brand-700 uppercase">
+                  <tr>
+                    <th class="text-left pb-2">Staff</th>
+                    <th class="text-left pb-2">Función</th>
+                    <th class="text-right pb-2">Check-ins</th>
+                    <th class="text-right pb-2 hidden md:table-cell">QR</th>
+                    <th class="text-right pb-2 hidden md:table-cell">Manuales</th>
+                    <th class="text-right pb-2">Check-outs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of reporteAvanzado()!.desempenoStaff; track s.staffUsuarioId) {
+                    <tr class="border-t border-surface-100">
+                      <td class="py-2">{{ s.nombre || '#' + s.staffUsuarioId }}</td>
+                      <td class="py-2 text-surface-600 text-xs">{{ s.funcion }}</td>
+                      <td class="py-2 text-right font-semibold">{{ s.checkInsRegistrados }}</td>
+                      <td class="py-2 text-right text-surface-600 hidden md:table-cell">{{ s.checkInsPorQR }}</td>
+                      <td class="py-2 text-right text-surface-600 hidden md:table-cell">{{ s.checkInsManuales }}</td>
+                      <td class="py-2 text-right">{{ s.checkOutsRegistrados }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="ez-card bg-brand-50 border-brand-200 text-center py-6">
+          <i class="pi pi-chart-line text-3xl text-brand-300 mb-2 block"></i>
+          <p class="text-sm text-surface-600">Selecciona un evento para ver su reporte avanzado.</p>
+        </div>
+      }
+    </section>
+  }
+</div>
