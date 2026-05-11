@@ -1,10 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   ActualizarPerfil,
   LoginRequest,
+  LoginResponse,
   Usuario
 } from '../models/domain.models';
 import { AuthStore } from './auth.store';
@@ -16,9 +17,10 @@ export class AuthService {
   private readonly base = `${environment.apiUrl}/api/usuarios`;
 
   login(req: LoginRequest): Observable<Usuario> {
-    return this.http
-      .post<Usuario>(`${this.base}/login`, req)
-      .pipe(tap((u) => this.store.setUsuario(u)));
+    return this.http.post<LoginResponse>(`${this.base}/login`, req).pipe(
+      tap((r) => this.store.setSesion(r.usuario, r.accessToken)),
+      map((r) => r.usuario)
+    );
   }
 
   registrar(payload: Partial<Usuario>): Observable<Usuario> {

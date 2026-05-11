@@ -43,6 +43,34 @@
       ></app-stat-card>
     </div>
 
+    <!-- Filtros listados (modalidad / rango fechas) -->
+    <div class="ez-card flex flex-wrap items-end gap-3">
+      <div>
+        <label class="ez-field-label text-[11px]">Modalidad</label>
+        <div class="flex gap-1 flex-wrap mt-1">
+          <button type="button" (click)="filtroTipoEvento.set('TODOS')"
+                  [class]="filtroTipoEvento() === 'TODOS' ? 'bg-brand-600 text-white' : 'bg-white border border-surface-200'"
+                  class="px-3 h-8 rounded-full text-xs font-semibold">Todos</button>
+          <button type="button" (click)="filtroTipoEvento.set('PUBLICO')"
+                  [class]="filtroTipoEvento() === 'PUBLICO' ? 'bg-brand-600 text-white' : 'bg-white border border-surface-200'"
+                  class="px-3 h-8 rounded-full text-xs font-semibold">Público</button>
+          <button type="button" (click)="filtroTipoEvento.set('PRIVADO')"
+                  [class]="filtroTipoEvento() === 'PRIVADO' ? 'bg-brand-600 text-white' : 'bg-white border border-surface-200'"
+                  class="px-3 h-8 rounded-full text-xs font-semibold">Privado</button>
+        </div>
+      </div>
+      <div>
+        <label class="ez-field-label text-[11px]">Fecha desde</label>
+        <input type="date" class="mt-1 h-9 px-2 rounded-lg border border-surface-200 text-xs block"
+               [ngModel]="fechaDesde()" (ngModelChange)="fechaDesde.set($event)" />
+      </div>
+      <div>
+        <label class="ez-field-label text-[11px]">Fecha hasta</label>
+        <input type="date" class="mt-1 h-9 px-2 rounded-lg border border-surface-200 text-xs block"
+               [ngModel]="fechaHasta()" (ngModelChange)="fechaHasta.set($event)" />
+      </div>
+    </div>
+
     <!-- Distribución + atención -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <a routerLink="/organizador/eventos" class="ez-stat hover:shadow-card transition block">

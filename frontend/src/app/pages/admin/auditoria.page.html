@@ -38,7 +38,7 @@
                [ngModel]="busqueda()"
                (ngModelChange)="busqueda.set($event)"
                class="w-full pl-9"
-               placeholder="Acción, usuario, entidad o ID" />
+               placeholder="Acción, usuario, entidad, IP o ID" />
       </span>
     </div>
     <div class="min-w-[200px]">
@@ -88,10 +88,17 @@
                   @if (r.entidadId != null) { #{{ r.entidadId }} }
                 </span>
               </div>
-              <div class="text-xs text-surface-500 mt-0.5">
-                <span class="font-medium text-surface-700">{{ nombreUsuario(r.usuarioId) }}</span>
-                @if (rolUsuario(r.usuarioId)) {
-                  <span class="text-[10px] text-brand-600 ml-1">({{ rolUsuario(r.usuarioId) }})</span>
+              <div class="text-xs text-surface-500 mt-0.5 space-y-0.5">
+                <div>
+                  <span class="font-medium text-surface-700">{{ nombreUsuario(r.usuarioId) }}</span>
+                  @if (rolUsuario(r.usuarioId)) {
+                    <span class="text-[10px] text-brand-600 ml-1">({{ rolUsuario(r.usuarioId) }})</span>
+                  }
+                </div>
+                @if (r.direccionIp) {
+                  <div class="text-[10px] font-mono text-surface-400">
+                    <i class="pi pi-globe text-[9px] mr-0.5"></i>{{ r.direccionIp }}
+                  </div>
                 }
               </div>
             </div>

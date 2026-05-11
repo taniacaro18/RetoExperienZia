@@ -1,0 +1,76 @@
+<div class="min-h-screen bg-brand-400 flex flex-col">
+  <header class="h-14 px-4 flex items-center justify-between bg-brand-500 text-white shrink-0 flex-wrap gap-2">
+    <span class="font-bold font-display text-sm">ExperienZia</span>
+    <div class="flex gap-3 text-xs font-semibold flex-wrap items-center">
+      <a routerLink="/catalogo" class="hover:underline opacity-90">Eventos públicos</a>
+      <span class="opacity-50">|</span>
+      <a routerLink="/verificar-certificado" class="hover:underline">Verificar certificado</a>
+      <span class="opacity-50">|</span>
+      <a routerLink="/login" class="hover:underline">Iniciar sesión</a>
+      <span class="opacity-50">|</span>
+      <a routerLink="/registro" class="hover:underline">Registro</a>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 md:p-6 max-w-5xl mx-auto w-full">
+    <h1 class="text-xl font-bold text-white font-display mb-1">Catálogo de eventos públicos</h1>
+    <p class="text-sm text-white/85 mb-4">
+      Solo eventos <strong>públicos y ACTIVOS</strong>. Para inscribirte o el detalle completo necesitas
+      <a routerLink="/login" class="underline font-semibold">iniciar sesión</a>.
+    </p>
+
+    <div class="bg-white/95 rounded-2xl border border-brand-100 p-4 mb-4 shadow-soft flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-[140px]">
+        <label class="text-[11px] font-bold text-surface-600 uppercase">Nombre</label>
+        <input pInputText class="w-full mt-1" placeholder="Buscar…"
+               [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" />
+      </div>
+      <div class="min-w-[140px]">
+        <label class="text-[11px] font-bold text-surface-600 uppercase">Categoría</label>
+        <input pInputText class="w-full mt-1" placeholder="Ej. tecnología"
+               [ngModel]="categoria()" (ngModelChange)="categoria.set($event)" />
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="flex justify-center py-16">
+        <p-progressSpinner styleClass="!w-12 !h-12" strokeWidth="4"></p-progressSpinner>
+      </div>
+    } @else if (filtrados().length === 0) {
+      <div class="bg-white rounded-2xl p-10 text-center border border-brand-100">
+        <p class="text-surface-700">No hay eventos que coincidan o el catálogo está vacío.</p>
+      </div>
+    } @else {
+      <div class="grid gap-3 md:grid-cols-2">
+        @for (e of filtrados(); track e.id) {
+          <p-card styleClass="shadow-soft border-brand-100">
+            <div class="space-y-2">
+              <div class="flex justify-between gap-2 items-start">
+                <h2 class="font-bold text-surface-900 text-sm leading-snug">{{ e.nombre }}</h2>
+                <p-tag value="ACTIVO" severity="success" styleClass="text-[10px]" />
+              </div>
+              <p class="text-xs text-surface-600">{{ e.descripcion || 'Sin descripción breve.' }}</p>
+              <div class="text-xs text-surface-500">
+                <i class="pi pi-calendar text-brand-500 mr-1"></i>{{ e.fecha | date: 'medium' }}
+              </div>
+              @if (e.ubicacion) {
+                <div class="text-xs text-surface-500">
+                  <i class="pi pi-map-marker text-brand-500 mr-1"></i>{{ e.ubicacion }}
+                </div>
+              }
+              <div class="text-xs pt-2 border-t border-surface-100">
+                Cupos disponibles: <strong>{{ cupos(e) }}</strong> / {{ e.aforoMaximo }}
+              </div>
+              <div class="pt-2">
+                <a routerLink="/login"
+                   class="text-xs font-bold text-brand-700 hover:text-brand-800 underline">
+                  Inicia sesión para inscribirte →
+                </a>
+              </div>
+            </div>
+          </p-card>
+        }
+      </div>
+    }
+  </main>
+</div>

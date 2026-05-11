@@ -17,6 +17,7 @@ import { AforoBarComponent } from '../../shared/aforo-bar/aforo-bar.component';
 import { eventoEstadoLabel, eventoEstadoSeverity } from '../../shared/estado.helpers';
 
 type FiltroEstado = 'TODOS' | EstadoEvento;
+type FiltroTipoEvento = 'TODOS' | 'PUBLICO' | 'PRIVADO';
 
 @Component({
   selector: 'app-admin-eventos-page',
@@ -48,6 +49,9 @@ export class AdminEventosPage {
   readonly organizadores = signal<Map<number, Usuario>>(new Map());
   readonly busqueda = signal('');
   readonly filtroEstado = signal<FiltroEstado>('TODOS');
+  readonly filtroTipoEvento = signal<FiltroTipoEvento>('TODOS');
+  readonly fechaDesde = signal('');
+  readonly fechaHasta = signal('');
   readonly procesando = signal<number | null>(null);
   readonly idFocus = signal<number | null>(null);
 
@@ -74,8 +78,22 @@ export class AdminEventosPage {
   readonly eventosFiltrados = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
     const f = this.filtroEstado();
+    const ft = this.filtroTipoEvento();
     let lista = [...this.eventos()];
     if (f !== 'TODOS') lista = lista.filter((e) => e.estado === f);
+    if (ft !== 'TODOS') lista = lista.filter((e) => e.tipoEvento === ft);
+    const d1 = this.fechaDesde();
+    const d2 = this.fechaHasta();
+    if (d1) {
+      const t = new Date(d1);
+      t.setHours(0, 0, 0, 0);
+      lista = lista.filter((e) => new Date(e.fecha).getTime() >= t.getTime());
+    }
+    if (d2) {
+      const t = new Date(d2);
+      t.setHours(23, 59, 59, 999);
+      lista = lista.filter((e) => new Date(e.fecha).getTime() <= t.getTime());
+    }
     if (q) {
       lista = lista.filter(
         (e) =>

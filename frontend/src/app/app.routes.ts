@@ -2,6 +2,16 @@ import { Routes } from '@angular/router';
 import { authGuard, noAuthGuard, rolGuard } from './core/auth/auth.guards';
 
 export const routes: Routes = [
+  {
+    path: 'catalogo',
+    loadComponent: () =>
+      import('./pages/public/catalogo-publico.page').then((m) => m.CatalogoPublicoPage)
+  },
+  {
+    path: 'verificar-certificado',
+    loadComponent: () =>
+      import('./pages/public/verificar-certificado.page').then((m) => m.VerificarCertificadoPage)
+  },
   // Rutas públicas (auth)
   {
     path: 'login',

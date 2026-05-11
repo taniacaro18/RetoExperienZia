@@ -84,26 +84,61 @@
 
     <!-- Reporte avanzado por evento -->
     <section class="ez-card">
-      <h2 class="text-base font-bold text-brand-700 font-display uppercase tracking-wider mb-4">
-        Reporte avanzado por evento
-      </h2>
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <h2 class="text-base font-bold text-brand-700 font-display uppercase tracking-wider mb-0">
+          Reporte avanzado por evento
+        </h2>
+        @if (reporteAvanzado()) {
+          <div class="flex flex-wrap gap-2">
+            <button type="button" (click)="abrirVistaPrevia()" class="ez-btn-secondary ez-btn-sm">
+              <i class="pi pi-eye text-[10px]"></i> Vista previa
+            </button>
+            <button type="button" (click)="exportarAvanzadoExcel()" class="ez-btn-success ez-btn-sm">
+              <i class="pi pi-file-excel text-[10px]"></i> Excel
+            </button>
+            <button type="button" (click)="exportarAvanzadoPdf()" class="ez-btn-danger ez-btn-sm">
+              <i class="pi pi-file-pdf text-[10px]"></i> PDF
+            </button>
+          </div>
+        }
+      </div>
+
+      <p class="text-xs text-surface-500 mb-3">
+        Alcance administrador: filtra por organizador para limitar los eventos y validar permisos al generar el reporte.
+      </p>
+
       <div class="flex flex-wrap items-end gap-3 mb-4">
-        <div class="flex-1 min-w-[260px]">
+        <div class="min-w-[240px] flex-1">
+          <label class="ez-field-label">Organizador</label>
+          <p-select [options]="opcionesOrganizadores()"
+                    optionLabel="label"
+                    optionValue="value"
+                    [ngModel]="organizadorFiltro()"
+                    (ngModelChange)="alCambiarOrganizadorFiltro($event)"
+                    placeholder="Todos"
+                    [filter]="true"
+                    [showClear]="true"
+                    styleClass="w-full"
+                    appendTo="body"></p-select>
+        </div>
+        <div class="min-w-[260px] flex-1">
           <label class="ez-field-label">
-            Selecciona un evento
+            Evento
           </label>
           <p-select [options]="opcionesEventos()"
+                    optionLabel="label"
+                    optionValue="value"
                     [ngModel]="eventoSeleccionado()"
-                    (onChange)="eventoSeleccionado.set($event.value)"
-                    placeholder="Elige un evento activo o finalizado"
+                    (ngModelChange)="eventoSeleccionado.set($event)"
+                    placeholder="Activo o finalizado"
                     [filter]="true"
                     [style]="{ width: '100%' }"
                     appendTo="body">
           </p-select>
         </div>
-        <button (click)="cargarAvanzado()"
-                [disabled]="!eventoSeleccionado() || cargandoAvanzado()"
-                class="ez-btn-primary">
+        <button type="button" (click)="cargarAvanzado()"
+                [disabled]="!eventoSeleccionado() || cargandoAvanzado() || opcionesEventos().length === 0"
+                class="ez-btn-primary shrink-0">
           @if (cargandoAvanzado()) {
             <i class="pi pi-spin pi-spinner"></i>
           } @else {
@@ -113,27 +148,33 @@
         </button>
       </div>
 
+      @if (organizadorFiltro() != null && opcionesEventos().length === 0) {
+        <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+          No hay eventos activos o finalizados para este organizador con el filtro actual.
+        </p>
+      }
+
       @if (cargandoAvanzado()) {
         <div class="flex justify-center py-12">
           <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
         </div>
-      } @else if (reporteAvanzado()) {
+      } @else if (reporteAvanzado(); as rep) {
         <div class="space-y-4">
           <!-- Cabecera del reporte -->
           <div class="bg-brand-gradient-strong text-white rounded-md p-4">
             <div class="text-[11px] uppercase tracking-widest opacity-80">Evento</div>
-            <div class="text-lg font-bold font-display">{{ reporteAvanzado()!.nombreEvento }}</div>
+            <div class="text-lg font-bold font-display">{{ rep.nombreEvento }}</div>
             <div class="text-xs opacity-90">
-              {{ reporteAvanzado()!.fechaEvento | date: 'dd MMM yyyy · HH:mm' }}
+              {{ rep.fechaEvento | date: 'dd MMM yyyy · HH:mm' }}
             </div>
           </div>
 
           <!-- KPIs -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <app-stat-card label="Inscritos" [value]="reporteAvanzado()!.inscritos" icon="pi-users"></app-stat-card>
-            <app-stat-card label="Asistieron" [value]="reporteAvanzado()!.asistieron" icon="pi-check-circle" tone="success"></app-stat-card>
-            <app-stat-card label="Faltaron" [value]="reporteAvanzado()!.faltaron" icon="pi-times-circle" tone="danger"></app-stat-card>
-            <app-stat-card label="% Ocupación" [value]="reporteAvanzado()!.porcentajeOcupacion + '%'" icon="pi-percentage" tone="info"></app-stat-card>
+            <app-stat-card label="Inscritos" [value]="rep.inscritos" icon="pi-users"></app-stat-card>
+            <app-stat-card label="Asistieron" [value]="rep.asistieron" icon="pi-check-circle" tone="success"></app-stat-card>
+            <app-stat-card label="Faltaron" [value]="rep.faltaron" icon="pi-times-circle" tone="danger"></app-stat-card>
+            <app-stat-card label="% Ocupación" [value]="rep.porcentajeOcupacion + '%'" icon="pi-percentage" tone="info"></app-stat-card>
           </div>
 
           <!-- Donuts -->
@@ -149,37 +190,39 @@
           </div>
 
           <!-- Curva de ingreso -->
-          @if (reporteAvanzado()!.curvaIngreso.length > 0) {
-            <div class="ez-card-sm">
-              <div class="ez-field-label !mb-3">Curva de ingreso por hora</div>
-              <div class="flex items-end gap-2 h-32">
-                @for (c of reporteAvanzado()!.curvaIngreso; track c.hora) {
-                  <div class="flex-1 flex flex-col items-center gap-1">
-                    <div class="w-full flex flex-col gap-0.5">
-                      <div class="bg-emerald-500 rounded-t-sm"
-                           [style.height.px]="(c.ingresos / maxCurva()) * 80"
+          <div class="ez-card-sm">
+            <div class="ez-field-label !mb-3">Curva de ingreso por hora</div>
+            @if (rep.curvaIngreso.length === 0) {
+              <p class="text-sm text-surface-500">Sin datos horarios.</p>
+            } @else {
+              <div class="flex items-end gap-1.5 h-48 overflow-x-auto pb-2">
+                @for (c of rep.curvaIngreso; track c.hora) {
+                  <div class="flex flex-col items-center gap-1 min-w-[28px] shrink-0">
+                    <div class="flex-1 w-full flex flex-col justify-end gap-0.5 min-h-[120px]">
+                      <div class="w-full bg-emerald-500 rounded-t"
+                           [style.height.%]="(c.ingresos / maxIngresosSalidas()) * 100"
                            [title]="'Ingresos: ' + c.ingresos"></div>
-                      <div class="bg-coral-400 rounded-t-sm"
-                           [style.height.px]="(c.salidas / maxCurva()) * 30"
+                      <div class="w-full bg-coral-400 rounded-b"
+                           [style.height.%]="(c.salidas / maxIngresosSalidas()) * 100"
                            [title]="'Salidas: ' + c.salidas"></div>
                     </div>
-                    <span class="text-[9px] text-surface-500">{{ c.hora }}h</span>
+                    <span class="text-[9px] text-surface-500">{{ formatearHora(c.hora) }}</span>
                   </div>
                 }
               </div>
-              <div class="flex items-center gap-3 mt-2 text-[11px] text-surface-600">
-                <span class="flex items-center gap-1">
-                  <span class="w-3 h-3 bg-emerald-500 rounded"></span> Ingresos
-                </span>
-                <span class="flex items-center gap-1">
-                  <span class="w-3 h-3 bg-coral-400 rounded"></span> Salidas
-                </span>
-              </div>
+            }
+            <div class="flex items-center gap-3 mt-2 text-[11px] text-surface-600">
+              <span class="flex items-center gap-1">
+                <span class="w-3 h-3 bg-emerald-500 rounded"></span> Ingresos
+              </span>
+              <span class="flex items-center gap-1">
+                <span class="w-3 h-3 bg-coral-400 rounded"></span> Salidas
+              </span>
             </div>
-          }
+          </div>
 
           <!-- Desempeño staff -->
-          @if (reporteAvanzado()!.desempenoStaff.length > 0) {
+          @if (rep.desempenoStaff.length > 0) {
             <div class="ez-card-sm">
               <div class="ez-field-label !mb-3">Desempeño del staff</div>
               <table class="w-full text-sm">
@@ -194,7 +237,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (s of reporteAvanzado()!.desempenoStaff; track s.staffUsuarioId) {
+                  @for (s of rep.desempenoStaff; track s.staffUsuarioId) {
                     <tr class="border-t border-surface-100">
                       <td class="py-2">{{ s.nombre || '#' + s.staffUsuarioId }}</td>
                       <td class="py-2 text-surface-600 text-xs">{{ s.funcion }}</td>
@@ -216,5 +259,76 @@
         </div>
       }
     </section>
+
+    <p-dialog
+      header="Vista previa del reporte"
+      [modal]="true"
+      [style]="{ width: 'min(920px, 96vw)' }"
+      [draggable]="false"
+      [closeOnEscape]="true"
+      [visible]="vistaPreviaVisible()"
+      (visibleChange)="vistaPreviaVisible.set($event)">
+      @if (reporteAvanzado(); as pv) {
+        <div class="max-h-[70vh] overflow-y-auto space-y-4 text-sm">
+          <p class="text-surface-600 text-xs">
+            El PDF y la hoja «Vista previa» en Excel replican esta misma estructura; las demás hojas del Excel conservan tablas detalladas.
+          </p>
+          <div class="bg-brand-gradient-strong text-white rounded-md p-3">
+            <div class="font-bold">{{ pv.nombreEvento }}</div>
+            <div class="text-xs opacity-90">{{ pv.fechaEvento | date: 'dd MMM yyyy · HH:mm' }}</div>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div class="rounded border border-surface-200 p-2 text-center"><div class="text-[10px] text-surface-500">Inscritos</div><div class="font-bold">{{ pv.inscritos }}</div></div>
+            <div class="rounded border border-surface-200 p-2 text-center"><div class="text-[10px] text-surface-500">Asistieron</div><div class="font-bold text-emerald-700">{{ pv.asistieron }}</div></div>
+            <div class="rounded border border-surface-200 p-2 text-center"><div class="text-[10px] text-surface-500">Faltaron</div><div class="font-bold text-red-600">{{ pv.faltaron }}</div></div>
+            <div class="rounded border border-surface-200 p-2 text-center"><div class="text-[10px] text-surface-500">Ocupación</div><div class="font-bold">{{ pv.porcentajeOcupacion }}%</div></div>
+          </div>
+          <div class="grid md:grid-cols-2 gap-3">
+            <div class="border border-brand-100 rounded-md p-2">
+              <div class="text-[11px] font-bold text-brand-700 mb-2">Asistencia</div>
+              <app-donut [data]="segmentosAsistencia()" leyendaCentro="Asistieron"></app-donut>
+            </div>
+            <div class="border border-brand-100 rounded-md p-2">
+              <div class="text-[11px] font-bold text-brand-700 mb-2">Check-in</div>
+              <app-donut [data]="segmentosCheckIn()" leyendaCentro="Por QR"></app-donut>
+            </div>
+          </div>
+          <div class="border rounded-md p-2">
+            <div class="font-bold text-brand-700 text-xs uppercase mb-2">Curva horaria</div>
+            <div class="flex items-end gap-1 h-32 overflow-x-auto">
+              @for (c of pv.curvaIngreso; track c.hora) {
+                <div class="flex flex-col items-center min-w-[20px]">
+                  <div class="flex flex-col justify-end gap-px h-24 w-full">
+                    <div class="bg-emerald-500 w-full" [style.height.%]="(c.ingresos / maxIngresosSalidas()) * 100"></div>
+                    <div class="bg-coral-400 w-full" [style.height.%]="(c.salidas / maxIngresosSalidas()) * 100"></div>
+                  </div>
+                  <span class="text-[8px] text-surface-500">{{ formatearHora(c.hora) }}</span>
+                </div>
+              }
+            </div>
+          </div>
+          @if (pv.desempenoStaff.length > 0) {
+            <div class="border rounded-md overflow-x-auto">
+              <table class="w-full text-xs">
+                <thead class="bg-brand-50">
+                  <tr>
+                    <th class="text-left p-2">Staff</th>
+                    <th class="text-right p-2">CI</th>
+                    <th class="text-right p-2">CO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of pv.desempenoStaff; track s.staffUsuarioId) {
+                    <tr class="border-t"><td class="p-2">{{ s.nombre || '#' + s.staffUsuarioId }}</td>
+                      <td class="p-2 text-right">{{ s.checkInsRegistrados }}</td>
+                      <td class="p-2 text-right">{{ s.checkOutsRegistrados }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    </p-dialog>
   }
 </div>

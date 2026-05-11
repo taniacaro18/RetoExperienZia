@@ -53,7 +53,7 @@ src/
 │  ├─ layout/
 │  │  └─ shell/            # Header + sidebar + router-outlet por rol
 │  ├─ pages/
-│  │  ├─ auth/             # Login (pendiente: registro, recuperar)
+│  │  ├─ auth/             # Login, registro, recuperación
 │  │  └─ inicio/           # Página inicio temporal
 │  └─ theme/
 │     └─ experienzia-preset.ts  # Preset Aura PrimeNG con paleta violeta
@@ -70,11 +70,3 @@ src/
 - `*ngIf` y `*ngFor` están reemplazados por `@if` / `@for` (control flow Angular 17+).
 - Estilos: prioridad a clases de Tailwind; SCSS solo cuando es necesario.
 
-## Próximas fases
-
-- **Fase 1**: páginas de Asistente (catálogo de eventos, mis inscripciones, mis certificados, perfil).
-- **Fase 2**: páginas de Organizador (mis eventos, crear/editar evento, asistentes, staff con función, reportes).
-- **Fase 3**: páginas de Staff (eventos asignados, lector QR, check-in manual, aforo en vivo).
-- **Fase 4**: páginas de Admin (usuarios, eventos, pagos, auditoría, dashboards).
-
-Cada fase consumirá los servicios bajo `core/api/` y se conectará al backend por los endpoints documentados en `/swagger-ui.html`.

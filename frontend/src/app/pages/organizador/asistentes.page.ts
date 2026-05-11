@@ -60,6 +60,10 @@ export class OrgAsistentesPage {
   readonly modalManual = signal(false);
   readonly modalCsv = signal(false);
   readonly archivoCsv = signal<File | null>(null);
+  readonly modalPreviewCsv = signal(false);
+  readonly previewFilas = signal<Record<string, string>[]>([]);
+  readonly previewTotalFilas = signal(0);
+  readonly csvArchivoPendiente = signal<File | null>(null);
   readonly procesandoCarga = signal(false);
   readonly modalResultado = signal<{
     cuentasNuevasCreadas: number;
@@ -101,6 +105,12 @@ export class OrgAsistentesPage {
   readonly eventoActual = computed(() =>
     this.eventos().find((e) => e.id === this.eventoSeleccionado())
   );
+
+  readonly previewColumnas = computed(() => {
+    const f = this.previewFilas();
+    if (f.length === 0) return [] as string[];
+    return Object.keys(f[0]);
+  });
 
   readonly formManual = this.fb.nonNullable.group({
     nombre: ['', [Validators.required, Validators.minLength(3)]],
@@ -236,11 +246,22 @@ export class OrgAsistentesPage {
       return;
     }
     this.archivoCsv.set(null);
+    this.previewFilas.set([]);
+    this.csvArchivoPendiente.set(null);
+    this.modalPreviewCsv.set(false);
     this.modalCsv.set(true);
   }
   cerrarModalCsv() {
     this.modalCsv.set(false);
     this.archivoCsv.set(null);
+    this.previewFilas.set([]);
+    this.csvArchivoPendiente.set(null);
+  }
+
+  cerrarPreviewCsv() {
+    this.modalPreviewCsv.set(false);
+    this.csvArchivoPendiente.set(null);
+    this.previewFilas.set([]);
   }
 
   archivoSeleccionado(ev: Event) {
@@ -260,7 +281,8 @@ export class OrgAsistentesPage {
     );
   }
 
-  async procesarCsv() {
+  /** Lee el archivo, valida columnas y muestra previsualización antes de enviar al API. */
+  async previsualizarCsv() {
     const archivo = this.archivoCsv();
     const orgId = this.store.usuario()?.id;
     const eventoId = this.eventoSeleccionado();
@@ -269,8 +291,6 @@ export class OrgAsistentesPage {
     this.procesandoCarga.set(true);
 
     try {
-      // Aceptamos .xlsx, .xls y .csv: leemos con SheetJS y validamos columnas
-      // antes de mandar al backend (que sigue recibiendo CSV).
       const filas = await this.exportSvc.leerExcelOCsv(archivo);
       const requeridas = ['nombre', 'email', 'tipoDocumento', 'numeroDocumento'];
       const headers = filas.length > 0 ? Object.keys(filas[0]).map((k) => k.trim()) : [];
@@ -295,7 +315,6 @@ export class OrgAsistentesPage {
         return;
       }
 
-      // Construimos un CSV con el orden esperado por el backend.
       const headersOrden = ['nombre', 'email', 'telefono', 'tipoDocumento', 'numeroDocumento'];
       const filasArr: (string | number)[][] = filas.map((f) =>
         headersOrden.map((h) => (f[h] ?? '').toString().trim())
@@ -303,16 +322,12 @@ export class OrgAsistentesPage {
       const csv = this.exportSvc.filasACsv(headersOrden, filasArr);
       const csvFile = new File([csv], 'asistentes.csv', { type: 'text/csv' });
 
-      this.inscripcionApi.cargaCsv(eventoId, orgId, csvFile).subscribe({
-        next: (r) => {
-          this.procesandoCarga.set(false);
-          this.modalCsv.set(false);
-          this.archivoCsv.set(null);
-          this.modalResultado.set(r);
-          this.recargarAsistentes();
-        },
-        error: () => this.procesandoCarga.set(false)
-      });
+      this.previewTotalFilas.set(filas.length);
+      this.previewFilas.set(filas.slice(0, 30) as Record<string, string>[]);
+      this.csvArchivoPendiente.set(csvFile);
+      this.procesandoCarga.set(false);
+      this.modalCsv.set(false);
+      this.modalPreviewCsv.set(true);
     } catch (e: any) {
       this.procesandoCarga.set(false);
       this.messages.add({
@@ -321,6 +336,27 @@ export class OrgAsistentesPage {
         detail: e?.message || 'Asegúrate de subir un .xlsx, .xls o .csv válido.'
       });
     }
+  }
+
+  confirmarCargaCsv() {
+    const csvFile = this.csvArchivoPendiente();
+    const orgId = this.store.usuario()?.id;
+    const eventoId = this.eventoSeleccionado();
+    if (!csvFile || !orgId || !eventoId) return;
+
+    this.procesandoCarga.set(true);
+    this.inscripcionApi.cargaCsv(eventoId, orgId, csvFile).subscribe({
+      next: (r) => {
+        this.procesandoCarga.set(false);
+        this.modalPreviewCsv.set(false);
+        this.csvArchivoPendiente.set(null);
+        this.previewFilas.set([]);
+        this.archivoCsv.set(null);
+        this.modalResultado.set(r);
+        this.recargarAsistentes();
+      },
+      error: () => this.procesandoCarga.set(false)
+    });
   }
 
   cerrarResultado() { this.modalResultado.set(null); }

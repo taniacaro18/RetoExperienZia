@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
@@ -25,6 +26,7 @@ interface BarraSerie {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     DatePipe,
     RouterLink,
     ProgressSpinnerModule,
@@ -43,9 +45,32 @@ export class OrgDashboardPage {
   readonly stats = signal<DashboardOrganizador | null>(null);
   readonly eventos = signal<Evento[]>([]);
 
+  readonly filtroTipoEvento = signal<'TODOS' | 'PUBLICO' | 'PRIVADO'>('TODOS');
+  readonly fechaDesde = signal('');
+  readonly fechaHasta = signal('');
+
+  readonly eventosFiltradosDash = computed(() => {
+    let list = this.eventos();
+    const ft = this.filtroTipoEvento();
+    if (ft !== 'TODOS') list = list.filter((e) => e.tipoEvento === ft);
+    const d1 = this.fechaDesde();
+    const d2 = this.fechaHasta();
+    if (d1) {
+      const t = new Date(d1);
+      t.setHours(0, 0, 0, 0);
+      list = list.filter((e) => new Date(e.fecha).getTime() >= t.getTime());
+    }
+    if (d2) {
+      const t = new Date(d2);
+      t.setHours(23, 59, 59, 999);
+      list = list.filter((e) => new Date(e.fecha).getTime() <= t.getTime());
+    }
+    return list;
+  });
+
   readonly proximos = computed(() => {
     const ahora = new Date();
-    return this.eventos()
+    return this.eventosFiltradosDash()
       .filter((e) => e.estado === 'ACTIVO' && new Date(e.fecha) >= ahora)
       .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
       .slice(0, 6);
@@ -74,7 +99,7 @@ export class OrgDashboardPage {
   });
 
   readonly necesitaAtencion = computed(() => {
-    return this.eventos().filter(
+    return this.eventosFiltradosDash().filter(
       (e) => e.estado === 'PENDIENTE' || e.estado === 'RECHAZADO'
     );
   });

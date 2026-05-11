@@ -26,6 +26,12 @@ export interface LoginRequest {
   password: string;
 }
 
+/** Respuesta de POST /api/usuarios/login */
+export interface LoginResponse {
+  accessToken: string;
+  usuario: Usuario;
+}
+
 export interface ActualizarPerfil {
   nombre?: string;
   email?: string;
@@ -141,6 +147,8 @@ export interface Auditoria {
   entidad: string;
   entidadId?: number | null;
   fecha: string;
+  /** IP del cliente (auditoría tipo ROOM_911) */
+  direccionIp?: string | null;
 }
 
 export interface Notificacion {
@@ -157,7 +165,9 @@ export interface Certificado {
   inscripcionId: number;
   usuarioId: number;
   eventoId: number;
-  codigo: string;
+  /** API backend (codigoUnico) */
+  codigoUnico?: string;
+  codigo?: string;
   fechaGeneracion: string;
   nombreAsistente?: string;
   numeroDocumento?: string;

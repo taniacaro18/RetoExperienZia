@@ -70,6 +70,7 @@ export class AdminAuditoriaPage {
         (r) =>
           r.accion.toLowerCase().includes(q) ||
           r.entidad.toLowerCase().includes(q) ||
+          (r.direccionIp && r.direccionIp.toLowerCase().includes(q)) ||
           (r.usuarioId != null && this.nombreUsuario(r.usuarioId).toLowerCase().includes(q)) ||
           (r.entidadId != null && String(r.entidadId).includes(q))
       );
@@ -109,14 +110,15 @@ export class AdminAuditoriaPage {
   exportarCsv() {
     const items = this.registrosFiltrados();
     const filas: string[][] = [
-      ['ID', 'Fecha', 'Usuario', 'Acción', 'Entidad', 'Entidad ID'],
+      ['ID', 'Fecha', 'Usuario', 'Acción', 'Entidad', 'Entidad ID', 'IP'],
       ...items.map((r) => [
         String(r.id),
         new Date(r.fecha).toISOString(),
         this.nombreUsuario(r.usuarioId),
         r.accion,
         r.entidad,
-        r.entidadId != null ? String(r.entidadId) : ''
+        r.entidadId != null ? String(r.entidadId) : '',
+        r.direccionIp ?? ''
       ])
     ];
     const csv = filas

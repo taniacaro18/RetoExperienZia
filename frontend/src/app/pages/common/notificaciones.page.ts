@@ -1,6 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageService } from 'primeng/api';
 import { AuthStore } from '../../core/auth/auth.store';
@@ -13,7 +12,7 @@ type FiltroNotif = 'TODAS' | 'NO_LEIDAS' | 'LEIDAS';
 @Component({
   selector: 'app-notificaciones-page',
   standalone: true,
-  imports: [CommonModule, DatePipe, RouterLink, ProgressSpinnerModule],
+  imports: [CommonModule, DatePipe, ProgressSpinnerModule],
   templateUrl: './notificaciones.page.html'
 })
 export class NotificacionesPage {

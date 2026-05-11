@@ -5,10 +5,12 @@ import { RouterLink } from '@angular/router';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { SelectModule } from 'primeng/select';
+import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
 import { ReporteApi, EventoPopular, ReporteEventoAvanzado } from '../../core/api/reporte.api';
 import { EventoApi } from '../../core/api/evento.api';
-import { DashboardAdmin, Evento } from '../../core/models/domain.models';
+import { UsuarioApi } from '../../core/api/usuario.api';
+import { DashboardAdmin, Evento, Usuario } from '../../core/models/domain.models';
 import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 import { DonutComponent } from '../../shared/donut/donut.component';
 import { ExportService } from '../../core/export/export.service';
@@ -24,6 +26,7 @@ import { ExportService } from '../../core/export/export.service';
     ProgressSpinnerModule,
     TagModule,
     SelectModule,
+    DialogModule,
     StatCardComponent,
     DonutComponent
   ],
@@ -32,6 +35,7 @@ import { ExportService } from '../../core/export/export.service';
 export class AdminReportesPage {
   private readonly reporteApi = inject(ReporteApi);
   private readonly eventoApi = inject(EventoApi);
+  private readonly usuarioApi = inject(UsuarioApi);
   private readonly messages = inject(MessageService);
   private readonly exportSvc = inject(ExportService);
 
@@ -39,18 +43,36 @@ export class AdminReportesPage {
   readonly stats = signal<DashboardAdmin | null>(null);
   readonly populares = signal<EventoPopular[]>([]);
   readonly eventos = signal<Evento[]>([]);
+  readonly organizadores = signal<Usuario[]>([]);
+  /** Filtro de alcance: null = todos los organizadores */
+  readonly organizadorFiltro = signal<number | null>(null);
   readonly eventoSeleccionado = signal<number | null>(null);
   readonly cargandoAvanzado = signal(false);
   readonly reporteAvanzado = signal<ReporteEventoAvanzado | null>(null);
+  readonly vistaPreviaVisible = signal(false);
+
+  readonly opcionesOrganizadores = computed(() => [
+    { label: 'Todos los organizadores', value: null as number | null },
+    ...this.organizadores().map((o) => ({
+      label: `${o.nombre} (#${o.id})`,
+      value: o.id
+    }))
+  ]);
+
+  readonly eventosFiltrados = computed(() => {
+    let list = this.eventos().filter((e) => e.estado === 'ACTIVO' || e.estado === 'FINALIZADO');
+    const orgId = this.organizadorFiltro();
+    if (orgId != null) {
+      list = list.filter((e) => e.organizadorId === orgId);
+    }
+    return [...list].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+  });
 
   readonly opcionesEventos = computed(() =>
-    this.eventos()
-      .filter((e) => e.estado === 'ACTIVO' || e.estado === 'FINALIZADO')
-      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-      .map((e) => ({
-        label: e.nombre + ' · ' + new Date(e.fecha).toLocaleDateString(),
-        value: e.id
-      }))
+    this.eventosFiltrados().map((e) => ({
+      label: `${e.nombre} · ${new Date(e.fecha).toLocaleDateString()}`,
+      value: e.id
+    }))
   );
 
   readonly maxPopulares = computed(() => {
@@ -76,11 +98,10 @@ export class AdminReportesPage {
     ];
   });
 
-  readonly maxCurva = computed(() => {
+  readonly maxIngresosSalidas = computed(() => {
     const r = this.reporteAvanzado();
-    if (!r) return 1;
-    const m = Math.max(0, ...r.curvaIngreso.map((c) => Math.max(c.ingresos, c.salidas)));
-    return m === 0 ? 1 : m;
+    if (!r || !r.curvaIngreso.length) return 1;
+    return Math.max(1, ...r.curvaIngreso.map((p) => Math.max(p.ingresos, p.salidas)));
   });
 
   ngOnInit() {
@@ -98,14 +119,29 @@ export class AdminReportesPage {
     this.eventoApi.listar().subscribe({
       next: (lista) => this.eventos.set(lista)
     });
+    this.usuarioApi.buscar({ rol: 'ORGANIZADOR', estado: 'ACTIVO' }).subscribe({
+      next: (lista) => this.organizadores.set(lista)
+    });
+  }
+
+  alCambiarOrganizadorFiltro(valor: number | null | undefined) {
+    this.organizadorFiltro.set(valor ?? null);
+    const sid = this.eventoSeleccionado();
+    const valido =
+      sid != null && this.eventosFiltrados().some((e) => e.id === sid);
+    if (!valido) {
+      this.eventoSeleccionado.set(null);
+      this.reporteAvanzado.set(null);
+    }
   }
 
   cargarAvanzado() {
     const id = this.eventoSeleccionado();
     if (!id) return;
+    const orgScope = this.organizadorFiltro();
     this.cargandoAvanzado.set(true);
     this.reporteAvanzado.set(null);
-    this.reporteApi.reporteAvanzado(id).subscribe({
+    this.reporteApi.reporteAvanzado(id, orgScope ?? undefined).subscribe({
       next: (r) => {
         this.reporteAvanzado.set(r);
         this.cargandoAvanzado.set(false);
@@ -119,6 +155,29 @@ export class AdminReportesPage {
         });
       }
     });
+  }
+
+  exportarAvanzadoExcel() {
+    const r = this.reporteAvanzado();
+    if (!r) return;
+    this.exportSvc.exportarReporteAvanzadoExcel(`reporte_evento_${r.eventoId}`, r, 'admin');
+    this.messages.add({ severity: 'success', summary: 'Excel generado' });
+  }
+
+  exportarAvanzadoPdf() {
+    const r = this.reporteAvanzado();
+    if (!r) return;
+    this.exportSvc.exportarReporteAvanzadoPdf(`reporte_evento_${r.eventoId}`, r, 'admin');
+    this.messages.add({ severity: 'success', summary: 'PDF generado' });
+  }
+
+  abrirVistaPrevia() {
+    if (this.reporteAvanzado()) this.vistaPreviaVisible.set(true);
+  }
+
+  formatearHora(h: number): string {
+    const hora = ((h % 24) + 24) % 24;
+    return hora.toString().padStart(2, '0') + ':00';
   }
 
   private filasResumen(): { metrica: string; valor: number }[] {
@@ -151,11 +210,15 @@ export class AdminReportesPage {
   exportarResumenPdf() {
     const filas = this.filasResumen();
     if (filas.length === 0) return;
-    this.exportSvc.exportarPdf('resumen_plataforma',
-      'Resumen general · ExperienZia', [
+    this.exportSvc.exportarPdf(
+      'resumen_plataforma',
+      'Resumen general · ExperienZia',
+      [
         { header: 'Métrica', value: (r) => r.metrica },
         { header: 'Valor', value: (r) => r.valor }
-      ], filas);
+      ],
+      filas
+    );
   }
 
   exportarPopularesExcel() {
@@ -171,11 +234,15 @@ export class AdminReportesPage {
   exportarPopularesPdf() {
     const items = this.populares();
     if (!items.length) return;
-    this.exportSvc.exportarPdf('eventos_populares',
-      'Eventos más populares · ExperienZia', [
+    this.exportSvc.exportarPdf(
+      'eventos_populares',
+      'Eventos más populares · ExperienZia',
+      [
         { header: 'ID Evento', value: (p: EventoPopular) => p.eventoId },
         { header: 'Nombre', value: (p: EventoPopular) => p.nombre },
         { header: 'Inscritos', value: (p: EventoPopular) => p.totalInscritos }
-      ], items);
+      ],
+      items
+    );
   }
 }

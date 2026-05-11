@@ -27,7 +27,7 @@
           <!-- Banner -->
           <div class="h-32 bg-brand-gradient text-white p-5 flex flex-col justify-between">
             <div class="text-[10px] tracking-widest uppercase opacity-90">Certificado</div>
-            <div class="text-xs font-mono opacity-90 truncate">{{ c.codigo }}</div>
+            <div class="text-xs font-mono opacity-90 truncate">{{ c.codigoUnico || c.codigo }}</div>
           </div>
 
           <div class="p-5 space-y-2">
@@ -98,7 +98,7 @@
         }.
       </div>
       <div class="text-[10px] font-mono text-surface-500 mt-6">
-        Código: {{ c.codigo }}
+        Código: {{ c.codigoUnico || c.codigo }}
       </div>
     </div>
 
@@ -108,7 +108,7 @@
         icon="pi pi-copy"
         severity="secondary"
         outlined="true"
-        (onClick)="copiarCodigo(c.codigo)"
+        (onClick)="copiarCodigo(c)"
       ></p-button>
       <p-button
         label="Descargar / Imprimir"

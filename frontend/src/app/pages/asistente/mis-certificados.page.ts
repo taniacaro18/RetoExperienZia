@@ -55,7 +55,8 @@ export class MisCertificadosPage {
     this.seleccionado.set(null);
   }
 
-  copiarCodigo(codigo: string) {
+  copiarCodigo(c: Certificado) {
+    const codigo = c.codigoUnico || c.codigo || '';
     navigator.clipboard?.writeText(codigo).then(
       () => this.messages.add({
         severity: 'success',
@@ -98,7 +99,7 @@ export class MisCertificadosPage {
       year: 'numeric', month: 'long', day: '2-digit'
     });
     return `<!doctype html>
-<html><head><meta charset="utf-8"><title>Certificado ${c.codigo}</title>
+<html><head><meta charset="utf-8"><title>Certificado ${c.codigoUnico || c.codigo || ''}</title>
 <style>
   @page { size: A4 landscape; margin: 0; }
   body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 60px;
@@ -133,7 +134,7 @@ export class MisCertificadosPage {
       <div class="firma">Coordinación ExperienZia</div>
       <div class="firma">Fecha de emisión: ${fechaGen}</div>
     </div>
-    <div class="codigo">Código de validación: ${c.codigo}</div>
+    <div class="codigo">Código de validación: ${c.codigoUnico || c.codigo || ''}</div>
   </div>
   <script>setTimeout(()=>window.print(), 200);</script>
 </body></html>`;
