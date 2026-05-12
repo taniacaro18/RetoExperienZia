@@ -1,0 +1,261 @@
+:host { display: block; }
+
+/* ── Loading / Error ──────────────────────── */
+.det-loading {
+  display: flex;
+  justify-content: center;
+  padding: 6rem 0;
+}
+
+.det-error {
+  text-align: center;
+  padding: 5rem 1rem;
+  color: var(--brand-600);
+
+  i { font-size: 2.5rem; opacity: 0.5; }
+  p { margin-top: 0.75rem; font-size: 0.95rem; }
+}
+
+.det-error__link {
+  display: inline-block;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--brand-700);
+  text-decoration: underline;
+}
+
+/* ── Hero ─────────────────────────────────── */
+.det-hero {
+  position: relative;
+  height: 260px;
+  background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+
+.det-hero__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.det-hero__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(55, 32, 80, 0.88) 0%,
+    rgba(78, 42, 111, 0.5) 60%,
+    transparent 100%
+  );
+}
+
+.det-hero__content {
+  position: relative;
+  z-index: 1;
+  padding: 1.5rem 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.det-hero__cat {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.65rem;
+  border-radius: 1rem;
+  margin-bottom: 0.5rem;
+  backdrop-filter: blur(4px);
+}
+
+.det-hero__title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.det-hero__badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Main ─────────────────────────────────── */
+.det-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.det-grid {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 340px;
+  }
+}
+
+/* ── Info ──────────────────────────────────── */
+.det-section {
+  margin-bottom: 2rem;
+}
+
+.det-section__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--brand-800);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--brand-100);
+}
+
+.det-section__text {
+  font-size: 0.88rem;
+  color: #444;
+  line-height: 1.65;
+}
+
+.det-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.det-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+
+  > i {
+    font-size: 1.1rem;
+    color: var(--brand-500);
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+  }
+}
+
+.det-detail__label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--brand-600);
+  text-transform: uppercase;
+}
+
+.det-detail__value {
+  font-size: 0.85rem;
+  color: #333;
+}
+
+/* ── CTA Card ─────────────────────────────── */
+.det-cta-card {
+  background: #fff;
+  border: 1.5px solid #ece5f3;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(101, 55, 143, 0.08);
+  position: sticky;
+  top: 80px;
+}
+
+.det-cta__price-row {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.det-cta__price {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--brand-800);
+}
+
+.det-cta__price-label {
+  display: block;
+  font-size: 0.72rem;
+  color: #9b8aad;
+}
+
+.det-cta__free {
+  display: inline-block;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 0.3rem 1rem;
+  border-radius: 2rem;
+}
+
+/* ── Aforo bar ────────────────────────────── */
+.det-cta__aforo {
+  margin-bottom: 1.25rem;
+}
+
+.det-cta__aforo-bar {
+  height: 8px;
+  background: #f0eaf5;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.det-cta__aforo-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand-500), var(--brand-700));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.det-cta__aforo-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #6b6b7b;
+}
+
+/* ── CTA Button ───────────────────────────── */
+.det-cta__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 2.85rem;
+  border: none;
+  border-radius: 2rem;
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 0.2s, transform 0.15s;
+  margin-bottom: 0.65rem;
+
+  i { font-size: 0.9rem; }
+  &:hover { opacity: 0.92; transform: translateY(-1px); }
+}
+
+.det-cta__sub {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #6b6b7b;
+}
+
+.det-cta__sub-link {
+  font-weight: 700;
+  color: var(--brand-600);
+  text-decoration: none;
+  margin-left: 0.2rem;
+  &:hover { text-decoration: underline; }
+}

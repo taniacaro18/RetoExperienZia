@@ -340,10 +340,14 @@ export class StaffValidadorQrPage implements OnInit, AfterViewInit, OnDestroy {
 
   private onError(err: any, codigo: string, modo: Modo) {
     this.procesando.set(false);
-    const detalle = err?.error?.message || err?.error?.error || 'No se pudo procesar el código.';
+    const body = err?.error;
+    const detalle = (body && typeof body === 'object' && body.message)
+      ? String(body.message)
+      : (typeof body === 'string' && body.trim().length > 0 ? body : 'No se pudo procesar el código.');
+    const esWarn = err?.status >= 400 && err?.status < 500;
     this.messages.add({
-      severity: 'error',
-      summary: 'Validación fallida',
+      severity: esWarn ? 'warn' : 'error',
+      summary: esWarn ? 'Atención' : 'Error',
       detail: detalle,
       life: 5000
     });

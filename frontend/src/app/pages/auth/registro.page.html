@@ -1,169 +1,215 @@
-<div class="min-h-screen flex flex-col bg-brand-400">
-  <!-- Header violeta -->
-  <header class="h-16 px-4 lg:px-8 bg-brand-500 flex items-center justify-between gap-4">
-    <a routerLink="/login" class="flex items-center">
-      <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
-    </a>
-
-    <div class="hidden md:flex flex-1 max-w-xl mx-2">
-      <div class="relative w-full flex items-center bg-white rounded-full pr-1">
-        <input
-          type="text"
-          placeholder="Busca aquí"
-          class="flex-1 h-9 pl-4 pr-3 bg-transparent rounded-full focus:outline-none text-sm text-surface-900 placeholder:text-surface-400"
-        />
-        <button type="button"
-                class="h-8 px-4 rounded-full bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition flex items-center gap-1.5">
-          <i class="pi pi-search text-[10px]"></i>
-          <span>Search</span>
-        </button>
-      </div>
+<div class="reg-split">
+  <!-- Sidebar izquierdo: stepper -->
+  <aside class="reg-sidebar">
+    <div class="reg-sidebar__brand">
+      <img src="/logo.png" alt="ExperienZia" class="reg-sidebar__logo" />
     </div>
 
-    <nav class="flex items-center gap-2 text-sm flex-wrap justify-end">
-      <a routerLink="/verificar-certificado"
-         class="px-3 h-9 rounded-full border border-white/40 text-white/95 hover:bg-white/10 font-semibold text-xs flex items-center transition">
-        Verificar certificado
-      </a>
-      <a routerLink="/registro"
-         class="px-4 h-9 rounded-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs flex items-center transition">
-        Regístrate
-      </a>
-      <a routerLink="/login"
-         class="px-4 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center transition">
-        Iniciar Sesión
-      </a>
+    <nav class="reg-sidebar__nav">
+      @for (sec of secciones; track sec.id) {
+        <a
+          class="reg-step"
+          [class.active]="seccionActiva() === sec.id"
+          [class.done]="seccionCompleta(sec.id)"
+          (click)="seccionActiva.set(sec.id)"
+        >
+          <span class="reg-step__dot">
+            @if (seccionCompleta(sec.id)) {
+              <i class="pi pi-check"></i>
+            }
+          </span>
+          <div class="reg-step__body">
+            <i [class]="sec.icon" class="reg-step__icon"></i>
+            <span class="reg-step__label">{{ sec.label }}</span>
+          </div>
+        </a>
+      }
     </nav>
-  </header>
+  </aside>
 
-  <div class="flex-1 flex min-h-0">
-    <!-- Sidebar violeta -->
-    <aside class="hidden lg:flex flex-col w-56 shrink-0 bg-brand-500">
-      <nav class="flex-1 px-3 py-5">
-        <ul class="space-y-2">
-          <li>
-            <a routerLink="/registro" class="sidebar-item active">
-              <i class="pi pi-user-plus text-xs"></i>
-              <span>Registro</span>
-            </a>
-          </li>
-          <li>
-            <a routerLink="/login" class="sidebar-item">
-              <i class="pi pi-sign-in text-xs"></i>
-              <span>Inicio Sesión</span>
-            </a>
-          </li>
-        </ul>
-      </nav>
-      <div class="p-4 flex items-center justify-center">
-        <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
+  <!-- Lado derecho: formulario -->
+  <div class="reg-form-side">
+    <div class="reg-form-wrapper">
+      <!-- Logo (solo mobile, en desktop va en sidebar) -->
+      <div class="reg-form-logo">
+        <img src="/logo.png" alt="ExperienZia" class="mx-auto h-14 w-auto object-contain" />
       </div>
-    </aside>
 
-    <main class="flex-1 min-w-0 p-4 lg:p-6 overflow-auto">
-      <div class="bg-white rounded-2xl shadow-card p-5 lg:p-8 min-h-full">
-        <div class="max-w-2xl mx-auto">
-          <h1 class="ez-section-title mb-5">Registro</h1>
+      <h1 class="reg-title">REGISTRO</h1>
 
-          <form [formGroup]="formulario" (ngSubmit)="enviar()"
-                class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-3" novalidate>
-
-            <div class="md:col-span-2 ez-field !mb-0">
-              <label class="ez-field-label"><span class="req">*</span>Nombres completos del usuario</label>
-              <input formControlName="nombre" class="ez-input" placeholder="ESCRIBA AQUÍ" />
-              @if (formulario.controls.nombre.touched && formulario.controls.nombre.invalid) {
-                <p class="text-rose-600 text-[11px] mt-1">Mínimo 3 caracteres.</p>
-              }
+      <form
+        [formGroup]="formulario"
+        (ngSubmit)="enviar()"
+        class="reg-form"
+        novalidate
+      >
+        <!-- Fila 1: Nombre · Correo · Celular -->
+        <div class="reg-row reg-row--3">
+          <div class="reg-field">
+            <label class="reg-field__label"><span class="reg-req">*</span> NOMBRES COMPLETOS DEL USUARIO</label>
+            <div class="reg-field__input-wrap">
+              <i class="pi pi-user reg-field__icon"></i>
+              <input
+                formControlName="nombre"
+                class="reg-field__input"
+                placeholder="Escriba aquí"
+                (focus)="focusSeccion('identidad')"
+              />
             </div>
+            @if (formulario.controls.nombre.touched && formulario.controls.nombre.invalid) {
+              <p class="reg-field__error">Mínimo 3 caracteres.</p>
+            }
+          </div>
 
-            <div class="ez-field !mb-0">
-              <label class="ez-field-label"><span class="req">*</span>Tipo de documento</label>
+          <div class="reg-field">
+            <label class="reg-field__label"><span class="reg-req">*</span> CORREO ELECTRÓNICO</label>
+            <div class="reg-field__input-wrap">
+              <i class="pi pi-envelope reg-field__icon"></i>
+              <input
+                type="email"
+                formControlName="email"
+                class="reg-field__input"
+                placeholder="Escriba aquí"
+                autocomplete="email"
+                (focus)="focusSeccion('contacto')"
+              />
+            </div>
+            @if (formulario.controls.email.touched && formulario.controls.email.invalid) {
+              <p class="reg-field__error">Correo no válido.</p>
+            }
+          </div>
+
+          <div class="reg-field">
+            <label class="reg-field__label"><span class="reg-req">*</span> NÚMERO DE CELULAR</label>
+            <div class="reg-field__input-wrap">
+              <i class="pi pi-phone reg-field__icon"></i>
+              <input
+                formControlName="telefono"
+                class="reg-field__input"
+                placeholder="Digite aquí"
+                (focus)="focusSeccion('telefono')"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Fila 2: Tipo doc · Número doc -->
+        <div class="reg-row reg-row--2" (focusin)="focusSeccion('documento')">
+          <div class="reg-field">
+            <label class="reg-field__label"><span class="reg-req">*</span> TIPO DE DOCUMENTO</label>
+            <div class="reg-field__input-wrap reg-field__input-wrap--select">
+              <i class="pi pi-id-card reg-field__icon"></i>
               <p-select
                 formControlName="tipoDocumento"
                 [options]="tiposDocumento"
                 optionLabel="label"
                 optionValue="value"
-                styleClass="w-full"
-                placeholder="SELECCIONE UNA OPCIÓN"
+                styleClass="reg-select"
+                placeholder="Cédula de Ciudadanía"
                 appendTo="body"
               ></p-select>
             </div>
-            <div class="ez-field !mb-0">
-              <label class="ez-field-label"><span class="req">*</span>Número de documento</label>
-              <input formControlName="numeroDocumento" class="ez-input" placeholder="DIGITE AQUÍ" />
-              @if (formulario.controls.numeroDocumento.touched && formulario.controls.numeroDocumento.invalid) {
-                <p class="text-rose-600 text-[11px] mt-1">Mínimo 4 dígitos.</p>
-              }
-            </div>
+          </div>
 
-            <div class="ez-field !mb-0">
-              <label class="ez-field-label"><span class="req">*</span>Correo electrónico</label>
-              <input type="email" formControlName="email" class="ez-input" placeholder="ESCRIBA AQUÍ" autocomplete="email" />
-              @if (formulario.controls.email.touched && formulario.controls.email.invalid) {
-                <p class="text-rose-600 text-[11px] mt-1">Correo no válido.</p>
-              }
+          <div class="reg-field">
+            <label class="reg-field__label"><span class="reg-req">*</span> NÚMERO DE DOCUMENTO</label>
+            <div class="reg-field__input-wrap">
+              <i class="pi pi-hashtag reg-field__icon"></i>
+              <input
+                formControlName="numeroDocumento"
+                class="reg-field__input"
+                placeholder="Digite aquí"
+                (focus)="focusSeccion('documento')"
+              />
             </div>
-            <div class="ez-field !mb-0">
-              <label class="ez-field-label"><span class="req">*</span>Número de celular</label>
-              <input formControlName="telefono" class="ez-input" placeholder="DIGITE AQUÍ" />
-            </div>
+            @if (formulario.controls.numeroDocumento.touched && formulario.controls.numeroDocumento.invalid) {
+              <p class="reg-field__error">Mínimo 4 dígitos.</p>
+            }
+          </div>
+        </div>
 
-            <div class="ez-field !mb-0">
-              <label class="ez-field-label"><span class="req">*</span>Contraseña</label>
-              <input type="password" formControlName="password" class="ez-input" placeholder="ESCRIBA AQUÍ" autocomplete="new-password" />
+        <!-- Fila 3: Contraseña · Confirmar -->
+        <div class="reg-row reg-row--2">
+          <div class="reg-field">
+            <label class="reg-field__label"><span class="reg-req">*</span> CONTRASEÑA</label>
+            <div class="reg-field__input-wrap">
+              <i class="pi pi-lock reg-field__icon"></i>
+              <input
+                [type]="mostrarPassword ? 'text' : 'password'"
+                formControlName="password"
+                class="reg-field__input"
+                placeholder="Escriba aquí"
+                autocomplete="new-password"
+                (focus)="focusSeccion('seguridad')"
+              />
+              <button type="button" class="reg-field__toggle" (click)="mostrarPassword = !mostrarPassword" tabindex="-1">
+                <i [class]="mostrarPassword ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
+              </button>
             </div>
-            <div class="ez-field !mb-0">
-              <label class="ez-field-label"><span class="req">*</span>Confirme la contraseña</label>
-              <input type="password" formControlName="confirmar" class="ez-input" placeholder="ESCRIBA AQUÍ" autocomplete="new-password" />
-              @if (formulario.controls.confirmar.touched && contrasenasNoCoinciden()) {
-                <p class="text-rose-600 text-[11px] mt-1">Las contraseñas no coinciden.</p>
-              }
-            </div>
+          </div>
 
-            <div class="md:col-span-2 ez-field !mb-0">
-              <label class="ez-field-label"><span class="req">*</span>Elegir rol</label>
+          <div class="reg-field">
+            <label class="reg-field__label"><span class="reg-req">*</span> CONFIRME LA CONTRASEÑA</label>
+            <div class="reg-field__input-wrap">
+              <i class="pi pi-lock reg-field__icon"></i>
+              <input
+                [type]="mostrarConfirmar ? 'text' : 'password'"
+                formControlName="confirmar"
+                class="reg-field__input"
+                placeholder="Escriba aquí"
+                autocomplete="new-password"
+                (focus)="focusSeccion('seguridad')"
+              />
+              <button type="button" class="reg-field__toggle" (click)="mostrarConfirmar = !mostrarConfirmar" tabindex="-1">
+                <i [class]="mostrarConfirmar ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
+              </button>
+            </div>
+            @if (formulario.controls.confirmar.touched && contrasenasNoCoinciden()) {
+              <p class="reg-field__error">Las contraseñas no coinciden.</p>
+            }
+          </div>
+        </div>
+
+        <!-- Fila 4: Rol -->
+        <div class="reg-row reg-row--center" (focusin)="focusSeccion('rol')">
+          <div class="reg-field reg-field--rol">
+            <label class="reg-field__label"><span class="reg-req">*</span> ELEGIR ROL</label>
+            <div class="reg-field__input-wrap reg-field__input-wrap--select">
+              <i class="pi pi-users reg-field__icon"></i>
               <p-select
                 formControlName="tipo"
                 [options]="tiposCuenta"
                 optionLabel="label"
                 optionValue="value"
-                styleClass="w-full"
-                placeholder="SELECCIONE UNA OPCIÓN"
+                styleClass="reg-select"
+                placeholder="Asistente"
                 appendTo="body"
               ></p-select>
             </div>
-
-            @if (formulario.controls.tipo.value === 'ORGANIZADOR') {
-              <div class="md:col-span-2 bg-brand-50 border border-brand-200 text-brand-800 rounded-md px-3 py-2 text-[11px]">
-                <i class="pi pi-info-circle mr-1"></i>
-                Las cuentas de Organizador deben ser aprobadas por un administrador antes de poder iniciar sesión.
-              </div>
-            }
-
-            <div class="md:col-span-2 flex justify-end pt-2">
-              <button
-                type="submit"
-                class="ez-btn-primary ez-btn-lg px-10"
-                [disabled]="cargando()"
-              >
-                @if (cargando()) { <i class="pi pi-spin pi-spinner mr-2"></i> }
-                Registrarme
-              </button>
-            </div>
-
-            <p class="md:col-span-2 text-center text-xs text-surface-500 mt-2">
-              ¿Ya tienes cuenta?
-              <a routerLink="/login" class="text-brand-700 hover:text-brand-800 font-bold ml-1">
-                Inicia sesión
-              </a>
-            </p>
-          </form>
+          </div>
         </div>
-      </div>
-    </main>
-  </div>
 
-  <footer class="bg-brand-500 px-6 py-3 flex items-center justify-center">
-    <img src="/logo.png" alt="ExperienZia" class="h-8 w-auto object-contain bg-white/90 rounded-md p-1" />
-  </footer>
+        @if (formulario.controls.tipo.value === 'ORGANIZADOR') {
+          <div class="reg-org-notice">
+            <i class="pi pi-info-circle mr-1"></i>
+            Las cuentas de Organizador deben ser aprobadas por un administrador antes de poder iniciar sesión.
+          </div>
+        }
+
+        <!-- Botón -->
+        <div class="reg-actions">
+          <button type="submit" class="reg-btn" [disabled]="cargando()">
+            @if (cargando()) { <i class="pi pi-spin pi-spinner mr-2"></i> }
+            Registrarme
+          </button>
+          <p class="reg-actions__sub">Crear Mi Cuenta</p>
+        </div>
+
+        <p class="reg-login-link">
+          ¿Ya tienes cuenta?
+          <a routerLink="/login" class="reg-login-link__a">Inicia sesión</a>
+        </p>
+      </form>
+    </div>
+  </div>
 </div>

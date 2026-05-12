@@ -27,7 +27,7 @@ public final class SecurityPaths {
         if (uri.startsWith("/api/certificados/validar/") || uri.startsWith("/api/certificados/pdf/")) {
             return true;
         }
-        if ("/api/eventos/catalogo/publicos".equals(uri)) {
+        if (uri.startsWith("/api/eventos/catalogo/publicos")) {
             return true;
         }
         return uri.startsWith("/api/usuarios/login")

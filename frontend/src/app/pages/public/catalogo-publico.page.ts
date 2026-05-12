@@ -2,10 +2,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { CardModule } from 'primeng/card';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputTextModule } from 'primeng/inputtext';
-import { TagModule } from 'primeng/tag';
 import { EventoApi } from '../../core/api/evento.api';
 import { Evento } from '../../core/models/domain.models';
 
@@ -17,12 +15,11 @@ import { Evento } from '../../core/models/domain.models';
     FormsModule,
     DatePipe,
     RouterLink,
-    CardModule,
     ProgressSpinnerModule,
-    InputTextModule,
-    TagModule
+    InputTextModule
   ],
-  templateUrl: './catalogo-publico.page.html'
+  templateUrl: './catalogo-publico.page.html',
+  styleUrl: './catalogo-publico.page.scss'
 })
 export class CatalogoPublicoPage {
   private readonly eventoApi = inject(EventoApi);
@@ -59,5 +56,10 @@ export class CatalogoPublicoPage {
 
   cupos(e: Evento): number {
     return Math.max(0, e.aforoMaximo - e.aforoActual);
+  }
+
+  porcentajeOcupacion(e: Evento): number {
+    if (!e.aforoMaximo) return 0;
+    return Math.min(100, Math.round((e.aforoActual / e.aforoMaximo) * 100));
   }
 }

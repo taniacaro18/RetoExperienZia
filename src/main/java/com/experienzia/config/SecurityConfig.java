@@ -75,7 +75,7 @@ public class SecurityConfig {
                                 "/api/usuarios/recuperar").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/certificados/validar/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/certificados/pdf/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/eventos/catalogo/publicos").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/eventos/catalogo/publicos", "/api/eventos/catalogo/publicos/*").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

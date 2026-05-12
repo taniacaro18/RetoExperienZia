@@ -34,6 +34,7 @@ export class LoginPage {
   private readonly messages = inject(MessageService);
 
   readonly cargando = signal(false);
+  mostrarPassword = false;
 
   readonly formulario = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],

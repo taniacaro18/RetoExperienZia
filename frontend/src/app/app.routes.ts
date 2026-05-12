@@ -8,6 +8,11 @@ export const routes: Routes = [
       import('./pages/public/catalogo-publico.page').then((m) => m.CatalogoPublicoPage)
   },
   {
+    path: 'catalogo/:id',
+    loadComponent: () =>
+      import('./pages/public/detalle-evento-publico.page').then((m) => m.DetalleEventoPublicoPage)
+  },
+  {
     path: 'verificar-certificado',
     loadComponent: () =>
       import('./pages/public/verificar-certificado.page').then((m) => m.VerificarCertificadoPage)
@@ -202,5 +207,5 @@ export const routes: Routes = [
       }
     ]
   },
-  { path: '**', redirectTo: 'login' }
+  { path: '**', redirectTo: 'catalogo' }
 ];

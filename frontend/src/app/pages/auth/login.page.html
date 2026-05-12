@@ -1,142 +1,107 @@
-<div class="min-h-screen flex flex-col bg-brand-400">
-  <!-- Header violeta · barra superior con búsqueda y accesos -->
-  <header class="h-16 px-4 lg:px-8 bg-brand-500 flex items-center justify-between gap-4">
-    <a routerLink="/login" class="flex items-center">
-      <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
-    </a>
-
-    <div class="hidden md:flex flex-1 max-w-xl mx-2">
-      <div class="relative w-full flex items-center bg-white rounded-full pr-1 shadow-sm">
-        <input
-          type="text"
-          placeholder="Busca aquí"
-          class="flex-1 h-9 pl-4 pr-3 bg-transparent rounded-full focus:outline-none text-sm text-surface-900 placeholder:text-surface-400"
-        />
-        <button
-          type="button"
-          class="h-8 px-4 rounded-full bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition flex items-center gap-1.5"
-        >
-          <i class="pi pi-search text-[10px]"></i>
-          <span>Search</span>
-        </button>
-      </div>
+<div class="login-split">
+  <!-- Lado izquierdo: imagen -->
+  <div class="login-image">
+    <img src="/login-bg.jpg" alt="" class="login-image__photo" />
+    <div class="login-image__overlay"></div>
+    <div class="login-image__content">
+      <img src="/logo.png" alt="ExperienZia" class="login-image__logo" />
+      <h2 class="login-image__tagline">Vive la experiencia.</h2>
     </div>
-
-    <nav class="flex items-center gap-2 text-sm flex-wrap justify-end">
-      <a routerLink="/verificar-certificado"
-         class="px-3 h-9 rounded-full border border-white/40 text-white/95 hover:bg-white/10 font-semibold text-xs flex items-center transition">
-        Verificar certificado
-      </a>
-      <a routerLink="/registro"
-         class="px-4 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center transition">
-        Regístrate
-      </a>
-      <a routerLink="/login"
-         class="px-4 h-9 rounded-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs flex items-center transition">
-        Iniciar Sesión
-      </a>
-    </nav>
-  </header>
-
-  <!-- Cuerpo: sidebar violeta + canvas blanco -->
-  <div class="flex-1 flex min-h-0">
-    <!-- Sidebar violeta (Figma) -->
-    <aside class="hidden lg:flex flex-col w-56 shrink-0 bg-brand-500">
-      <nav class="flex-1 px-3 py-5">
-        <ul class="space-y-2">
-          <li>
-            <a routerLink="/registro" class="sidebar-item">
-              <i class="pi pi-user-plus text-xs"></i>
-              <span>Registro</span>
-            </a>
-          </li>
-          <li>
-            <a routerLink="/login" class="sidebar-item active">
-              <i class="pi pi-sign-in text-xs"></i>
-              <span>Inicio Sesión</span>
-            </a>
-          </li>
-        </ul>
-      </nav>
-      <div class="p-4 flex items-center justify-center">
-        <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
-      </div>
-    </aside>
-
-    <!-- Canvas central blanco · contiene el formulario -->
-    <main class="flex-1 min-w-0 p-4 lg:p-6 overflow-auto">
-      <div class="bg-white rounded-2xl shadow-card p-6 lg:p-8 min-h-full flex items-center justify-center">
-        <div class="w-full max-w-sm">
-          <h1 class="text-center text-lg font-bold tracking-wider text-brand-800 font-display uppercase mb-6">
-            Inicio De Sesión
-          </h1>
-
-          <form
-            [formGroup]="formulario"
-            (ngSubmit)="enviar()"
-            class="space-y-4"
-            novalidate
-          >
-            <div class="ez-field !mb-0">
-              <label class="ez-field-label">Correo Electrónico</label>
-              <input
-                type="email"
-                formControlName="email"
-                class="ez-input"
-                placeholder="ESCRIBA AQUÍ"
-                autocomplete="email"
-              />
-              @if (formulario.controls.email.touched && formulario.controls.email.invalid) {
-                <p class="text-rose-600 text-[11px] mt-1">Ingresa un correo válido.</p>
-              }
-            </div>
-
-            <div class="ez-field !mb-0">
-              <label class="ez-field-label">Contraseña</label>
-              <input
-                type="password"
-                formControlName="password"
-                class="ez-input"
-                placeholder="ESCRIBA AQUÍ"
-                autocomplete="current-password"
-              />
-              @if (formulario.controls.password.touched && formulario.controls.password.invalid) {
-                <p class="text-rose-600 text-[11px] mt-1">Mínimo 4 caracteres.</p>
-              }
-            </div>
-
-            <button
-              type="submit"
-              class="ez-btn-primary ez-btn-lg w-full uppercase tracking-widest"
-              [disabled]="cargando()"
-            >
-              @if (cargando()) {
-                <i class="pi pi-spin pi-spinner mr-1"></i>
-              }
-              Ingresar
-            </button>
-
-            <div class="text-center">
-              <a routerLink="/recuperar"
-                 class="text-brand-700 hover:text-brand-800 text-xs font-semibold underline">
-                ¿Olvidaste la Contraseña?
-              </a>
-            </div>
-
-            <div class="border-t border-surface-200 pt-3 text-center text-xs text-surface-500">
-              ¿No tienes cuenta?
-              <a routerLink="/registro" class="text-brand-700 hover:text-brand-800 font-bold ml-1">
-                Regístrate aquí
-              </a>
-            </div>
-          </form>
-        </div>
-      </div>
-    </main>
   </div>
 
-  <!-- Footer violeta -->
-  <footer class="bg-brand-500 px-6 py-3 flex items-center justify-center">
-    <img src="/logo.png" alt="ExperienZia" class="h-8 w-auto object-contain bg-white/90 rounded-md p-1" />
-  </footer>
+  <!-- Lado derecho: formulario -->
+  <div class="login-form-side">
+    <div class="login-form-wrapper">
+      <!-- Logo -->
+      <div class="text-center mb-6">
+        <img src="/logo.png" alt="ExperienZia" class="mx-auto h-16 w-auto object-contain" />
+      </div>
+
+      <h1 class="login-greeting">¡Hola! Qué bueno verte de nuevo</h1>
+      <p class="login-subtitle">INICIO DE SESIÓN</p>
+
+      <form
+        [formGroup]="formulario"
+        (ngSubmit)="enviar()"
+        class="login-form"
+        novalidate
+      >
+        <!-- Email -->
+        <div class="login-field">
+          <label class="login-field__label">CORREO ELECTRÓNICO</label>
+          <div class="login-field__input-wrap">
+            <i class="pi pi-envelope login-field__icon"></i>
+            <input
+              type="email"
+              formControlName="email"
+              class="login-field__input"
+              placeholder="ejemplo@correo.com"
+              autocomplete="email"
+            />
+          </div>
+          @if (formulario.controls.email.touched && formulario.controls.email.invalid) {
+            <p class="login-field__error">Ingresa un correo válido.</p>
+          }
+        </div>
+
+        <!-- Contraseña -->
+        <div class="login-field">
+          <label class="login-field__label">CONTRASEÑA</label>
+          <div class="login-field__input-wrap">
+            <i class="pi pi-lock login-field__icon"></i>
+            <input
+              [type]="mostrarPassword ? 'text' : 'password'"
+              formControlName="password"
+              class="login-field__input"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="login-field__toggle"
+              (click)="mostrarPassword = !mostrarPassword"
+              tabindex="-1"
+            >
+              <i [class]="mostrarPassword ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
+            </button>
+          </div>
+          @if (formulario.controls.password.touched && formulario.controls.password.invalid) {
+            <p class="login-field__error">Mínimo 4 caracteres.</p>
+          }
+        </div>
+
+        <!-- Botón -->
+        <button
+          type="submit"
+          class="login-btn"
+          [disabled]="cargando()"
+        >
+          @if (cargando()) {
+            <i class="pi pi-spin pi-spinner mr-2"></i>
+          }
+          INGRESAR
+        </button>
+
+        <!-- Olvidaste contraseña -->
+        <div class="text-center mt-4">
+          <a routerLink="/recuperar" class="login-link">
+            ¿Olvidaste tu Contraseña?
+          </a>
+        </div>
+
+        <!-- Separador -->
+        <div class="login-divider">
+          <span>Términos y Condiciones</span>
+          <span class="mx-1">|</span>
+          <span>Ayuda</span>
+        </div>
+
+        <!-- Registro -->
+        <p class="login-register">
+          ¿No tienes cuenta?
+          <a routerLink="/registro" class="login-register__link">Regístrate aquí</a>
+        </p>
+      </form>
+    </div>
+  </div>
 </div>

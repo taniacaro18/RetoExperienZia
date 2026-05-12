@@ -1,74 +1,137 @@
-<div class="min-h-screen bg-brand-400 flex flex-col">
-  <header class="h-14 px-4 flex items-center justify-between bg-brand-500 text-white shrink-0 flex-wrap gap-2">
-    <span class="font-bold font-display text-sm">ExperienZia</span>
-    <div class="flex gap-3 text-xs font-semibold flex-wrap items-center">
-      <a routerLink="/catalogo" class="hover:underline opacity-90">Eventos públicos</a>
-      <span class="opacity-50">|</span>
-      <a routerLink="/verificar-certificado" class="hover:underline">Verificar certificado</a>
-      <span class="opacity-50">|</span>
-      <a routerLink="/login" class="hover:underline">Iniciar sesión</a>
-      <span class="opacity-50">|</span>
-      <a routerLink="/registro" class="hover:underline">Registro</a>
+<div class="min-h-screen flex flex-col bg-white">
+  <!-- Header violeta (igual al shell) -->
+  <header class="h-16 px-4 lg:px-8 bg-brand-500 flex items-center justify-between gap-4 sticky top-0 z-30">
+    <a routerLink="/catalogo" class="flex items-center">
+      <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
+    </a>
+
+    <div class="hidden md:flex flex-1 max-w-xl mx-2">
+      <div class="relative w-full flex items-center bg-white rounded-full pr-1">
+        <input
+          type="text"
+          placeholder="Busca eventos por nombre..."
+          class="flex-1 h-9 pl-4 pr-3 bg-transparent rounded-full focus:outline-none text-sm text-surface-900 placeholder:text-surface-400"
+          [ngModel]="nombre()"
+          (ngModelChange)="nombre.set($event)"
+        />
+        <button
+          type="button"
+          class="h-8 px-4 rounded-full bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition flex items-center gap-1.5"
+        >
+          <i class="pi pi-search text-[10px]"></i>
+          <span>Buscar</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 text-sm flex-wrap justify-end">
+      <a routerLink="/verificar-certificado"
+         class="px-3 h-9 rounded-full border border-white/40 text-white/95 hover:bg-white/10 font-semibold text-xs flex items-center transition">
+        Verificar certificado
+      </a>
+      <a routerLink="/login"
+         class="px-4 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center transition">
+        Iniciar Sesión
+      </a>
+      <a routerLink="/registro"
+         class="px-4 h-9 rounded-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs flex items-center transition">
+        Regístrate
+      </a>
     </div>
   </header>
 
-  <main class="flex-1 p-4 md:p-6 max-w-5xl mx-auto w-full">
-    <h1 class="text-xl font-bold text-white font-display mb-1">Catálogo de eventos públicos</h1>
-    <p class="text-sm text-white/85 mb-4">
-      Solo eventos <strong>públicos y ACTIVOS</strong>. Para inscribirte o el detalle completo necesitas
-      <a routerLink="/login" class="underline font-semibold">iniciar sesión</a>.
-    </p>
-
-    <div class="bg-white/95 rounded-2xl border border-brand-100 p-4 mb-4 shadow-soft flex flex-wrap gap-3 items-end">
-      <div class="flex-1 min-w-[140px]">
-        <label class="text-[11px] font-bold text-surface-600 uppercase">Nombre</label>
-        <input pInputText class="w-full mt-1" placeholder="Buscar…"
-               [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" />
-      </div>
-      <div class="min-w-[140px]">
-        <label class="text-[11px] font-bold text-surface-600 uppercase">Categoría</label>
-        <input pInputText class="w-full mt-1" placeholder="Ej. tecnología"
-               [ngModel]="categoria()" (ngModelChange)="categoria.set($event)" />
+  <main class="cat-body">
+    <!-- Título -->
+    <div class="flex items-end justify-between gap-4 flex-wrap mb-4">
+      <div>
+        <h1 class="ez-section-title">Eventos disponibles</h1>
+        <p class="ez-page-subtitle !mb-0">Explora y participa en los eventos públicos.</p>
       </div>
     </div>
 
+    <!-- Filtros -->
+    <div class="ez-card mb-5">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        <div class="ez-field !mb-0">
+          <label class="ez-field-label">Nombre</label>
+          <input pInputText class="w-full" placeholder="BUSCAR..."
+                 [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" />
+        </div>
+        <div class="ez-field !mb-0">
+          <label class="ez-field-label">Categoría</label>
+          <input pInputText class="w-full" placeholder="TECNOLOGÍA, MÚSICA..."
+                 [ngModel]="categoria()" (ngModelChange)="categoria.set($event)" />
+        </div>
+        <div class="text-right text-xs text-brand-600 font-semibold pt-4">
+          {{ filtrados().length }} evento{{ filtrados().length !== 1 ? 's' : '' }} encontrado{{ filtrados().length !== 1 ? 's' : '' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Cargando -->
     @if (cargando()) {
-      <div class="flex justify-center py-16">
-        <p-progressSpinner styleClass="!w-12 !h-12" strokeWidth="4"></p-progressSpinner>
+      <div class="flex justify-center py-12">
+        <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
       </div>
     } @else if (filtrados().length === 0) {
-      <div class="bg-white rounded-2xl p-10 text-center border border-brand-100">
-        <p class="text-surface-700">No hay eventos que coincidan o el catálogo está vacío.</p>
+      <div class="text-center py-12">
+        <i class="pi pi-calendar-times text-4xl text-brand-300 mb-2"></i>
+        <p class="text-surface-500">No hay eventos que coincidan con tu búsqueda.</p>
       </div>
     } @else {
-      <div class="grid gap-3 md:grid-cols-2">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         @for (e of filtrados(); track e.id) {
-          <p-card styleClass="shadow-soft border-brand-100">
-            <div class="space-y-2">
-              <div class="flex justify-between gap-2 items-start">
-                <h2 class="font-bold text-surface-900 text-sm leading-snug">{{ e.nombre }}</h2>
-                <p-tag value="ACTIVO" severity="success" styleClass="text-[10px]" />
+          <article class="ez-event-card cursor-pointer hover:shadow-card transition"
+                   [routerLink]="['/catalogo', e.id]">
+            <header class="ez-event-card-header">
+              <span class="ez-event-card-badge">A</span>
+              <h3 class="ez-event-card-title leading-tight line-clamp-2 flex-1 min-w-0">
+                {{ e.nombre }}
+              </h3>
+            </header>
+
+            @if (e.imagen) {
+              <img [src]="e.imagen" [alt]="e.nombre" class="w-full h-40 object-cover" />
+            } @else {
+              <div class="w-full h-40 bg-brand-gradient flex items-center justify-center text-white">
+                <i class="pi pi-calendar text-4xl opacity-90"></i>
               </div>
-              <p class="text-xs text-surface-600">{{ e.descripcion || 'Sin descripción breve.' }}</p>
-              <div class="text-xs text-surface-500">
-                <i class="pi pi-calendar text-brand-500 mr-1"></i>{{ e.fecha | date: 'medium' }}
+            }
+
+            <div class="ez-event-card-body space-y-2 text-[13px]">
+              <div class="text-surface-700">
+                <div class="font-bold">{{ e.fecha | date: 'dd' }} de {{ e.fecha | date: 'MMMM' }} de {{ e.fecha | date: 'yyyy' }}</div>
+                <div class="text-surface-500 text-xs">{{ e.fecha | date: 'h:mm a' }}</div>
               </div>
-              @if (e.ubicacion) {
-                <div class="text-xs text-surface-500">
-                  <i class="pi pi-map-marker text-brand-500 mr-1"></i>{{ e.ubicacion }}
-                </div>
+
+              @if (e.descripcion) {
+                <p class="text-surface-600 line-clamp-2">{{ e.descripcion }}</p>
               }
-              <div class="text-xs pt-2 border-t border-surface-100">
-                Cupos disponibles: <strong>{{ cupos(e) }}</strong> / {{ e.aforoMaximo }}
-              </div>
-              <div class="pt-2">
-                <a routerLink="/login"
-                   class="text-xs font-bold text-brand-700 hover:text-brand-800 underline">
-                  Inicia sesión para inscribirte →
-                </a>
+
+              <div class="pt-1">
+                <div class="flex items-center justify-between text-[11px] text-surface-500 mb-1">
+                  <span class="uppercase tracking-wider font-bold">Aforo</span>
+                  <span>{{ e.aforoActual }} / {{ e.aforoMaximo }}</span>
+                </div>
+                <div class="h-1.5 bg-surface-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-brand-600" [style.width.%]="porcentajeOcupacion(e)"></div>
+                </div>
               </div>
             </div>
-          </p-card>
+
+            <footer class="ez-event-card-footer">
+              <a [routerLink]="['/catalogo', e.id]"
+                 class="ez-btn-outline ez-btn-sm"
+                 (click)="$event.stopPropagation()">
+                Ver Detalles
+              </a>
+              <a routerLink="/login"
+                 class="ez-btn-primary ez-btn-sm"
+                 (click)="$event.stopPropagation()">
+                Inscríbete
+              </a>
+            </footer>
+          </article>
         }
       </div>
     }

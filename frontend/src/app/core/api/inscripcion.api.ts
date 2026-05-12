@@ -1,7 +1,8 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { SKIP_GLOBAL_TOAST } from '../interceptors/error.interceptor';
 import {
   AforoEnVivo,
   AsistenteEvento,
@@ -69,7 +70,7 @@ export class InscripcionApi {
       codigoQR,
       staffUsuarioId,
       eventoId
-    });
+    }, { headers: new HttpHeaders().set(SKIP_GLOBAL_TOAST, '1') });
   }
 
   checkOutQR(codigoQR: string, staffUsuarioId: number, eventoId?: number): Observable<Inscripcion> {
@@ -77,7 +78,7 @@ export class InscripcionApi {
       codigoQR,
       staffUsuarioId,
       eventoId
-    });
+    }, { headers: new HttpHeaders().set(SKIP_GLOBAL_TOAST, '1') });
   }
 
   cargaManual(

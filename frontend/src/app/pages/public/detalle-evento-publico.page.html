@@ -1,0 +1,144 @@
+<div class="min-h-screen flex flex-col bg-white">
+  <!-- Header violeta (igual al shell) -->
+  <header class="h-16 px-4 lg:px-8 bg-brand-500 flex items-center justify-between gap-4 sticky top-0 z-30">
+    <a routerLink="/catalogo" class="flex items-center">
+      <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
+    </a>
+
+    <div class="flex-1"></div>
+
+    <div class="flex items-center gap-2 text-sm flex-wrap justify-end">
+      <a routerLink="/catalogo"
+         class="px-3 h-9 rounded-full border border-white/40 text-white/95 hover:bg-white/10 font-semibold text-xs flex items-center transition gap-1.5">
+        <i class="pi pi-arrow-left text-[10px]"></i> Volver al catálogo
+      </a>
+      <a routerLink="/login"
+         class="px-4 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center transition">
+        Iniciar Sesión
+      </a>
+      <a routerLink="/registro"
+         class="px-4 h-9 rounded-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs flex items-center transition">
+        Regístrate
+      </a>
+    </div>
+  </header>
+
+  @if (cargando()) {
+    <div class="det-loading">
+      <p-progressSpinner styleClass="!w-14 !h-14" strokeWidth="4"></p-progressSpinner>
+    </div>
+  } @else if (error()) {
+    <div class="det-error">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>{{ error() }}</p>
+      <a routerLink="/catalogo" class="det-error__link">← Volver al catálogo</a>
+    </div>
+  } @else if (evento(); as e) {
+    <!-- Hero del evento -->
+    <div class="det-hero">
+      @if (e.imagen) {
+        <img [src]="e.imagen" [alt]="e.nombre" class="det-hero__img" />
+      }
+      <div class="det-hero__overlay"></div>
+      <div class="det-hero__content">
+        @if (e.categoria) {
+          <span class="det-hero__cat">{{ e.categoria }}</span>
+        }
+        <h1 class="det-hero__title">{{ e.nombre }}</h1>
+        <div class="det-hero__badges">
+          <p-tag value="ACTIVO" severity="success" styleClass="text-xs" />
+          <p-tag [value]="e.tipoEvento" severity="info" styleClass="text-xs" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenido -->
+    <main class="det-main">
+      <div class="det-grid">
+        <!-- Columna izquierda: info -->
+        <div class="det-info">
+          <section class="det-section">
+            <h2 class="det-section__title">Descripción</h2>
+            <p class="det-section__text">{{ e.descripcion || 'Este evento no tiene descripción.' }}</p>
+          </section>
+
+          <section class="det-section">
+            <h2 class="det-section__title">Detalles</h2>
+            <div class="det-details">
+              <div class="det-detail">
+                <i class="pi pi-calendar"></i>
+                <div>
+                  <span class="det-detail__label">Fecha de inicio</span>
+                  <span class="det-detail__value">{{ e.fecha | date: 'fullDate' }} — {{ e.fecha | date: 'shortTime' }}</span>
+                </div>
+              </div>
+              @if (e.fechaFin) {
+                <div class="det-detail">
+                  <i class="pi pi-calendar-plus"></i>
+                  <div>
+                    <span class="det-detail__label">Fecha de fin</span>
+                    <span class="det-detail__value">{{ e.fechaFin | date: 'fullDate' }} — {{ e.fechaFin | date: 'shortTime' }}</span>
+                  </div>
+                </div>
+              }
+              @if (e.duracionHoras) {
+                <div class="det-detail">
+                  <i class="pi pi-clock"></i>
+                  <div>
+                    <span class="det-detail__label">Duración</span>
+                    <span class="det-detail__value">{{ e.duracionHoras }} hora{{ e.duracionHoras > 1 ? 's' : '' }}</span>
+                  </div>
+                </div>
+              }
+              @if (e.ubicacion) {
+                <div class="det-detail">
+                  <i class="pi pi-map-marker"></i>
+                  <div>
+                    <span class="det-detail__label">Ubicación</span>
+                    <span class="det-detail__value">{{ e.ubicacion }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        </div>
+
+        <!-- Columna derecha: tarjeta de inscripción -->
+        <aside class="det-aside">
+          <div class="det-cta-card">
+            <!-- Precio -->
+            <div class="det-cta__price-row">
+              @if (e.costo > 0) {
+                <span class="det-cta__price">$ {{ e.costo | number:'1.0-0' }}</span>
+                <span class="det-cta__price-label">por persona</span>
+              } @else {
+                <span class="det-cta__free">GRATIS</span>
+              }
+            </div>
+
+            <!-- Aforo -->
+            <div class="det-cta__aforo">
+              <div class="det-cta__aforo-bar">
+                <div class="det-cta__aforo-fill" [style.width.%]="porcentajeAforo()"></div>
+              </div>
+              <div class="det-cta__aforo-text">
+                <span><strong>{{ cupos() }}</strong> cupos disponibles</span>
+                <span>{{ e.aforoActual }} / {{ e.aforoMaximo }}</span>
+              </div>
+            </div>
+
+            <!-- CTA -->
+            <a routerLink="/login" [queryParams]="{ returnTo: '/eventos/' + e.id }" class="det-cta__btn">
+              <i class="pi pi-sign-in"></i>
+              Inicia sesión para inscribirte
+            </a>
+            <p class="det-cta__sub">
+              ¿No tienes cuenta?
+              <a routerLink="/registro" class="det-cta__sub-link">Regístrate gratis</a>
+            </p>
+          </div>
+        </aside>
+      </div>
+    </main>
+  }
+</div>

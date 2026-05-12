@@ -7,21 +7,27 @@ import { catchError, throwError } from 'rxjs';
  * Interceptor global: traduce errores HTTP a toasts y deja pasar la excepción
  * para que cada componente decida si reacciona.
  */
+export const SKIP_GLOBAL_TOAST = 'X-Skip-Global-Toast';
+
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const messageService = inject(MessageService, { optional: true });
+  const skipToast = req.headers.has(SKIP_GLOBAL_TOAST);
+  const cleanReq = skipToast ? req.clone({ headers: req.headers.delete(SKIP_GLOBAL_TOAST) }) : req;
 
-  return next(req).pipe(
+  return next(cleanReq).pipe(
     catchError((err: HttpErrorResponse) => {
-      const mensaje = extraerMensaje(err);
-      if (messageService) {
-        messageService.add({
-          severity: severidadPorEstado(err.status),
-          summary: tituloPorEstado(err.status),
-          detail: mensaje,
-          life: 4500
-        });
-      } else {
-        console.error('[HTTP]', err.status, mensaje);
+      if (!skipToast) {
+        const mensaje = extraerMensaje(err);
+        if (messageService) {
+          messageService.add({
+            severity: severidadPorEstado(err.status),
+            summary: tituloPorEstado(err.status),
+            detail: mensaje,
+            life: 4500
+          });
+        } else {
+          console.error('[HTTP]', err.status, mensaje);
+        }
       }
       return throwError(() => err);
     })

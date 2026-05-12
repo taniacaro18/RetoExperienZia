@@ -31,6 +31,10 @@ export class EventoApi {
     return this.http.get<Evento[]>(this.base + '/catalogo/publicos');
   }
 
+  obtenerPublico(id: number): Observable<Evento> {
+    return this.http.get<Evento>(this.base + '/catalogo/publicos/' + id);
+  }
+
   listarPorOrganizador(organizadorId: number): Observable<Evento[]> {
     return this.http.get<Evento[]>(this.base + '/organizador/' + organizadorId);
   }

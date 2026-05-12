@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -21,7 +21,8 @@ import { AuthService } from '../../core/auth/auth.service';
     PasswordModule,
     SelectModule
   ],
-  templateUrl: './registro.page.html'
+  templateUrl: './registro.page.html',
+  styleUrl: './registro.page.scss'
 })
 export class RegistroPage {
   private readonly fb = inject(FormBuilder);
@@ -30,6 +31,18 @@ export class RegistroPage {
   private readonly messages = inject(MessageService);
 
   readonly cargando = signal(false);
+  mostrarPassword = false;
+  mostrarConfirmar = false;
+  readonly seccionActiva = signal<string>('identidad');
+
+  readonly secciones: { id: string; icon: string; label: string }[] = [
+    { id: 'identidad', icon: 'pi pi-user',     label: 'Nombres Completos' },
+    { id: 'contacto',  icon: 'pi pi-envelope',  label: 'Correo Electrónico' },
+    { id: 'telefono',  icon: 'pi pi-phone',     label: 'Número de Celular' },
+    { id: 'documento', icon: 'pi pi-id-card',   label: 'Documentos' },
+    { id: 'seguridad', icon: 'pi pi-shield',    label: 'Seguridad' },
+    { id: 'rol',       icon: 'pi pi-users',     label: 'Rol de Usuario' }
+  ];
 
   readonly tiposCuenta = [
     { label: 'Asistente', value: 'ASISTENTE' },
@@ -54,10 +67,27 @@ export class RegistroPage {
     confirmar: ['', [Validators.required]]
   });
 
-  readonly contrasenasNoCoinciden = computed(() => {
+  contrasenasNoCoinciden(): boolean {
     const v = this.formulario.getRawValue();
     return v.password !== v.confirmar;
-  });
+  }
+
+  seccionCompleta(id: string): boolean {
+    const f = this.formulario.controls;
+    switch (id) {
+      case 'identidad': return f.nombre.valid;
+      case 'contacto':  return f.email.valid;
+      case 'telefono':  return f.telefono.value.trim().length > 0;
+      case 'documento': return f.tipoDocumento.valid && f.numeroDocumento.valid;
+      case 'seguridad': return f.password.valid && f.confirmar.valid && !this.contrasenasNoCoinciden();
+      case 'rol':       return f.tipo.valid;
+      default:          return false;
+    }
+  }
+
+  focusSeccion(seccion: string) {
+    this.seccionActiva.set(seccion);
+  }
 
   /** Devuelve la lista concreta de problemas del formulario, en lenguaje claro. */
   private obtenerProblemas(): string[] {

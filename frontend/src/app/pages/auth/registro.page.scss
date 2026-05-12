@@ -1,0 +1,430 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+/* ── Layout split ─────────────────────────── */
+.reg-split {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Sidebar (mismo ancho visual que login-image: 50%) ── */
+.reg-sidebar {
+  display: none;
+  flex-direction: column;
+  width: 260px;
+  flex-shrink: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(78, 42, 111, 0.97) 0%,
+    rgba(101, 55, 143, 0.95) 50%,
+    rgba(144, 97, 194, 0.92) 100%
+  );
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('/login-bg.jpg') center / cover no-repeat;
+    opacity: 0.12;
+    z-index: 0;
+  }
+
+  @media (min-width: 1024px) {
+    display: flex;
+  }
+}
+
+.reg-sidebar__brand {
+  position: relative;
+  z-index: 1;
+  padding: 2rem 1.5rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.reg-sidebar__logo {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25));
+}
+
+/* ── Stepper nav ──────────────────────────── */
+.reg-sidebar__nav {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0 1rem;
+  flex: 1;
+}
+
+/* ── Step item ────────────────────────────── */
+.reg-step {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.reg-step__dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.6rem;
+  color: transparent;
+  transition: all 0.25s;
+  background: transparent;
+}
+
+.reg-step__body {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reg-step__icon {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.55);
+  width: 1.1rem;
+  text-align: center;
+  transition: color 0.2s;
+}
+
+.reg-step__label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  transition: color 0.2s;
+}
+
+.reg-step:hover {
+  background: rgba(255, 255, 255, 0.08);
+
+  .reg-step__label,
+  .reg-step__icon {
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+.reg-step.active {
+  background: rgba(255, 255, 255, 0.14);
+
+  .reg-step__dot {
+    border-color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .reg-step__icon {
+    color: #fff;
+  }
+
+  .reg-step__label {
+    color: #fff;
+    font-weight: 700;
+  }
+}
+
+.reg-step.done {
+  .reg-step__dot {
+    border-color: #86efac;
+    background: #86efac;
+    color: #166534;
+  }
+
+  .reg-step__icon {
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .reg-step__label {
+    color: rgba(255, 255, 255, 0.8);
+  }
+}
+
+.reg-step.done.active {
+  .reg-step__dot {
+    border-color: #4ade80;
+    background: #4ade80;
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+  }
+
+  .reg-step__label {
+    color: #fff;
+  }
+
+  .reg-step__icon {
+    color: #fff;
+  }
+}
+
+/* ── Lado formulario ──────────────────────── */
+.reg-form-side {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background: #f7f5fa;
+  overflow-y: auto;
+
+  @media (max-width: 1023px) {
+    background: linear-gradient(
+      to bottom,
+      var(--brand-500) 0%,
+      var(--brand-400) 120px,
+      #f7f5fa 120px
+    );
+    padding-top: 1.5rem;
+  }
+}
+
+.reg-form-logo {
+  text-align: center;
+  margin-bottom: 1rem;
+
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+.reg-form-wrapper {
+  width: 100%;
+  max-width: 820px;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  padding: 2rem 2.5rem 1.75rem;
+
+  @media (max-width: 640px) {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+/* ── Título ────────────────────────────────── */
+.reg-title {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--brand-800);
+  margin-bottom: 1.5rem;
+}
+
+/* ── Formulario ────────────────────────────── */
+.reg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* ── Filas ─────────────────────────────────── */
+.reg-row {
+  display: grid;
+  gap: 1rem;
+}
+
+.reg-row--3 {
+  grid-template-columns: 1fr;
+
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.reg-row--2 {
+  grid-template-columns: 1fr;
+
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.reg-row--center {
+  display: flex;
+  justify-content: center;
+}
+
+.reg-field--rol {
+  width: 100%;
+  max-width: 360px;
+}
+
+/* ── Campo ─────────────────────────────────── */
+.reg-field__label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--brand-700);
+  margin-bottom: 0.3rem;
+}
+
+.reg-req {
+  color: #dc2626;
+  margin-right: 2px;
+}
+
+.reg-field__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #e0d4ec;
+  border-radius: 0.5rem;
+  background: #faf8fd;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus-within {
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(144, 97, 194, 0.15);
+  }
+}
+
+.reg-field__input-wrap--select {
+  padding-right: 0;
+
+  .reg-select {
+    flex: 1;
+  }
+
+  :deep(.p-select) {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    min-height: 2.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+.reg-field__icon {
+  padding-left: 0.7rem;
+  color: var(--brand-400);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.reg-field__input {
+  flex: 1;
+  height: 2.5rem;
+  padding: 0 0.65rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.85rem;
+  color: #1e1e2f;
+  min-width: 0;
+
+  &::placeholder {
+    color: #b5a8c4;
+  }
+}
+
+.reg-field__toggle {
+  padding: 0 0.65rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--brand-400);
+  font-size: 0.95rem;
+  transition: color 0.15s;
+
+  &:hover {
+    color: var(--brand-700);
+  }
+}
+
+.reg-field__error {
+  font-size: 0.65rem;
+  color: #dc2626;
+  margin-top: 0.25rem;
+}
+
+/* ── Aviso organizador ─────────────────────── */
+.reg-org-notice {
+  background: #f4eefb;
+  border: 1px solid #d2bceb;
+  color: var(--brand-800);
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+/* ── Acciones ──────────────────────────────── */
+.reg-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.reg-btn {
+  width: 100%;
+  max-width: 420px;
+  height: 2.75rem;
+  border: none;
+  border-radius: 2rem;
+  background: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-700) 100%);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    opacity: 0.92;
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.reg-actions__sub {
+  font-size: 0.7rem;
+  color: #9b8aad;
+}
+
+/* ── Link login ────────────────────────────── */
+.reg-login-link {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #6b6b7b;
+  margin-top: 0.25rem;
+}
+
+.reg-login-link__a {
+  font-weight: 700;
+  color: var(--brand-600);
+  text-decoration: none;
+  margin-left: 0.25rem;
+
+  &:hover {
+    color: var(--brand-800);
+    text-decoration: underline;
+  }
+}
