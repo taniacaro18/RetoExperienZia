@@ -6,6 +6,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputTextModule } from 'primeng/inputtext';
 import { EventoApi } from '../../core/api/evento.api';
 import { Evento } from '../../core/models/domain.models';
+import { VerificarCertificadoModal } from './verificar-certificado.page';
 
 @Component({
   selector: 'app-catalogo-publico-page',
@@ -16,7 +17,8 @@ import { Evento } from '../../core/models/domain.models';
     DatePipe,
     RouterLink,
     ProgressSpinnerModule,
-    InputTextModule
+    InputTextModule,
+    VerificarCertificadoModal
   ],
   templateUrl: './catalogo-publico.page.html',
   styleUrl: './catalogo-publico.page.scss'
@@ -29,6 +31,7 @@ export class CatalogoPublicoPage {
 
   readonly nombre = signal('');
   readonly categoria = signal('');
+  readonly mostrarVerificar = signal(false);
 
   readonly filtrados = computed(() => {
     let list = this.todos();

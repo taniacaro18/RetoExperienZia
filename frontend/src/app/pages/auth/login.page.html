@@ -84,9 +84,9 @@
 
         <!-- Olvidaste contraseña -->
         <div class="text-center mt-4">
-          <a routerLink="/recuperar" class="login-link">
+          <button type="button" class="login-link" (click)="mostrarRecuperar.set(true)">
             ¿Olvidaste tu Contraseña?
-          </a>
+          </button>
         </div>
 
         <!-- Catálogo público -->
@@ -102,4 +102,8 @@
       </form>
     </div>
   </div>
+
+  @if (mostrarRecuperar()) {
+    <app-recuperar-modal (cerrarModal)="mostrarRecuperar.set(false)" />
+  }
 </div>

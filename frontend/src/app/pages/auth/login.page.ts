@@ -10,6 +10,7 @@ import { MessageService } from 'primeng/api';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { AuthService } from '../../core/auth/auth.service';
 import { Rol } from '../../core/models/domain.models';
+import { RecuperarModal } from './recuperar.page';
 
 @Component({
   selector: 'app-login-page',
@@ -22,7 +23,8 @@ import { Rol } from '../../core/models/domain.models';
     InputTextModule,
     PasswordModule,
     CardModule,
-    ProgressSpinnerModule
+    ProgressSpinnerModule,
+    RecuperarModal
   ],
   templateUrl: './login.page.html',
   styleUrl: './login.page.scss'
@@ -35,6 +37,7 @@ export class LoginPage {
 
   readonly cargando = signal(false);
   mostrarPassword = false;
+  readonly mostrarRecuperar = signal(false);
 
   readonly formulario = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],

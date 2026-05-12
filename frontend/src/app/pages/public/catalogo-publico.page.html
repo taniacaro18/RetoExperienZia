@@ -25,10 +25,11 @@
     </div>
 
     <div class="flex items-center gap-2 text-sm flex-wrap justify-end">
-      <a routerLink="/verificar-certificado"
-         class="px-3 h-9 rounded-full border border-white/40 text-white/95 hover:bg-white/10 font-semibold text-xs flex items-center transition">
+      <button type="button"
+              (click)="mostrarVerificar.set(true)"
+              class="px-3 h-9 rounded-full border border-white/40 text-white/95 hover:bg-white/10 font-semibold text-xs flex items-center transition cursor-pointer">
         Verificar certificado
-      </a>
+      </button>
       <a routerLink="/login"
          class="px-4 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center transition">
         Iniciar Sesión
@@ -136,4 +137,8 @@
       </div>
     }
   </main>
+
+  @if (mostrarVerificar()) {
+    <app-verificar-certificado-modal (cerrarModal)="mostrarVerificar.set(false)" />
+  }
 </div>

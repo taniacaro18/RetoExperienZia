@@ -1,32 +1,23 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { CardModule } from 'primeng/card';
 import { MessageService } from 'primeng/api';
 import { CertificadoApi } from '../../core/api/certificado.api';
 import { Certificado } from '../../core/models/domain.models';
 import { environment } from '../../../environments/environment';
 
 @Component({
-  selector: 'app-verificar-certificado-page',
+  selector: 'app-verificar-certificado-modal',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    RouterLink,
-    ButtonModule,
-    InputTextModule,
-    CardModule
-  ],
+  imports: [CommonModule, FormsModule],
   templateUrl: './verificar-certificado.page.html',
   styleUrl: './verificar-certificado.page.scss'
 })
-export class VerificarCertificadoPage {
+export class VerificarCertificadoModal {
   private readonly certApi = inject(CertificadoApi);
   private readonly messages = inject(MessageService);
+
+  readonly cerrarModal = output<void>();
 
   readonly codigo = signal('');
   readonly cargando = signal(false);
@@ -70,5 +61,9 @@ export class VerificarCertificadoPage {
     const url =
       `${environment.apiUrl}/api/certificados/pdf/` + encodeURIComponent(codigoRaw.trim());
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  cerrar() {
+    this.cerrarModal.emit();
   }
 }

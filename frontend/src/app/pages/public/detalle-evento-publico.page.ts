@@ -5,11 +5,12 @@ import { TagModule } from 'primeng/tag';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { EventoApi } from '../../core/api/evento.api';
 import { Evento } from '../../core/models/domain.models';
+import { VerificarCertificadoModal } from './verificar-certificado.page';
 
 @Component({
   selector: 'app-detalle-evento-publico-page',
   standalone: true,
-  imports: [CommonModule, DatePipe, RouterLink, TagModule, ProgressSpinnerModule],
+  imports: [CommonModule, DatePipe, RouterLink, TagModule, ProgressSpinnerModule, VerificarCertificadoModal],
   templateUrl: './detalle-evento-publico.page.html',
   styleUrl: './detalle-evento-publico.page.scss'
 })
@@ -20,6 +21,7 @@ export class DetalleEventoPublicoPage {
   readonly cargando = signal(true);
   readonly evento = signal<Evento | null>(null);
   readonly error = signal<string | null>(null);
+  readonly mostrarVerificar = signal(false);
 
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));

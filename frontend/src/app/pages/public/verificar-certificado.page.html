@@ -1,73 +1,82 @@
-<div class="min-h-screen bg-brand-400 flex flex-col">
-  <header class="h-14 px-4 flex items-center justify-between bg-brand-500 text-white">
-    <span class="font-bold font-display text-sm">ExperienZia</span>
-    <div class="flex gap-2 text-xs font-semibold flex-wrap items-center justify-end">
-      <a routerLink="/catalogo" class="hover:underline mr-2">Eventos públicos</a>
-      <span class="opacity-50">|</span>
-      <a routerLink="/login" class="hover:underline">Iniciar sesión</a>
-      <span class="opacity-50">|</span>
-      <a routerLink="/registro" class="hover:underline">Registro</a>
+<!-- Backdrop semi-transparente: la página real se ve detrás -->
+<div class="vc-backdrop" (click)="cerrar()"></div>
+
+<!-- Modal card -->
+<div class="vc-modal">
+  <div class="vc-modal__header">
+    <div>
+      <h1 class="vc-modal__title">
+        <i class="pi pi-verified"></i> Verificar certificado
+      </h1>
+      <p class="vc-modal__sub">
+        Ingresa el <strong>código único</strong> del PDF emitido por la plataforma.
+      </p>
     </div>
-  </header>
+    <button type="button" class="vc-modal__close" (click)="cerrar()">
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
 
-  <main class="flex-1 flex items-center justify-center p-6">
-    <p-card styleClass="w-full max-w-lg shadow-soft border-brand-100">
-      <div class="space-y-4">
-        <div>
-          <h1 class="text-xl font-bold text-surface-900 font-display">Verificar certificado</h1>
-          <p class="text-sm text-surface-600 mt-1">
-            Consulta pública: ingresa el <strong>código único</strong> del PDF emitido por la plataforma.
-          </p>
+  <div class="vc-search">
+    <div class="vc-search__wrap">
+      <i class="pi pi-search vc-search__icon"></i>
+      <input
+        class="vc-search__input"
+        placeholder="Ej. CERT-XXXX-..."
+        [ngModel]="codigo()"
+        (ngModelChange)="codigo.set($event)"
+        (keyup.enter)="buscar()"
+      />
+    </div>
+    <button
+      type="button"
+      class="vc-search__btn"
+      [disabled]="cargando()"
+      (click)="buscar()"
+    >
+      @if (cargando()) {
+        <i class="pi pi-spin pi-spinner"></i>
+      } @else {
+        <i class="pi pi-search"></i>
+      }
+      Verificar
+    </button>
+  </div>
+
+  @if (resultado(); as cert) {
+    <div class="vc-result">
+      <div class="vc-result__badge">
+        <i class="pi pi-check-circle"></i> Certificado válido
+      </div>
+
+      <div class="vc-result__grid">
+        <div class="vc-result__item">
+          <span class="vc-result__label">Participante</span>
+          <span class="vc-result__value">{{ cert.nombreAsistente || '—' }}</span>
         </div>
-
-        <div class="flex gap-2 flex-wrap">
-          <input
-            pInputText
-            class="flex-1 min-w-[200px]"
-            placeholder="Ej. CERT-XXXX-..."
-            [ngModel]="codigo()"
-            (ngModelChange)="codigo.set($event)"
-            (keyup.enter)="buscar()"
-          />
-          <button
-            pButton
-            type="button"
-            label="Verificar"
-            icon="pi pi-search"
-            class="p-button-primary"
-            [loading]="cargando()"
-            [disabled]="cargando()"
-            (click)="buscar()"
-          ></button>
+        <div class="vc-result__item">
+          <span class="vc-result__label">Evento</span>
+          <span class="vc-result__value">{{ cert.nombreEvento || '—' }}</span>
         </div>
-
-        @if (resultado(); as cert) {
-          <div class="rounded-xl border border-accent-200 bg-accent-50 p-4 text-sm space-y-2">
-            <div class="flex items-center gap-2 text-accent-800 font-bold">
-              <i class="pi pi-verified"></i> Certificado válido
-            </div>
-            <div><span class="text-surface-500">Participante:</span> {{ cert.nombreAsistente || '—' }}</div>
-            <div><span class="text-surface-500">Evento:</span> {{ cert.nombreEvento || '—' }}</div>
-            @if (cert.duracionHoras != null) {
-              <div><span class="text-surface-500">Duración:</span> {{ cert.duracionHoras }} h</div>
-            }
-            <div><span class="text-surface-500">Fecha evento:</span> {{ cert.fechaEvento | date: 'mediumDate' }}</div>
-            <div class="text-xs text-surface-600 font-mono border-t border-accent-200 pt-2 mt-2">
-              Código: {{ cert.codigoUnico || cert.codigo }}
-            </div>
-            <div class="pt-2">
-              <button
-                pButton
-                type="button"
-                label="Descargar PDF (servidor)"
-                icon="pi pi-download"
-                class="p-button-outlined p-button-sm w-full"
-                (click)="descargarPdf()"
-              ></button>
-            </div>
+        <div class="vc-result__item">
+          <span class="vc-result__label">Fecha evento</span>
+          <span class="vc-result__value">{{ cert.fechaEvento | date: 'mediumDate' }}</span>
+        </div>
+        @if (cert.duracionHoras != null) {
+          <div class="vc-result__item">
+            <span class="vc-result__label">Duración</span>
+            <span class="vc-result__value">{{ cert.duracionHoras }} horas</span>
           </div>
         }
       </div>
-    </p-card>
-  </main>
+
+      <div class="vc-result__code">
+        <i class="pi pi-hashtag"></i> {{ cert.codigoUnico || cert.codigo }}
+      </div>
+
+      <button type="button" class="vc-result__download" (click)="descargarPdf()">
+        <i class="pi pi-download"></i> Descargar PDF
+      </button>
+    </div>
+  }
 </div>

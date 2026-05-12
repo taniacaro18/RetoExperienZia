@@ -12,11 +12,6 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/public/detalle-evento-publico.page').then((m) => m.DetalleEventoPublicoPage)
   },
-  {
-    path: 'verificar-certificado',
-    loadComponent: () =>
-      import('./pages/public/verificar-certificado.page').then((m) => m.VerificarCertificadoPage)
-  },
   // Rutas públicas (auth)
   {
     path: 'login',
@@ -27,11 +22,6 @@ export const routes: Routes = [
     path: 'registro',
     canActivate: [noAuthGuard],
     loadComponent: () => import('./pages/auth/registro.page').then((m) => m.RegistroPage)
-  },
-  {
-    path: 'recuperar',
-    canActivate: [noAuthGuard],
-    loadComponent: () => import('./pages/auth/recuperar.page').then((m) => m.RecuperarPage)
   },
 
   // App protegida con shell

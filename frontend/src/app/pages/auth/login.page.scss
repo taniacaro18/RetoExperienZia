@@ -234,6 +234,10 @@
   color: var(--brand-600);
   text-decoration: none;
   transition: color 0.15s;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 
   &:hover {
     color: var(--brand-800);

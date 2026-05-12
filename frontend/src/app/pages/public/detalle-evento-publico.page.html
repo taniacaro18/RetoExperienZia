@@ -12,6 +12,11 @@
          class="px-3 h-9 rounded-full border border-white/40 text-white/95 hover:bg-white/10 font-semibold text-xs flex items-center transition gap-1.5">
         <i class="pi pi-arrow-left text-[10px]"></i> Volver al catálogo
       </a>
+      <button type="button"
+              (click)="mostrarVerificar.set(true)"
+              class="px-3 h-9 rounded-full border border-white/40 text-white/95 hover:bg-white/10 font-semibold text-xs flex items-center transition cursor-pointer">
+        Verificar certificado
+      </button>
       <a routerLink="/login"
          class="px-4 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center transition">
         Iniciar Sesión
@@ -140,5 +145,9 @@
         </aside>
       </div>
     </main>
+  }
+
+  @if (mostrarVerificar()) {
+    <app-verificar-certificado-modal (cerrarModal)="mostrarVerificar.set(false)" />
   }
 </div>

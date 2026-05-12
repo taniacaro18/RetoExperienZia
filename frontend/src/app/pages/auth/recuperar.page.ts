@@ -1,30 +1,22 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { CardModule } from 'primeng/card';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
-  selector: 'app-recuperar-page',
+  selector: 'app-recuperar-modal',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    ButtonModule,
-    InputTextModule,
-    CardModule
-  ],
-  templateUrl: './recuperar.page.html'
+  imports: [CommonModule, ReactiveFormsModule],
+  templateUrl: './recuperar.page.html',
+  styleUrl: './recuperar.page.scss'
 })
-export class RecuperarPage {
+export class RecuperarModal {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly messages = inject(MessageService);
+
+  readonly cerrarModal = output<void>();
 
   readonly cargando = signal(false);
   readonly passwordTemporal = signal<string | null>(null);
@@ -70,5 +62,9 @@ export class RecuperarPage {
         });
       }
     });
+  }
+
+  cerrar() {
+    this.cerrarModal.emit();
   }
 }
