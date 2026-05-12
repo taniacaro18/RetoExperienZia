@@ -1,6 +1,7 @@
 package com.experienzia.impl;
 
 import com.experienzia.dto.AsistenteEventoDTO;
+import com.experienzia.dto.CertificadoDTO;
 import com.experienzia.dto.EventoDTO;
 import com.experienzia.exceptions.CustomException;
 import com.experienzia.service.export.ExportService;
@@ -32,7 +33,9 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Implementación de exportadores en backend.
@@ -208,6 +211,63 @@ public class ExportServiceImpl implements ExportService {
             return out.toByteArray();
         } catch (IOException e) {
             throw new CustomException("No se pudo generar el PDF: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Override
+    public byte[] certificadoPdf(CertificadoDTO c) {
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Document doc = new Document(PageSize.A4.rotate(), 48, 48, 48, 48);
+            PdfWriter.getInstance(doc, out);
+            doc.open();
+
+            Font tituloF = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, BRAND);
+            Font marcaF = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 28, BRAND);
+            Font cuerpoF = FontFactory.getFont(FontFactory.HELVETICA, 12, Color.DARK_GRAY);
+            Font nombreF = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, new Color(17, 24, 39));
+            Font monoF = FontFactory.getFont(FontFactory.COURIER, 9, Color.GRAY);
+
+            doc.add(new Paragraph("CERTIFICADO DE ASISTENCIA", tituloF));
+            doc.add(new Paragraph("ExperienZia", marcaF));
+            doc.add(new Paragraph(" ", cuerpoF));
+
+            doc.add(new Paragraph("Se certifica que", cuerpoF));
+            doc.add(new Paragraph(safe(c.getNombreAsistente()), nombreF));
+            doc.add(new Paragraph(" ", cuerpoF));
+
+            StringBuilder descripcion = new StringBuilder();
+            descripcion.append("Participó en el programa / evento: ");
+            descripcion.append(safe(c.getNombreEvento()));
+            if (c.getFechaEvento() != null) {
+                descripcion.append(", realizado el ");
+                descripcion.append(c.getFechaEvento().format(
+                        DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(new Locale("es", "CO"))));
+            }
+            if (c.getDuracionHoras() != null && c.getDuracionHoras() > 0) {
+                descripcion.append(", con una duración de ");
+                descripcion.append(c.getDuracionHoras());
+                descripcion.append(" hora(s).");
+            } else {
+                descripcion.append(".");
+            }
+            doc.add(new Paragraph(descripcion.toString(), cuerpoF));
+            doc.add(new Paragraph(" ", cuerpoF));
+
+            if (c.getFechaGeneracion() != null) {
+                doc.add(new Paragraph(
+                        "Fecha de emisión: " + c.getFechaGeneracion().format(FECHA_FMT),
+                        FontFactory.getFont(FontFactory.HELVETICA, 10, Color.GRAY)));
+            }
+
+            doc.add(new Paragraph(" ", cuerpoF));
+            doc.add(new Paragraph("Código único de verificación (API / web pública):", monoF));
+            doc.add(new Paragraph(safe(c.getCodigoUnico()), FontFactory.getFont(FontFactory.COURIER, 10, BRAND)));
+
+            doc.close();
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new CustomException("No se pudo generar el PDF del certificado: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

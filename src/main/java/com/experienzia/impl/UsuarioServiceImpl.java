@@ -19,6 +19,7 @@ import com.experienzia.spec.UsuarioSpecification.UsuarioSearchCriteria;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -36,13 +37,16 @@ public class UsuarioServiceImpl implements UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final NotificacionService notificacionService;
     private final ModelMapper modelMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public UsuarioServiceImpl(UsuarioRepository usuarioRepository,
                               NotificacionService notificacionService,
-                              ModelMapper modelMapper) {
+                              ModelMapper modelMapper,
+                              PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.notificacionService = notificacionService;
         this.modelMapper = modelMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -55,7 +59,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         Usuario usuario = new Usuario();
         usuario.setNombre(dto.getNombre().trim());
         usuario.setEmail(dto.getEmail().trim().toLowerCase(Locale.ROOT));
-        usuario.setPassword(dto.getPassword());
+        usuario.setPassword(passwordEncoder.encode(dto.getPassword()));
         usuario.setTelefono(blankToNull(dto.getTelefono()));
         usuario.setTipoDocumento(dto.getTipoDocumento());
         usuario.setNumeroDocumento(blankToNull(dto.getNumeroDocumento()));
@@ -84,13 +88,17 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .orElseThrow(() -> new CustomException(
                         "No existe una cuenta registrada con este correo.", HttpStatus.UNAUTHORIZED));
 
-        if (!usuario.getPassword().equals(dto.getPassword())) {
+        if (!passwordCoincide(dto.getPassword(), usuario.getPassword())) {
             throw new CustomException("La contraseña ingresada es incorrecta.", HttpStatus.UNAUTHORIZED);
         }
         if (usuario.getEstado() != Estado.ACTIVO) {
             throw new CustomException(
                     "Acceso denegado. El estado de la cuenta es: " + usuario.getEstado(),
                     HttpStatus.FORBIDDEN);
+        }
+        if (!passwordEsBcrypt(usuario.getPassword())) {
+            usuario.setPassword(passwordEncoder.encode(dto.getPassword()));
+            usuario = usuarioRepository.save(usuario);
         }
         return toDto(usuario);
     }
@@ -116,7 +124,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         Usuario staff = new Usuario();
         staff.setNombre(dto.getNombre().trim());
         staff.setEmail(dto.getEmail().trim().toLowerCase(Locale.ROOT));
-        staff.setPassword(dto.getPassword());
+        staff.setPassword(passwordEncoder.encode(dto.getPassword()));
         staff.setTelefono(dto.getTelefono());
         staff.setTipoDocumento(dto.getTipoDocumento());
         staff.setNumeroDocumento(dto.getNumeroDocumento());
@@ -290,10 +298,10 @@ public class UsuarioServiceImpl implements UsuarioService {
                 throw new CustomException("La contraseña debe tener al menos 4 caracteres.");
             }
             // HU-005 C03: la nueva contraseña no puede ser igual a la anterior.
-            if (nuevaPass.equals(u.getPassword())) {
+            if (passwordCoincide(nuevaPass, u.getPassword())) {
                 throw new CustomException("La nueva contraseña no puede ser igual a la anterior.");
             }
-            u.setPassword(nuevaPass);
+            u.setPassword(passwordEncoder.encode(nuevaPass));
         }
         return toDto(usuarioRepository.save(u));
     }
@@ -320,7 +328,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                     "Los datos de identidad no coinciden con la cuenta.", HttpStatus.UNAUTHORIZED);
         }
         String temporal = generarPasswordTemporal(10);
-        u.setPassword(temporal);
+        u.setPassword(passwordEncoder.encode(temporal));
         Usuario guardado = usuarioRepository.save(u);
 
         return new RecuperarPasswordResponseDTO(
@@ -343,7 +351,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         String nuevaPass = (u.getNumeroDocumento() != null && !u.getNumeroDocumento().isBlank())
                 ? u.getNumeroDocumento().trim()
                 : generarPasswordTemporal(10);
-        u.setPassword(nuevaPass);
+        u.setPassword(passwordEncoder.encode(nuevaPass));
         Usuario guardado = usuarioRepository.save(u);
 
         notificacionService.crear(guardado.getId(),
@@ -430,6 +438,24 @@ public class UsuarioServiceImpl implements UsuarioService {
             sb.append(ALFABETO_PASS.charAt(RANDOM.nextInt(ALFABETO_PASS.length())));
         }
         return sb.toString();
+    }
+
+    private boolean passwordEsBcrypt(String stored) {
+        return stored != null
+                && (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$"));
+    }
+
+    /**
+     * BCrypt o contraseñas legadas en texto plano (se migran a BCrypt al iniciar sesión).
+     */
+    private boolean passwordCoincide(String raw, String stored) {
+        if (stored == null || raw == null) {
+            return false;
+        }
+        if (passwordEsBcrypt(stored)) {
+            return passwordEncoder.matches(raw, stored);
+        }
+        return raw.equals(stored);
     }
 
     private UsuarioDTO toDto(Usuario u) {

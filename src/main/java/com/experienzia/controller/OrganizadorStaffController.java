@@ -6,6 +6,8 @@ import com.experienzia.service.AuditoriaService;
 import com.experienzia.service.NotificacionService;
 import com.experienzia.service.UsuarioService;
 import org.springframework.http.ResponseEntity;
+import com.experienzia.util.ClientIpResolver;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,23 +32,27 @@ public class OrganizadorStaffController {
 
     @PutMapping("/{staffId}/desactivar")
     public ResponseEntity<UsuarioDTO> desactivar(@PathVariable Long organizadorId,
-                                                 @PathVariable Long staffId) {
+                                                 @PathVariable Long staffId,
+                                                 HttpServletRequest request) {
         UsuarioDTO u = usuarioService.desactivarStaffPorOrganizador(organizadorId, staffId);
         notificacionService.crear(u.getId(),
                 "El organizador desactivó tu cuenta de staff. Ya no podrás iniciar sesión hasta que sea reactivada.",
                 TipoNotificacion.ALERTA);
-        auditoriaService.registrar(organizadorId, "STAFF_DESACTIVADO", "Usuario", u.getId());
+        auditoriaService.registrar(organizadorId, "STAFF_DESACTIVADO", "Usuario", u.getId(),
+                ClientIpResolver.resolve(request));
         return ResponseEntity.ok(u);
     }
 
     @PutMapping("/{staffId}/reactivar")
     public ResponseEntity<UsuarioDTO> reactivar(@PathVariable Long organizadorId,
-                                                @PathVariable Long staffId) {
+                                                @PathVariable Long staffId,
+                                                HttpServletRequest request) {
         UsuarioDTO u = usuarioService.reactivarStaffPorOrganizador(organizadorId, staffId);
         notificacionService.crear(u.getId(),
                 "El organizador reactivó tu cuenta de staff. Ya puedes iniciar sesión nuevamente.",
                 TipoNotificacion.INFO);
-        auditoriaService.registrar(organizadorId, "STAFF_REACTIVADO", "Usuario", u.getId());
+        auditoriaService.registrar(organizadorId, "STAFF_REACTIVADO", "Usuario", u.getId(),
+                ClientIpResolver.resolve(request));
         return ResponseEntity.ok(u);
     }
 }

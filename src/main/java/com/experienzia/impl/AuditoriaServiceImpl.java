@@ -24,7 +24,7 @@ public class AuditoriaServiceImpl implements AuditoriaService {
     }
 
     @Override
-    public AuditoriaDTO registrar(Long usuarioId, String accion, String entidad, Long entidadId) {
+    public AuditoriaDTO registrar(Long usuarioId, String accion, String entidad, Long entidadId, String direccionIp) {
         if (accion == null || accion.trim().isEmpty()) {
             throw new IllegalArgumentException("La acción de auditoría no puede estar vacía.");
         }
@@ -37,6 +37,7 @@ public class AuditoriaServiceImpl implements AuditoriaService {
         auditoria.setEntidad(entidad);
         auditoria.setEntidadId(entidadId);
         auditoria.setFecha(LocalDateTime.now());
+        auditoria.setDireccionIp(direccionIp);
         return modelMapper.map(auditoriaRepository.save(auditoria), AuditoriaDTO.class);
     }
 

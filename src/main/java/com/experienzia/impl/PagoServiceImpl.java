@@ -67,7 +67,7 @@ public class PagoServiceImpl implements PagoService {
     }
 
     @Override
-    public PagoDTO registrar(Long eventoId, Long organizadorId, MultipartFile archivo) {
+    public PagoDTO registrar(Long eventoId, Long organizadorId, MultipartFile archivo, String direccionIp) {
         if (eventoId == null) {
             throw new CustomException("El evento es requerido.", HttpStatus.BAD_REQUEST);
         }
@@ -124,12 +124,12 @@ public class PagoServiceImpl implements PagoService {
         pago.setFecha(LocalDateTime.now());
         Pago guardado = pagoRepository.save(pago);
 
-        auditoriaService.registrar(organizadorId, "PAGO_REGISTRADO", "Pago", guardado.getId());
+        auditoriaService.registrar(organizadorId, "PAGO_REGISTRADO", "Pago", guardado.getId(), direccionIp);
         return toDto(guardado);
     }
 
     @Override
-    public PagoDTO aprobar(Long pagoId, Long aprobadorId) {
+    public PagoDTO aprobar(Long pagoId, Long aprobadorId, String direccionIp) {
         Pago pago = pagoRepository.findById(pagoId)
                 .orElseThrow(() -> new CustomException("El pago no existe.", HttpStatus.NOT_FOUND));
         if (pago.getEstado() != EstadoPago.PENDIENTE) {
@@ -153,12 +153,12 @@ public class PagoServiceImpl implements PagoService {
             // El evento puede no estar APROBADO; lo dejamos como está.
         }
 
-        auditoriaService.registrar(aprobadorId, "PAGO_APROBADO", "Pago", guardado.getId());
+        auditoriaService.registrar(aprobadorId, "PAGO_APROBADO", "Pago", guardado.getId(), direccionIp);
         return toDto(guardado);
     }
 
     @Override
-    public PagoDTO rechazar(Long pagoId, String motivo, Long aprobadorId) {
+    public PagoDTO rechazar(Long pagoId, String motivo, Long aprobadorId, String direccionIp) {
         if (motivo == null || motivo.isBlank()) {
             throw new CustomException("El motivo de rechazo es obligatorio.", HttpStatus.BAD_REQUEST);
         }
@@ -178,7 +178,7 @@ public class PagoServiceImpl implements PagoService {
                         + ". Sube un nuevo comprobante desde tu panel.",
                 TipoNotificacion.ALERTA);
 
-        auditoriaService.registrar(aprobadorId, "PAGO_RECHAZADO", "Pago", guardado.getId());
+        auditoriaService.registrar(aprobadorId, "PAGO_RECHAZADO", "Pago", guardado.getId(), direccionIp);
         return toDto(guardado);
     }
 

@@ -8,6 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.experienzia.util.ClientIpResolver;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.List;
 
 /**
@@ -28,22 +32,27 @@ public class PagoController {
     @PostMapping
     public ResponseEntity<PagoDTO> registrar(@RequestParam Long eventoId,
                                              @RequestParam Long organizadorId,
-                                             @RequestParam MultipartFile archivo) {
+                                             @RequestParam MultipartFile archivo,
+                                             HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(pagoService.registrar(eventoId, organizadorId, archivo));
+                .body(pagoService.registrar(eventoId, organizadorId, archivo, ClientIpResolver.resolve(request)));
     }
 
     @PutMapping("/{id}/aprobar")
     public ResponseEntity<PagoDTO> aprobar(@PathVariable Long id,
-                                           @RequestParam(required = false) Long aprobadorId) {
-        return ResponseEntity.ok(pagoService.aprobar(id, aprobadorId));
+                                           @RequestParam(required = false) Long aprobadorId,
+                                           HttpServletRequest request) {
+        return ResponseEntity.ok(pagoService.aprobar(id, aprobadorId, ClientIpResolver.resolve(request)));
     }
 
     @PutMapping("/{id}/rechazar")
-    public ResponseEntity<PagoDTO> rechazar(@PathVariable Long id, @RequestBody RechazarPagoDTO body) {
+    public ResponseEntity<PagoDTO> rechazar(@PathVariable Long id,
+                                           @RequestBody RechazarPagoDTO body,
+                                           HttpServletRequest request) {
         return ResponseEntity.ok(pagoService.rechazar(id,
                 body == null ? null : body.getMotivo(),
-                body == null ? null : body.getAprobadorId()));
+                body == null ? null : body.getAprobadorId(),
+                ClientIpResolver.resolve(request)));
     }
 
     @GetMapping("/pendientes")

@@ -27,6 +27,7 @@ import com.experienzia.service.InscripcionService;
 import com.experienzia.service.NotificacionService;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,19 +53,22 @@ public class InscripcionServiceImpl implements InscripcionService {
     private final StaffEventoAsignacionRepository staffEventoRepository;
     private final NotificacionService notificacionService;
     private final ModelMapper modelMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public InscripcionServiceImpl(InscripcionRepository inscripcionRepository,
                                   EventoRepository eventoRepository,
                                   UsuarioRepository usuarioRepository,
                                   StaffEventoAsignacionRepository staffEventoRepository,
                                   NotificacionService notificacionService,
-                                  ModelMapper modelMapper) {
+                                  ModelMapper modelMapper,
+                                  PasswordEncoder passwordEncoder) {
         this.inscripcionRepository = inscripcionRepository;
         this.eventoRepository = eventoRepository;
         this.usuarioRepository = usuarioRepository;
         this.staffEventoRepository = staffEventoRepository;
         this.notificacionService = notificacionService;
         this.modelMapper = modelMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -590,7 +594,7 @@ public class InscripcionServiceImpl implements InscripcionService {
         nuevo.setTelefono(blankToNull(fila.getTelefono()));
         nuevo.setTipoDocumento(fila.getTipoDocumento().trim());
         nuevo.setNumeroDocumento(numeroDoc);
-        nuevo.setPassword(numeroDoc);
+        nuevo.setPassword(passwordEncoder.encode(numeroDoc));
         nuevo.setRol(Rol.ASISTENTE);
         nuevo.setEstado(Estado.ACTIVO);
         Usuario guardado = usuarioRepository.save(nuevo);

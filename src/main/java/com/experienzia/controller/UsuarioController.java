@@ -3,14 +3,20 @@ package com.experienzia.controller;
 import com.experienzia.dto.ActualizarPerfilDTO;
 import com.experienzia.dto.CrearStaffDTO;
 import com.experienzia.dto.LoginDTO;
+import com.experienzia.dto.LoginResponseDTO;
 import com.experienzia.dto.RecuperarPasswordDTO;
 import com.experienzia.dto.RecuperarPasswordResponseDTO;
 import com.experienzia.dto.UsuarioDTO;
+import com.experienzia.security.JwtService;
 import com.experienzia.service.AuditoriaService;
 import com.experienzia.service.UsuarioService;
 import com.experienzia.spec.UsuarioSpecification.UsuarioSearchCriteria;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import com.experienzia.util.ClientIpResolver;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
@@ -20,10 +26,13 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
     private final AuditoriaService auditoriaService;
+    private final JwtService jwtService;
 
-    public UsuarioController(UsuarioService usuarioService, AuditoriaService auditoriaService) {
+    public UsuarioController(UsuarioService usuarioService, AuditoriaService auditoriaService,
+                             JwtService jwtService) {
         this.usuarioService = usuarioService;
         this.auditoriaService = auditoriaService;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/registro")
@@ -32,8 +41,10 @@ public class UsuarioController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<UsuarioDTO> login(@RequestBody LoginDTO dto) {
-        return ResponseEntity.ok(usuarioService.login(dto));
+    public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginDTO dto) {
+        UsuarioDTO usuario = usuarioService.login(dto);
+        String token = jwtService.generateToken(usuario.getId(), usuario.getEmail(), usuario.getRol());
+        return ResponseEntity.ok(new LoginResponseDTO(token, usuario));
     }
 
     @PostMapping("/staff")
@@ -75,9 +86,11 @@ public class UsuarioController {
     @PostMapping("/{id}/reenviar-credenciales")
     public ResponseEntity<RecuperarPasswordResponseDTO> reenviarCredenciales(
             @PathVariable Long id,
-            @RequestParam(required = false) Long actorId) {
+            @RequestParam(required = false) Long actorId,
+            HttpServletRequest request) {
         RecuperarPasswordResponseDTO r = usuarioService.reenviarCredenciales(id);
-        auditoriaService.registrar(actorId, "CREDENCIALES_REENVIADAS", "Usuario", id);
+        auditoriaService.registrar(actorId, "CREDENCIALES_REENVIADAS", "Usuario", id,
+                ClientIpResolver.resolve(request));
         return ResponseEntity.ok(r);
     }
 }

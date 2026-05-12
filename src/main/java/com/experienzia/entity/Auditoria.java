@@ -45,4 +45,8 @@ public class Auditoria {
 
     @Column(nullable = false)
     private LocalDateTime fecha;
+
+    /** Dirección IP del cliente (IPv4/IPv6). ROOM_911 / trazabilidad. */
+    @Column(name = "direccion_ip", length = 45)
+    private String direccionIp;
 }

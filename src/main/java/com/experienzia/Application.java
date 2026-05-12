@@ -8,6 +8,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @SpringBootApplication
 public class Application {
@@ -22,7 +23,8 @@ public class Application {
 	 * para poder iniciar sesión y administrar la plataforma desde el primer arranque.
 	 */
 	@Bean
-	CommandLineRunner inicializarAdmin(UsuarioRepository usuarioRepository) {
+	CommandLineRunner inicializarAdmin(UsuarioRepository usuarioRepository,
+			PasswordEncoder passwordEncoder) {
 		return args -> {
 			final String emailAdmin = "admin@experienzia.com";
 
@@ -32,7 +34,7 @@ public class Application {
 				Usuario admin = new Usuario();
 				admin.setNombre("Administrador ExperienZia");
 				admin.setEmail(emailAdmin);
-				admin.setPassword("admin123");
+				admin.setPassword(passwordEncoder.encode("admin123"));
 				admin.setTipoDocumento("CC");
 				admin.setNumeroDocumento("0000000000");
 				admin.setTelefono("3000000000");

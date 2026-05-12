@@ -1,6 +1,7 @@
 package com.experienzia.service.export;
 
 import com.experienzia.dto.AsistenteEventoDTO;
+import com.experienzia.dto.CertificadoDTO;
 import com.experienzia.dto.EventoDTO;
 
 import java.util.List;
@@ -15,4 +16,7 @@ public interface ExportService {
 
     byte[] eventosExcel(List<EventoDTO> eventos);
     byte[] eventosPdf(List<EventoDTO> eventos);
+
+    /** Certificado individual (nombre, curso/evento, duración, código) en PDF. */
+    byte[] certificadoPdf(CertificadoDTO certificado);
 }

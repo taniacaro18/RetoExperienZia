@@ -13,6 +13,8 @@ import com.experienzia.entity.FuncionStaff;
 import com.experienzia.exceptions.CustomException;
 import com.experienzia.service.AuditoriaService;
 import com.experienzia.service.InscripcionService;
+import com.experienzia.util.ClientIpResolver;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,16 +36,18 @@ public class InscripcionController {
     }
 
     @PostMapping("/api/inscripciones")
-    public ResponseEntity<InscripcionDTO> crear(@RequestBody InscripcionDTO dto) {
+    public ResponseEntity<InscripcionDTO> crear(@RequestBody InscripcionDTO dto, HttpServletRequest request) {
         InscripcionDTO ins = inscripcionService.inscribir(dto.getUsuarioId(), dto.getEventoId());
-        auditoriaService.registrar(ins.getUsuarioId(), "INSCRIPCION_CREADA", "Inscripcion", ins.getId());
+        auditoriaService.registrar(ins.getUsuarioId(), "INSCRIPCION_CREADA", "Inscripcion", ins.getId(),
+                ClientIpResolver.resolve(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(ins);
     }
 
     @PutMapping("/api/inscripciones/{id}/cancelar")
-    public ResponseEntity<InscripcionDTO> cancelar(@PathVariable Long id) {
+    public ResponseEntity<InscripcionDTO> cancelar(@PathVariable Long id, HttpServletRequest request) {
         InscripcionDTO ins = inscripcionService.cancelar(id);
-        auditoriaService.registrar(ins.getUsuarioId(), "INSCRIPCION_CANCELADA", "Inscripcion", ins.getId());
+        auditoriaService.registrar(ins.getUsuarioId(), "INSCRIPCION_CANCELADA", "Inscripcion", ins.getId(),
+                ClientIpResolver.resolve(request));
         return ResponseEntity.ok(ins);
     }
 
@@ -58,69 +62,79 @@ public class InscripcionController {
     }
 
     @PutMapping("/api/inscripciones/{id}/check-in")
-    public ResponseEntity<InscripcionDTO> checkIn(@PathVariable Long id, @RequestBody CheckInDTO body) {
+    public ResponseEntity<InscripcionDTO> checkIn(@PathVariable Long id, @RequestBody CheckInDTO body,
+                                                    HttpServletRequest request) {
         if (body == null || body.getStaffUsuarioId() == null) {
             throw new CustomException("staffUsuarioId es obligatorio.", HttpStatus.BAD_REQUEST);
         }
         InscripcionDTO ins = inscripcionService.checkIn(id, body.getStaffUsuarioId());
-        auditoriaService.registrar(body.getStaffUsuarioId(), "CHECK_IN", "Inscripcion", ins.getId());
+        auditoriaService.registrar(body.getStaffUsuarioId(), "CHECK_IN", "Inscripcion", ins.getId(),
+                ClientIpResolver.resolve(request));
         return ResponseEntity.ok(ins);
     }
 
     @PutMapping("/api/inscripciones/{id}/check-out")
-    public ResponseEntity<InscripcionDTO> checkOut(@PathVariable Long id, @RequestBody CheckInDTO body) {
+    public ResponseEntity<InscripcionDTO> checkOut(@PathVariable Long id, @RequestBody CheckInDTO body,
+                                                     HttpServletRequest request) {
         if (body == null || body.getStaffUsuarioId() == null) {
             throw new CustomException("staffUsuarioId es obligatorio.", HttpStatus.BAD_REQUEST);
         }
         InscripcionDTO ins = inscripcionService.checkOut(id, body.getStaffUsuarioId());
-        auditoriaService.registrar(body.getStaffUsuarioId(), "CHECK_OUT", "Inscripcion", ins.getId());
+        auditoriaService.registrar(body.getStaffUsuarioId(), "CHECK_OUT", "Inscripcion", ins.getId(),
+                ClientIpResolver.resolve(request));
         return ResponseEntity.ok(ins);
     }
 
     /** HU-015: check-in escaneando el código QR del asistente. */
     @PostMapping("/api/inscripciones/check-in/qr")
-    public ResponseEntity<InscripcionDTO> checkInPorQR(@RequestBody CheckInDTO body) {
+    public ResponseEntity<InscripcionDTO> checkInPorQR(@RequestBody CheckInDTO body, HttpServletRequest request) {
         if (body == null || body.getStaffUsuarioId() == null || body.getCodigoQR() == null) {
             throw new CustomException("staffUsuarioId y codigoQR son obligatorios.", HttpStatus.BAD_REQUEST);
         }
         InscripcionDTO ins = inscripcionService.checkInPorQR(body.getCodigoQR(), body.getStaffUsuarioId(), body.getEventoId());
-        auditoriaService.registrar(body.getStaffUsuarioId(), "CHECK_IN_QR", "Inscripcion", ins.getId());
+        auditoriaService.registrar(body.getStaffUsuarioId(), "CHECK_IN_QR", "Inscripcion", ins.getId(),
+                ClientIpResolver.resolve(request));
         return ResponseEntity.ok(ins);
     }
 
     /** HU-017: check-out escaneando el código QR del asistente. */
     @PostMapping("/api/inscripciones/check-out/qr")
-    public ResponseEntity<InscripcionDTO> checkOutPorQR(@RequestBody CheckInDTO body) {
+    public ResponseEntity<InscripcionDTO> checkOutPorQR(@RequestBody CheckInDTO body, HttpServletRequest request) {
         if (body == null || body.getStaffUsuarioId() == null || body.getCodigoQR() == null) {
             throw new CustomException("staffUsuarioId y codigoQR son obligatorios.", HttpStatus.BAD_REQUEST);
         }
         InscripcionDTO ins = inscripcionService.checkOutPorQR(body.getCodigoQR(), body.getStaffUsuarioId(), body.getEventoId());
-        auditoriaService.registrar(body.getStaffUsuarioId(), "CHECK_OUT_QR", "Inscripcion", ins.getId());
+        auditoriaService.registrar(body.getStaffUsuarioId(), "CHECK_OUT_QR", "Inscripcion", ins.getId(),
+                ClientIpResolver.resolve(request));
         return ResponseEntity.ok(ins);
     }
 
     @PostMapping("/api/eventos/{eventoId}/asistentes/carga-manual")
     public ResponseEntity<ResultadoCargaAsistentesDTO> cargaManual(@PathVariable Long eventoId,
-                                                                   @RequestBody CargaAsistentesManualDTO body) {
+                                                                   @RequestBody CargaAsistentesManualDTO body,
+                                                                   HttpServletRequest request) {
         if (body == null || body.getOrganizadorId() == null || body.getFilas() == null) {
             throw new CustomException("organizadorId y filas son obligatorios.", HttpStatus.BAD_REQUEST);
         }
         ResultadoCargaAsistentesDTO r = inscripcionService.cargarAsistentesManual(eventoId, body.getOrganizadorId(), body.getFilas());
-        auditoriaService.registrar(body.getOrganizadorId(), "ASISTENTES_CARGA_MANUAL", "Evento", eventoId);
+        auditoriaService.registrar(body.getOrganizadorId(), "ASISTENTES_CARGA_MANUAL", "Evento", eventoId,
+                ClientIpResolver.resolve(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(r);
     }
 
     @PostMapping(path = "/api/eventos/{eventoId}/asistentes/carga-csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResultadoCargaAsistentesDTO> cargaCsv(@PathVariable Long eventoId,
                                                                 @RequestParam Long organizadorId,
-                                                                @RequestPart("archivo") MultipartFile archivo) {
+                                                                @RequestPart("archivo") MultipartFile archivo,
+                                                                HttpServletRequest request) {
         if (archivo == null || archivo.isEmpty()) {
             throw new CustomException("Adjunte el archivo CSV en el campo archivo.", HttpStatus.BAD_REQUEST);
         }
         try {
             String contenido = new String(archivo.getBytes(), StandardCharsets.UTF_8);
             ResultadoCargaAsistentesDTO r = inscripcionService.cargarAsistentesCsv(eventoId, organizadorId, contenido);
-            auditoriaService.registrar(organizadorId, "ASISTENTES_CARGA_CSV", "Evento", eventoId);
+            auditoriaService.registrar(organizadorId, "ASISTENTES_CARGA_CSV", "Evento", eventoId,
+                    ClientIpResolver.resolve(request));
             return ResponseEntity.status(HttpStatus.CREATED).body(r);
         } catch (java.io.IOException e) {
             throw new CustomException("No se pudo leer el archivo CSV.", HttpStatus.BAD_REQUEST);
@@ -128,13 +142,15 @@ public class InscripcionController {
     }
 
     @PostMapping("/api/eventos/{eventoId}/staff/asignacion")
-    public ResponseEntity<Void> asignarStaff(@PathVariable Long eventoId, @RequestBody AsignarStaffDTO body) {
+    public ResponseEntity<Void> asignarStaff(@PathVariable Long eventoId, @RequestBody AsignarStaffDTO body,
+                                             HttpServletRequest request) {
         if (body == null || body.getOrganizadorId() == null || body.getStaffUsuarioId() == null) {
             throw new CustomException("organizadorId y staffUsuarioId son obligatorios.", HttpStatus.BAD_REQUEST);
         }
         FuncionStaff funcion = parseFuncion(body.getFuncion());
         inscripcionService.asignarStaff(eventoId, body.getOrganizadorId(), body.getStaffUsuarioId(), funcion);
-        auditoriaService.registrar(body.getOrganizadorId(), "STAFF_ASIGNADO_" + funcion, "Evento", eventoId);
+        auditoriaService.registrar(body.getOrganizadorId(), "STAFF_ASIGNADO_" + funcion, "Evento", eventoId,
+                ClientIpResolver.resolve(request));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -142,19 +158,23 @@ public class InscripcionController {
     public ResponseEntity<StaffAsignadoDTO> cambiarFuncionStaff(@PathVariable Long eventoId,
                                                                 @PathVariable Long staffUsuarioId,
                                                                 @RequestParam Long organizadorId,
-                                                                @RequestBody AsignarStaffDTO body) {
+                                                                @RequestBody AsignarStaffDTO body,
+                                                                HttpServletRequest request) {
         FuncionStaff funcion = parseFuncion(body == null ? null : body.getFuncion());
         StaffAsignadoDTO dto = inscripcionService.cambiarFuncionStaff(eventoId, organizadorId, staffUsuarioId, funcion);
-        auditoriaService.registrar(organizadorId, "STAFF_FUNCION_CAMBIADA_" + funcion, "Evento", eventoId);
+        auditoriaService.registrar(organizadorId, "STAFF_FUNCION_CAMBIADA_" + funcion, "Evento", eventoId,
+                ClientIpResolver.resolve(request));
         return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/api/eventos/{eventoId}/staff/{staffUsuarioId}")
     public ResponseEntity<Void> desasignarStaff(@PathVariable Long eventoId,
                                                 @PathVariable Long staffUsuarioId,
-                                                @RequestParam Long organizadorId) {
+                                                @RequestParam Long organizadorId,
+                                                HttpServletRequest request) {
         inscripcionService.desasignarStaff(eventoId, organizadorId, staffUsuarioId);
-        auditoriaService.registrar(organizadorId, "STAFF_DESASIGNADO", "Evento", eventoId);
+        auditoriaService.registrar(organizadorId, "STAFF_DESASIGNADO", "Evento", eventoId,
+                ClientIpResolver.resolve(request));
         return ResponseEntity.noContent().build();
     }
 

@@ -16,4 +16,5 @@ public class AuditoriaDTO {
     private String entidad;
     private Long entidadId;
     private LocalDateTime fecha;
+    private String direccionIp;
 }
