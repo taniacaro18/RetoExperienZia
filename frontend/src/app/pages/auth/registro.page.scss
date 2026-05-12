@@ -428,3 +428,26 @@
     text-decoration: underline;
   }
 }
+
+.reg-catalogo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--brand-600);
+  text-decoration: none;
+  padding: 0.45rem;
+  border: 1.5px solid var(--brand-200);
+  border-radius: 0.5rem;
+  transition: all 0.15s;
+
+  i { font-size: 0.85rem; }
+
+  &:hover {
+    background: var(--brand-50);
+    border-color: var(--brand-400);
+    color: var(--brand-800);
+  }
+}
