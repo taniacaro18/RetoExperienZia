@@ -51,7 +51,7 @@
         }
         <h1 class="det-hero__title">{{ e.nombre }}</h1>
         <div class="det-hero__badges">
-          <p-tag value="ACTIVO" severity="success" styleClass="text-xs" />
+          <p-tag [value]="eventoEstadoLabel(e.estado)" [severity]="eventoEstadoSeverity(e.estado)" styleClass="text-xs" />
           <p-tag [value]="e.tipoEvento" severity="info" styleClass="text-xs" />
         </div>
       </div>
@@ -108,38 +108,20 @@
           </section>
         </div>
 
-        <!-- Columna derecha: tarjeta de inscripción -->
+        <!-- Columna derecha: acceso (sin tarifas ni datos de inscripción; eso es solo en sesión / rol organizador o admin) -->
         <aside class="det-aside">
           <div class="det-cta-card">
-            <!-- Precio -->
-            <div class="det-cta__price-row">
-              @if (e.costo > 0) {
-                <span class="det-cta__price">$ {{ e.costo | number:'1.0-0' }}</span>
-                <span class="det-cta__price-label">por persona</span>
-              } @else {
-                <span class="det-cta__free">GRATIS</span>
-              }
-            </div>
-
-            <!-- Aforo -->
-            <div class="det-cta__aforo">
-              <div class="det-cta__aforo-bar">
-                <div class="det-cta__aforo-fill" [style.width.%]="porcentajeAforo()"></div>
-              </div>
-              <div class="det-cta__aforo-text">
-                <span><strong>{{ cupos() }}</strong> cupos disponibles</span>
-                <span>{{ e.aforoActual }} / {{ e.aforoMaximo }}</span>
-              </div>
-            </div>
-
-            <!-- CTA -->
-            <a routerLink="/login" [queryParams]="{ returnTo: '/eventos/' + e.id }" class="det-cta__btn">
+            <h3 class="text-base font-extrabold text-surface-900 leading-snug">¿Te interesa este evento?</h3>
+            <p class="text-sm text-surface-600 mt-3 leading-relaxed">
+              Tarifas, cupos e inscripciones no se publican en esta vista. Tras iniciar sesión como asistente podrás consultarlos en tu área privada; el organizador o la administración gestionan el resto.
+            </p>
+            <a routerLink="/login" class="det-cta__btn mt-5">
               <i class="pi pi-sign-in"></i>
-              Inicia sesión para inscribirte
+              Iniciar sesión
             </a>
-            <p class="det-cta__sub">
+            <p class="det-cta__sub mt-3">
               ¿No tienes cuenta?
-              <a routerLink="/registro" class="det-cta__sub-link">Regístrate gratis</a>
+              <a routerLink="/registro" class="det-cta__sub-link">Regístrate</a>
             </p>
           </div>
         </aside>

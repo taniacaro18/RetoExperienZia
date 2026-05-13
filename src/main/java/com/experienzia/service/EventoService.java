@@ -15,8 +15,13 @@ public interface EventoService {
     EventoDTO obtenerPorId(Long id);
     List<EventoDTO> listarTodos();
     List<EventoDTO> listarCatalogoPublicoActivo();
+    /** Detalle público: solo evento público, activo y cuya ventana horaria aún no terminó. */
+    EventoDTO obtenerParaCatalogoPublico(Long id);
     List<EventoDTO> listarPorOrganizador(Long organizadorId);
     List<EventoDTO> buscar(EventoSearchCriteria criteria);
     void aumentarAforo(Long eventoId);
     void disminuirAforo(Long eventoId);
+
+    /** Marca FINALIZADOS los eventos ACTIVO cuya fecha/hora de fin ya pasó. */
+    void marcarEventosActivosFinalizados();
 }

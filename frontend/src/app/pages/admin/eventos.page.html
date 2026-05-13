@@ -135,7 +135,11 @@
                   <app-aforo-bar [value]="e.aforoActual" [max]="e.aforoMaximo" [hideLabel]="false"></app-aforo-bar>
                 </td>
                 <td class="!text-right">
-                  <div class="inline-flex gap-2">
+                  <div class="inline-flex flex-wrap gap-2 justify-end">
+                    <button type="button" (click)="abrirDetalle(e)" class="ez-btn-secondary ez-btn-sm">
+                      <i class="pi pi-list text-[10px]"></i>
+                      Detalle
+                    </button>
                     @if (e.estado === 'PENDIENTE') {
                       <button (click)="aprobar(e)"
                               [disabled]="procesando() === e.id"
@@ -177,6 +181,165 @@
     }
   </div>
 </div>
+
+<!-- Modal detalle del evento (solicitud nueva o re-envío tras edición) -->
+<p-dialog
+  [visible]="mostrarModalDetalle()"
+  (visibleChange)="!$event && cerrarDetalle()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [dismissableMask]="true"
+  [closeOnEscape]="true"
+  styleClass="admin-evento-detalle-dialog"
+  [style]="{ width: '640px', maxWidth: '96vw' }"
+>
+  <ng-template pTemplate="header">
+    <div class="flex items-start gap-3 pr-8">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+        <i class="pi pi-calendar text-lg"></i>
+      </span>
+      <div>
+        <div class="font-extrabold text-brand-900 text-base leading-tight">Detalle del evento</div>
+        @if (eventoDetalle(); as evH) {
+          <p class="text-xs text-surface-500 m-0 mt-1 leading-snug max-w-md">{{ subtituloModalDetalle(evH) }}</p>
+        }
+      </div>
+    </div>
+  </ng-template>
+
+  @if (eventoDetalle(); as ev) {
+    <div class="relative space-y-4 pt-1">
+      @if (cargandoDetalleModal()) {
+        <div class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 rounded-lg">
+          <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
+        </div>
+      }
+
+      <div class="flex flex-wrap items-center gap-2">
+        <p-tag [value]="estadoLabel(ev.estado)" [severity]="estadoSeverity(ev.estado)"></p-tag>
+        <span class="text-xs text-surface-500">ID #{{ ev.id }}</span>
+      </div>
+
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-wider text-brand-700 mb-0.5">Nombre</div>
+        <div class="text-lg font-bold text-surface-900">{{ ev.nombre }}</div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="rounded-xl border border-brand-100 bg-brand-50/50 p-3">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-brand-700 mb-1">Organizador</div>
+          <div class="text-sm font-semibold text-surface-900">{{ nombreOrganizador(ev.organizadorId) }}</div>
+          <div class="text-xs text-surface-600 break-all">{{ emailOrganizador(ev.organizadorId) }}</div>
+        </div>
+        <div class="rounded-xl border border-surface-100 p-3">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-1">Modalidad</div>
+          <div class="text-sm font-semibold text-surface-900">{{ ev.tipoEvento }}</div>
+          <div class="text-xs text-surface-600 mt-0.5">
+            @if (ev.categoria) {
+              Categoría: {{ ev.categoria }}
+            } @else {
+              Sin categoría
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-0.5">Inicio</div>
+          <div class="text-surface-900">{{ ev.fecha | date: 'dd MMM yyyy · HH:mm' }}</div>
+        </div>
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-0.5">Fin</div>
+          <div class="text-surface-900">
+            @if (ev.fechaFin) {
+              {{ ev.fechaFin | date: 'dd MMM yyyy · HH:mm' }}
+            } @else {
+              <span class="text-surface-400 italic">No registrada</span>
+            }
+          </div>
+        </div>
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-0.5">Duración (horas)</div>
+          <div class="text-surface-900">{{ ev.duracionHoras ?? '—' }}</div>
+        </div>
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-0.5">Tarifa / costo</div>
+          <div class="text-surface-900 font-semibold">{{ ev.costo | currency: 'COP':'symbol-narrow':'1.0-0' }}</div>
+        </div>
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-0.5">Aforo</div>
+          <div class="text-surface-900">{{ ev.aforoActual }} / {{ ev.aforoMaximo }}</div>
+        </div>
+        <div class="sm:col-span-2">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-0.5">Ubicación</div>
+          <div class="text-surface-900">{{ ev.ubicacion || '—' }}</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-1">Descripción</div>
+        <div
+          class="text-sm text-surface-800 whitespace-pre-wrap max-h-40 overflow-y-auto rounded-lg border border-surface-100 bg-surface-50 p-3"
+        >{{ ev.descripcion?.trim() || 'Sin descripción.' }}</div>
+      </div>
+
+      @if (imagenEventoAbsoluta(ev.imagen)) {
+        <div>
+          <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-2">Imagen (URL)</div>
+          <div class="flex flex-col sm:flex-row gap-3 items-start">
+            <img [src]="ev.imagen!" alt="" class="h-28 w-full max-w-xs object-cover rounded-lg border border-surface-200" />
+            <a [href]="ev.imagen!" target="_blank" rel="noopener noreferrer" class="text-xs text-brand-700 underline break-all">
+              {{ ev.imagen }}
+            </a>
+          </div>
+        </div>
+      } @else if (ev.imagen?.trim()) {
+        <div class="text-xs text-surface-500">Imagen: <span class="break-all">{{ ev.imagen }}</span></div>
+      }
+
+      @if (ev.estado === 'RECHAZADO' && ev.motivoRechazo) {
+        <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          <strong class="block text-xs uppercase mb-1">Motivo de rechazo previo</strong>
+          {{ ev.motivoRechazo }}
+        </div>
+      }
+      @if (ev.estado === 'CANCELADO' && ev.motivoCancelacion) {
+        <div class="rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm text-surface-800">
+          <strong class="block text-xs uppercase mb-1">Motivo de cancelación</strong>
+          {{ ev.motivoCancelacion }}
+        </div>
+      }
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    @if (eventoDetalle(); as evF) {
+      <div class="flex flex-wrap justify-end gap-2 w-full">
+        @if (evF.estado === 'PENDIENTE') {
+          <button type="button" (click)="aprobar(evF)" [disabled]="procesando() === evF.id" class="ez-btn-success ez-btn-sm">
+            @if (procesando() === evF.id) {
+              <i class="pi pi-spin pi-spinner text-[10px]"></i>
+            } @else {
+              <i class="pi pi-check text-[10px]"></i>
+            }
+            Aprobar
+          </button>
+          <button type="button" (click)="abrirRechazoDesdeDetalle()" [disabled]="procesando() === evF.id" class="ez-btn-danger ez-btn-sm">
+            <i class="pi pi-times text-[10px]"></i>
+            Rechazar
+          </button>
+        }
+        <a [routerLink]="['/eventos', evF.id]" target="_blank" class="ez-btn-ghost ez-btn-sm">
+          <i class="pi pi-external-link text-[10px]"></i>
+          Vista previa
+        </a>
+        <button type="button" (click)="cerrarDetalle()" class="ez-btn-secondary ez-btn-sm">Cerrar</button>
+      </div>
+    }
+  </ng-template>
+</p-dialog>
 
 <!-- Modal de rechazo -->
 <p-dialog [visible]="mostrarModalRechazo()"

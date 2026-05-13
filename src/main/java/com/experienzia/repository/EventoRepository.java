@@ -12,5 +12,8 @@ import java.util.List;
 @Repository
 public interface EventoRepository extends JpaRepository<Evento, Long>, JpaSpecificationExecutor<Evento> {
     List<Evento> findByTipoEventoAndEstado(TipoEvento tipoEvento, EstadoEvento estado);
+
+    List<Evento> findByEstado(EstadoEvento estado);
+
     List<Evento> findByOrganizadorId(Long organizadorId);
 }

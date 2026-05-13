@@ -6,6 +6,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputTextModule } from 'primeng/inputtext';
 import { EventoApi } from '../../core/api/evento.api';
 import { Evento } from '../../core/models/domain.models';
+import { eventoSigueVigenteEnCatalogoPublico } from '../../shared/evento-catalogo.helpers';
 import { VerificarCertificadoModal } from './verificar-certificado.page';
 
 @Component({
@@ -34,7 +35,7 @@ export class CatalogoPublicoPage {
   readonly mostrarVerificar = signal(false);
 
   readonly filtrados = computed(() => {
-    let list = this.todos();
+    let list = this.todos().filter(eventoSigueVigenteEnCatalogoPublico);
     const n = this.nombre().trim().toLowerCase();
     const cat = this.categoria().trim().toLowerCase();
     if (n) {
@@ -55,14 +56,5 @@ export class CatalogoPublicoPage {
       },
       error: () => this.cargando.set(false)
     });
-  }
-
-  cupos(e: Evento): number {
-    return Math.max(0, e.aforoMaximo - e.aforoActual);
-  }
-
-  porcentajeOcupacion(e: Evento): number {
-    if (!e.aforoMaximo) return 0;
-    return Math.min(100, Math.round((e.aforoActual / e.aforoMaximo) * 100));
   }
 }

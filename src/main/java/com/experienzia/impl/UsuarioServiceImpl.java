@@ -19,18 +19,24 @@ import com.experienzia.spec.UsuarioSpecification.UsuarioSearchCriteria;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class UsuarioServiceImpl implements UsuarioService {
 
     private static final String EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+    /** Registro público: solo letras Unicode y espacios. */
+    private static final Pattern REG_NOMBRE_REGISTRO = Pattern.compile("^[\\p{L}\\s]+$");
+    /** Teléfono de perfil: dígitos y separadores habituales, longitud razonable. */
+    private static final String TELEFONO_PERFIL_REGEX = "^[0-9+\\s().-]+$";
     private static final String ALFABETO_PASS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -52,6 +58,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     public UsuarioDTO registrar(UsuarioDTO dto) {
         validarDatosObligatorios(dto.getNombre(), dto.getEmail(), dto.getPassword());
+        validarFormatoRegistro(dto);
         validarEmailUnico(dto.getEmail());
         validarNumeroDocumentoUnico(dto.getNumeroDocumento());
         validarTelefonoUnico(dto.getTelefono());
@@ -258,41 +265,24 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     public UsuarioDTO actualizarPerfil(Long id, ActualizarPerfilDTO dto) {
         Usuario u = buscarOFallar(id);
-        if (dto.getNombre() != null) {
-            String n = dto.getNombre().trim();
-            if (n.isEmpty()) {
-                throw new CustomException("El nombre no puede quedar vacío.");
-            }
-            u.setNombre(n);
-        }
-        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
-            String nuevoEmail = dto.getEmail().trim().toLowerCase(Locale.ROOT);
-            if (!nuevoEmail.matches(EMAIL_REGEX)) {
-                throw new CustomException("El formato del correo electrónico no es válido.");
-            }
-            if (!nuevoEmail.equals(u.getEmail()) && usuarioRepository.existsByEmail(nuevoEmail)) {
-                throw new CustomException("El correo electrónico ya pertenece a otro usuario.");
-            }
-            u.setEmail(nuevoEmail);
-        }
         if (dto.getTelefono() != null) {
             String tel = dto.getTelefono().isBlank() ? null : dto.getTelefono().trim();
-            if (tel != null && !tel.equals(u.getTelefono()) && usuarioRepository.existsByTelefono(tel)) {
-                throw new CustomException("El teléfono ya pertenece a otro usuario.");
+            if (tel != null) {
+                if (tel.length() < 7 || tel.length() > 20) {
+                    throw new CustomException("El teléfono debe tener entre 7 y 20 caracteres.");
+                }
+                if (!tel.matches(TELEFONO_PERFIL_REGEX)) {
+                    throw new CustomException(
+                            "El teléfono solo puede incluir dígitos, espacios y los símbolos + ( ) - .");
+                }
+                if (!tel.equals(u.getTelefono()) && usuarioRepository.existsByTelefono(tel)) {
+                    throw new CustomException("El teléfono ya pertenece a otro usuario.");
+                }
             }
             u.setTelefono(tel);
         }
-        if (dto.getTipoDocumento() != null && !dto.getTipoDocumento().isBlank()) {
-            u.setTipoDocumento(dto.getTipoDocumento().trim());
-        }
-        if (dto.getNumeroDocumento() != null && !dto.getNumeroDocumento().isBlank()) {
-            String nuevoDoc = dto.getNumeroDocumento().trim();
-            if (!nuevoDoc.equals(u.getNumeroDocumento()) && usuarioRepository.existsByNumeroDocumento(nuevoDoc)) {
-                throw new CustomException("El número de documento ya pertenece a otro usuario.");
-            }
-            u.setNumeroDocumento(nuevoDoc);
-        }
         if (dto.getNuevaPassword() != null && !dto.getNuevaPassword().isBlank()) {
+            validarActorPuedeCambiarContrasenaDe(id);
             String nuevaPass = dto.getNuevaPassword().trim();
             if (nuevaPass.length() < 4) {
                 throw new CustomException("La contraseña debe tener al menos 4 caracteres.");
@@ -408,9 +398,70 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
     }
 
+    /** HU-001/002: reglas de formato del formulario de registro público. */
+    private void validarFormatoRegistro(UsuarioDTO dto) {
+        String nombre = dto.getNombre().trim();
+        if (nombre.length() < 3) {
+            throw new CustomException("El nombre debe tener al menos 3 caracteres.");
+        }
+        if (!REG_NOMBRE_REGISTRO.matcher(nombre).matches()) {
+            throw new CustomException("El nombre solo puede contener letras y espacios.");
+        }
+        String tel = dto.getTelefono() != null ? dto.getTelefono().trim() : "";
+        if (tel.isEmpty()) {
+            throw new CustomException("El número de celular es obligatorio.");
+        }
+        if (!tel.matches("^\\d{10}$")) {
+            throw new CustomException("El celular debe tener exactamente 10 dígitos numéricos.");
+        }
+        String doc = dto.getNumeroDocumento() != null ? dto.getNumeroDocumento().trim() : "";
+        if (doc.isEmpty()) {
+            throw new CustomException("El número de documento es obligatorio.");
+        }
+        if (!doc.matches("^\\d{4,10}$")) {
+            throw new CustomException("El documento solo puede contener números (entre 4 y 10 dígitos).");
+        }
+        if (dto.getTipoDocumento() == null || dto.getTipoDocumento().isBlank()) {
+            throw new CustomException("El tipo de documento es obligatorio.");
+        }
+        String pwd = dto.getPassword();
+        if (pwd.length() < 9) {
+            throw new CustomException("La contraseña debe tener más de 8 caracteres (mínimo 9).");
+        }
+        boolean mayus = pwd.codePoints().anyMatch(Character::isUpperCase);
+        boolean minus = pwd.codePoints().anyMatch(Character::isLowerCase);
+        boolean especial = pwd.codePoints()
+                .anyMatch(cp -> !Character.isLetter(cp) && !Character.isDigit(cp) && !Character.isWhitespace(cp));
+        if (!mayus) {
+            throw new CustomException("La contraseña debe incluir al menos una letra mayúscula.");
+        }
+        if (!minus) {
+            throw new CustomException("La contraseña debe incluir al menos una letra minúscula.");
+        }
+        if (!especial) {
+            throw new CustomException("La contraseña debe incluir al menos un carácter especial.");
+        }
+    }
+
     private void validarEmailUnico(String email) {
         if (usuarioRepository.existsByEmail(email.trim().toLowerCase(Locale.ROOT))) {
             throw new CustomException("El correo electrónico ya se encuentra registrado.");
+        }
+    }
+
+    /**
+     * La contraseña solo puede cambiarse por el propio usuario (perfil).
+     * Evita que un administrador u otro rol use PUT /usuarios/{id} para fijar la contraseña de terceros.
+     */
+    private void validarActorPuedeCambiarContrasenaDe(Long usuarioObjetivoId) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof Long actorId)) {
+            throw new CustomException("No autenticado.", HttpStatus.UNAUTHORIZED);
+        }
+        if (!actorId.equals(usuarioObjetivoId)) {
+            throw new CustomException(
+                    "Solo puedes cambiar tu propia contraseña desde tu perfil.",
+                    HttpStatus.FORBIDDEN);
         }
     }
 

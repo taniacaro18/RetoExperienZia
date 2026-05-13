@@ -1,10 +1,9 @@
-<div class="min-h-screen flex flex-col bg-brand-400">
-  <!-- ============== HEADER VIOLETA ============== -->
+<div class="flex min-h-0 flex-1 flex-col bg-white w-full min-w-0">
+  <!-- ============== HEADER ============== -->
   <header
-    class="h-16 px-4 lg:px-8 bg-brand-500 flex items-center justify-between gap-4 sticky top-0 z-30"
+    class="app-shell-header h-14 sm:h-16 shrink-0 px-3 sm:px-4 lg:px-6 lg:pl-[calc(14rem+1rem)] text-white flex items-center justify-between gap-2 sm:gap-4 min-w-0 relative z-30 border-b border-white/10"
   >
-    <!-- Brand -->
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 shrink-0">
       <button
         class="lg:hidden p-2 rounded-md hover:bg-white/15 text-white"
         (click)="toggleSidebar()"
@@ -12,14 +11,11 @@
       >
         <i class="pi pi-bars"></i>
       </button>
-      <a routerLink="/inicio" class="flex items-center">
-        <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
-      </a>
     </div>
 
     <!-- Buscador central (sólo cuando el rol tiene listados que filtrar) -->
     @if (mostrarBuscador()) {
-      <div class="hidden md:flex flex-1 max-w-xl mx-2">
+      <div class="hidden md:flex flex-1 min-w-0 max-w-xl mx-1 sm:mx-2">
         <div class="relative w-full flex items-center bg-white rounded-full pr-1">
           <input
             type="text"
@@ -39,11 +35,11 @@
         </div>
       </div>
     } @else {
-      <div class="flex-1"></div>
+      <div class="flex-1 min-w-0"></div>
     }
 
     <!-- Acciones derecha -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1 sm:gap-2 shrink-0">
       @if (store.usuario(); as u) {
         <!-- Campanita de notificaciones -->
         <a
@@ -54,7 +50,7 @@
           <i class="pi pi-bell text-[14px]"></i>
           @if (notif.noLeidas() > 0) {
             <span
-              class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center border-2 border-brand-500"
+              class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center border-2 border-white/70"
             >
               {{ notif.noLeidas() > 99 ? '99+' : notif.noLeidas() }}
             </span>
@@ -86,14 +82,31 @@
   </header>
 
   <!-- ============== CUERPO ============== -->
-  <div class="flex-1 flex min-h-0">
-    <!-- Sidebar VIOLETA -->
+  <div class="flex flex-1 min-h-0 w-full min-w-0 flex-row bg-white">
+    <!-- Sidebar encima del header (desktop) y bajo el header (móvil). Sin translate en desktop = estable. -->
     <aside
-      [class.translate-x-0]="sidebarAbierto()"
-      [class.-translate-x-full]="!sidebarAbierto()"
-      class="lg:translate-x-0 fixed lg:static inset-y-0 left-0 top-16 lg:top-0 z-20 w-56 shrink-0 bg-brand-500 transition-transform duration-200 ease-out lg:flex lg:flex-col"
+      [class.-translate-x-full]="!pantallaGrande() && !sidebarAbierto()"
+      [class.translate-x-0]="!pantallaGrande() && sidebarAbierto()"
+      class="app-shell-sidebar flex w-56 flex-col min-h-0 overflow-hidden
+             fixed left-0 z-[50] bottom-0
+             max-lg:top-14 sm:max-lg:top-16 max-lg:transform max-lg:transition-transform max-lg:duration-200 max-lg:ease-out
+             lg:top-0 lg:transform-none lg:transition-none"
     >
-      <nav class="flex-1 px-3 py-5 overflow-y-auto">
+      <div class="app-shell-sidebar-brand relative z-[1] px-2 sm:px-3 pt-3 sm:pt-4 pb-2 sm:pb-3 flex flex-col items-center">
+        <a
+          routerLink="/inicio"
+          class="flex flex-col items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg"
+          (click)="cerrarSidebarMobile()"
+        >
+          <img
+            src="/logo.png"
+            alt="ExperienZia"
+            class="drop-shadow-md"
+          />
+        </a>
+      </div>
+
+      <nav class="relative z-[1] flex-1 px-2 sm:px-3 pt-0.5 pb-4 sm:pb-5 overflow-y-auto overflow-x-hidden min-h-0">
         <ul class="space-y-2">
           @for (item of itemsVisibles(); track item.ruta) {
             <li>
@@ -111,30 +124,28 @@
           }
         </ul>
       </nav>
-
-      <div class="p-4 flex items-center justify-center">
-        <img src="/logo.png" alt="ExperienZia" class="h-10 w-auto object-contain bg-white/95 rounded-md p-1" />
-      </div>
     </aside>
 
     @if (sidebarAbierto()) {
       <div
-        class="lg:hidden fixed inset-0 top-16 bg-black/40 z-10"
+        class="lg:hidden fixed inset-0 max-lg:top-14 sm:max-lg:top-16 bg-black/40 z-40"
         (click)="cerrarSidebarMobile()"
       ></div>
     }
 
-    <!-- Canvas blanco con contenido -->
-    <main class="flex-1 min-w-0 p-4 lg:p-5 overflow-auto">
-      <div class="bg-white rounded-2xl shadow-card p-4 lg:p-6 min-h-full">
-        <router-outlet></router-outlet>
-      </div>
+    <!-- Contenido principal -->
+    <main
+      class="app-shell-main flex-1 min-w-0 min-h-0 w-full overflow-y-auto overflow-x-auto bg-white px-4 py-4 sm:px-5 sm:py-5 lg:py-6 lg:pl-[calc(14rem+1.5rem)] lg:pr-8 xl:pl-[calc(14rem+2rem)] xl:pr-10"
+    >
+      <router-outlet></router-outlet>
     </main>
   </div>
 
-  <!-- ============== FOOTER VIOLETA ============== -->
-  <footer class="bg-brand-500 px-6 py-2.5 flex items-center justify-between text-white/80 text-[11px]">
-    <span>© {{ anio }} ExperienZia · Plataforma de eventos</span>
-    <span class="hidden md:inline">v1.0</span>
+  <!-- ============== FOOTER ============== -->
+  <footer
+    class="app-shell-footer shrink-0 relative z-20 px-4 sm:px-6 py-2 sm:py-2.5 lg:pl-[calc(14rem+1.5rem)] lg:pr-8 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between min-w-0 text-white/85 text-[10px] sm:text-[11px] border-t border-white/10"
+  >
+    <span class="break-words sm:truncate sm:min-w-0 sm:max-w-[70%]">© {{ anio }} ExperienZia · Plataforma de eventos</span>
+    <span class="hidden shrink-0 md:inline">v1.0</span>
   </footer>
 </div>

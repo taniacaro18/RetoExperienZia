@@ -5,6 +5,8 @@ import { TagModule } from 'primeng/tag';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { EventoApi } from '../../core/api/evento.api';
 import { Evento } from '../../core/models/domain.models';
+import { eventoEstadoLabel, eventoEstadoSeverity } from '../../shared/estado.helpers';
+import { eventoSigueVigenteEnCatalogoPublico } from '../../shared/evento-catalogo.helpers';
 import { VerificarCertificadoModal } from './verificar-certificado.page';
 
 @Component({
@@ -17,6 +19,9 @@ import { VerificarCertificadoModal } from './verificar-certificado.page';
 export class DetalleEventoPublicoPage {
   private readonly route = inject(ActivatedRoute);
   private readonly eventoApi = inject(EventoApi);
+
+  readonly eventoEstadoLabel = eventoEstadoLabel;
+  readonly eventoEstadoSeverity = eventoEstadoSeverity;
 
   readonly cargando = signal(true);
   readonly evento = signal<Evento | null>(null);
@@ -31,8 +36,14 @@ export class DetalleEventoPublicoPage {
       return;
     }
     this.eventoApi.obtenerPublico(id).subscribe({
-      next: (e) => {
-        this.evento.set(e);
+      next: (ev) => {
+        if (!eventoSigueVigenteEnCatalogoPublico(ev)) {
+          this.error.set('Este evento ya finalizó y no está disponible en el catálogo público.');
+          this.evento.set(null);
+          this.cargando.set(false);
+          return;
+        }
+        this.evento.set(ev);
         this.cargando.set(false);
       },
       error: () => {
@@ -40,16 +51,5 @@ export class DetalleEventoPublicoPage {
         this.cargando.set(false);
       }
     });
-  }
-
-  cupos(): number {
-    const e = this.evento();
-    return e ? Math.max(0, e.aforoMaximo - e.aforoActual) : 0;
-  }
-
-  porcentajeAforo(): number {
-    const e = this.evento();
-    if (!e || e.aforoMaximo === 0) return 0;
-    return Math.round((e.aforoActual / e.aforoMaximo) * 100);
   }
 }

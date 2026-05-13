@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -26,6 +26,7 @@ type FiltroTipoEvento = 'TODOS' | 'PUBLICO' | 'PRIVADO';
     CommonModule,
     FormsModule,
     DatePipe,
+    CurrencyPipe,
     RouterLink,
     ProgressSpinnerModule,
     TagModule,
@@ -35,7 +36,8 @@ type FiltroTipoEvento = 'TODOS' | 'PUBLICO' | 'PRIVADO';
     StatCardComponent,
     AforoBarComponent
   ],
-  templateUrl: './eventos.page.html'
+  templateUrl: './eventos.page.html',
+  styleUrl: './eventos.page.scss'
 })
 export class AdminEventosPage {
   private readonly route = inject(ActivatedRoute);
@@ -58,6 +60,10 @@ export class AdminEventosPage {
   readonly mostrarModalRechazo = signal(false);
   readonly eventoARechazar = signal<Evento | null>(null);
   motivoRechazo = '';
+
+  readonly mostrarModalDetalle = signal(false);
+  readonly eventoDetalle = signal<Evento | null>(null);
+  readonly cargandoDetalleModal = signal(false);
 
   estadoLabel = eventoEstadoLabel;
   estadoSeverity = eventoEstadoSeverity;
@@ -165,15 +171,63 @@ export class AdminEventosPage {
       next: (actualizado) => {
         this.procesando.set(null);
         this.actualizarEvento(actualizado);
+        this.cerrarDetalleSiCorresponde(actualizado.id);
         this.messages.add({
           severity: 'success',
           summary: 'Evento aprobado',
-          detail: `"${e.nombre}" fue aprobado.`,
+          detail: `"${actualizado.nombre}" fue aprobado.`,
           life: 3500
         });
       },
       error: () => this.procesando.set(null)
     });
+  }
+
+  abrirDetalle(e: Evento) {
+    this.eventoDetalle.set(e);
+    this.mostrarModalDetalle.set(true);
+    this.cargandoDetalleModal.set(true);
+    this.eventoApi.obtener(e.id).subscribe({
+      next: (fresh) => {
+        this.eventoDetalle.set(fresh);
+        this.actualizarEvento(fresh);
+        this.cargandoDetalleModal.set(false);
+      },
+      error: () => {
+        this.cargandoDetalleModal.set(false);
+        this.messages.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo cargar el detalle del evento.',
+          life: 4000
+        });
+      }
+    });
+  }
+
+  cerrarDetalle() {
+    this.mostrarModalDetalle.set(false);
+    this.eventoDetalle.set(null);
+    this.cargandoDetalleModal.set(false);
+  }
+
+  abrirRechazoDesdeDetalle() {
+    const e = this.eventoDetalle();
+    if (!e) return;
+    this.mostrarModalDetalle.set(false);
+    this.eventoDetalle.set(null);
+    this.abrirRechazo(e);
+  }
+
+  subtituloModalDetalle(e: Evento): string {
+    if (e.estado === 'PENDIENTE') {
+      return 'Solicitud pendiente de revisión (alta o cambios del organizador). Revisa todos los datos antes de decidir.';
+    }
+    return 'Información completa del evento en la plataforma.';
+  }
+
+  imagenEventoAbsoluta(url?: string | null): boolean {
+    return !!url && /^https?:\/\//i.test(url.trim());
   }
 
   abrirRechazo(e: Evento) {
@@ -200,6 +254,7 @@ export class AdminEventosPage {
         this.procesando.set(null);
         this.mostrarModalRechazo.set(false);
         this.actualizarEvento(actualizado);
+        this.cerrarDetalleSiCorresponde(actualizado.id);
         this.messages.add({
           severity: 'success',
           summary: 'Evento rechazado',
@@ -218,5 +273,13 @@ export class AdminEventosPage {
 
   private actualizarEvento(e: Evento) {
     this.eventos.update((items) => items.map((x) => (x.id === e.id ? e : x)));
+  }
+
+  private cerrarDetalleSiCorresponde(id: number) {
+    if (this.eventoDetalle()?.id === id) {
+      this.mostrarModalDetalle.set(false);
+      this.eventoDetalle.set(null);
+      this.cargandoDetalleModal.set(false);
+    }
   }
 }

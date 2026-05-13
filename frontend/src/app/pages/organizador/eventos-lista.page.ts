@@ -16,6 +16,7 @@ import { EstadoEvento, Evento } from '../../core/models/domain.models';
 import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 import { AforoBarComponent } from '../../shared/aforo-bar/aforo-bar.component';
 import { eventoEstadoLabel, eventoEstadoSeverity } from '../../shared/estado.helpers';
+import { eventoVentanaYaCerro } from '../../shared/evento-catalogo.helpers';
 
 type FiltroEstado = 'TODOS' | EstadoEvento;
 type Orden = 'FECHA_DESC' | 'FECHA_ASC' | 'NOMBRE' | 'AFORO';
@@ -149,7 +150,24 @@ export class OrgEventosListaPage {
   }
 
   puedeEditar(e: Evento): boolean {
-    return e.estado === 'PENDIENTE' || e.estado === 'ACTIVO' || e.estado === 'RECHAZADO';
+    if (e.estado === 'FINALIZADO' || e.estado === 'CANCELADO') {
+      return false;
+    }
+    const porEstado =
+      e.estado === 'PENDIENTE' ||
+      e.estado === 'APROBADO' ||
+      e.estado === 'ACTIVO' ||
+      e.estado === 'RECHAZADO';
+    if (!porEstado) return false;
+    if (e.estado === 'ACTIVO' && eventoVentanaYaCerro(e)) {
+      return false;
+    }
+    return true;
+  }
+
+  /** Solo hay paso de comprobante cuando el evento tiene tarifa (> 0). */
+  requiereComprobante(e: Evento): boolean {
+    return (e.costo ?? 0) > 0;
   }
 
   puedeCancelar(e: Evento): boolean {

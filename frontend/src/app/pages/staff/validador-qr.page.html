@@ -207,6 +207,22 @@
               <div class="text-xs text-surface-500 font-mono truncate">
                 {{ r.codigo }}
               </div>
+              @if (r.exito && (r.nombreAsistente || r.nombreEvento)) {
+                <div class="mt-2 pt-2 border-t border-emerald-200/60 text-xs text-surface-700 space-y-0.5">
+                  @if (r.nombreAsistente) {
+                    <div><span class="font-semibold text-surface-800">Asistente:</span> {{ r.nombreAsistente }}</div>
+                  }
+                  @if (r.lineaDocumento) {
+                    <div><span class="font-semibold text-surface-800">Documento:</span> {{ r.lineaDocumento }}</div>
+                  }
+                  @if (r.nombreEvento) {
+                    <div><span class="font-semibold text-surface-800">Evento:</span> {{ r.nombreEvento }}</div>
+                  }
+                  @if (r.detalleEvento) {
+                    <div class="text-surface-600">{{ r.detalleEvento }}</div>
+                  }
+                </div>
+              }
             </div>
           </div>
         }

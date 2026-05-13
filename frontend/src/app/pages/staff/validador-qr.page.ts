@@ -23,6 +23,10 @@ interface RegistroLog {
   codigo: string;
   mensaje: string;
   estado?: string;
+  nombreAsistente?: string;
+  lineaDocumento?: string;
+  nombreEvento?: string;
+  detalleEvento?: string;
 }
 
 @Component({
@@ -316,12 +320,28 @@ export class StaffValidadorQrPage implements OnInit, AfterViewInit, OnDestroy {
   private onExito(ins: Inscripcion, codigo: string, modo: Modo) {
     this.procesando.set(false);
     const msg = modo === 'CHECK_IN' ? 'Check-in registrado' : 'Check-out registrado';
+    const nombre = ins.nombreAsistente?.trim() || 'Asistente';
+    const doc =
+      ins.tipoDocumento && ins.numeroDocumento
+        ? `${ins.tipoDocumento} ${ins.numeroDocumento}`.trim()
+        : ins.numeroDocumento?.trim() || '';
+    const evNombre = ins.nombreEvento?.trim() || '';
+    const evFecha = ins.fechaEvento ? new Date(ins.fechaEvento).toLocaleString() : '';
+    const evUbic = ins.ubicacionEvento?.trim();
+    const partesToast = [
+      nombre,
+      doc ? `Documento: ${doc}` : null,
+      evNombre ? `Evento: ${evNombre}` : null,
+      evFecha ? `Fecha: ${evFecha}` : null,
+      evUbic ? `Ubicación: ${evUbic}` : null
+    ].filter(Boolean) as string[];
     this.messages.add({
       severity: 'success',
       summary: msg,
-      detail: 'Operación exitosa.',
-      life: 3500
+      detail: partesToast.join(' · '),
+      life: 5500
     });
+    const detalleEvento = [evFecha ? evFecha : null, evUbic || null].filter(Boolean).join(' · ');
     this.historial.update((h) => [
       {
         id: crypto.randomUUID(),
@@ -330,7 +350,11 @@ export class StaffValidadorQrPage implements OnInit, AfterViewInit, OnDestroy {
         exito: true,
         codigo,
         mensaje: msg,
-        estado: ins.estado
+        estado: ins.estado,
+        nombreAsistente: nombre,
+        lineaDocumento: doc || undefined,
+        nombreEvento: evNombre || undefined,
+        detalleEvento: detalleEvento || undefined
       },
       ...h
     ].slice(0, 20));

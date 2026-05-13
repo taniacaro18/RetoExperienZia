@@ -6,7 +6,12 @@
       </h1>
       <p class="text-surface-500 text-sm mt-1">
         @if (editando()) {
-          Los cambios marcarán el evento como PENDIENTE hasta nueva aprobación.
+          @if ((costoEventoCargado() ?? 0) <= 0) {
+            Este evento no tiene tarifa de activación: al guardar no se te pedirá comprobante de pago.
+          } @else {
+            Si tu evento tiene tarifa, los cambios importantes pueden marcarlo como PENDIENTE hasta nueva
+            aprobación del administrador.
+          }
         } @else {
           Tu solicitud quedará PENDIENTE hasta ser aprobada por el administrador.
         }
@@ -185,12 +190,18 @@
                 ></p-datepicker>
               </div>
             </div>
-            @if (!horaFinValida()) {
+            @if (horaInicioFinIguales()) {
               <div class="bg-coral-50 border border-coral-200 rounded-md px-3 py-2 -mt-2">
                 <p class="text-coral-700 text-[11px] flex items-start gap-1 m-0">
                   <i class="pi pi-exclamation-triangle text-[10px] mt-[2px]"></i>
-                  <span>La hora de fin debe ser <strong>posterior</strong> a la de inicio.
-                  Si el evento dura toda la noche, marca la fecha siguiente.</span>
+                  <span>La hora de fin no puede ser <strong>igual</strong> a la de inicio.</span>
+                </p>
+              </div>
+            } @else if (cruzaMedianoche()) {
+              <div class="bg-brand-50 border border-brand-200 rounded-md px-3 py-2 -mt-2">
+                <p class="text-brand-800 text-[11px] flex items-start gap-1 m-0">
+                  <i class="pi pi-moon text-[10px] mt-[2px]"></i>
+                  <span>El fin se registrará al <strong>día siguiente</strong> (evento nocturno).</span>
                 </p>
               </div>
             }
@@ -229,7 +240,11 @@
               <p class="text-[11px] text-surface-500 pt-1 border-t border-surface-100">
                 <i class="pi pi-info-circle"></i>
                 Tarifa fija de $ {{ precioPorHora | number: '1.0-0' }} COP por hora.
-                Tras la aprobación deberás subir un comprobante de pago para activar el evento.
+                @if (editando() && (costoEventoCargado() ?? 0) <= 0) {
+                  Tu evento no tiene tarifa de activación; no aplica subir comprobante.
+                } @else {
+                  Tras la aprobación, si tu evento tiene tarifa, sube el comprobante de pago para activarlo.
+                }
               </p>
             </div>
           </div>

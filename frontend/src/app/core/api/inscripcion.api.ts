@@ -54,14 +54,16 @@ export class InscripcionApi {
   checkIn(inscripcionId: number, staffUsuarioId: number): Observable<Inscripcion> {
     return this.http.put<Inscripcion>(
       this.base + '/api/inscripciones/' + inscripcionId + '/check-in',
-      { staffUsuarioId }
+      { staffUsuarioId },
+      { headers: new HttpHeaders().set(SKIP_GLOBAL_TOAST, '1') }
     );
   }
 
   checkOut(inscripcionId: number, staffUsuarioId: number): Observable<Inscripcion> {
     return this.http.put<Inscripcion>(
       this.base + '/api/inscripciones/' + inscripcionId + '/check-out',
-      { staffUsuarioId }
+      { staffUsuarioId },
+      { headers: new HttpHeaders().set(SKIP_GLOBAL_TOAST, '1') }
     );
   }
 

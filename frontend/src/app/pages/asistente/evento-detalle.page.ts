@@ -12,6 +12,8 @@ import { EventoApi } from '../../core/api/evento.api';
 import { InscripcionApi } from '../../core/api/inscripcion.api';
 import { Evento, Inscripcion } from '../../core/models/domain.models';
 import { AuthStore } from '../../core/auth/auth.store';
+import { eventoVentanaYaCerro } from '../../shared/evento-catalogo.helpers';
+import { eventoEstadoLabel } from '../../shared/estado.helpers';
 
 @Component({
   selector: 'app-evento-detalle-page',
@@ -59,6 +61,7 @@ export class EventoDetallePage {
     const e = this.evento();
     const u = this.auth.usuario();
     if (!e || !u) return false;
+    if (eventoVentanaYaCerro(e)) return false;
     if (u.rol !== 'ASISTENTE') return false;
     if (e.organizadorId === u.id) return false;
     return true;
@@ -70,6 +73,23 @@ export class EventoDetallePage {
     const u = this.auth.usuario();
     return !!(e && u && e.organizadorId === u.id);
   });
+
+  readonly textoVolver = computed(() => {
+    const r = this.auth.rol();
+    if (r === 'ORGANIZADOR') return 'Volver a mis eventos';
+    if (r === 'STAFF') return 'Volver a mis asignaciones';
+    return 'Volver al catálogo';
+  });
+
+  /** Estado mostrado: si ya pasó la ventana y el API aún dice ACTIVO, se muestra como finalizado. */
+  readonly estadoBadge = computed(() => {
+    const e = this.evento();
+    if (!e) return 'PENDIENTE';
+    if (e.estado === 'ACTIVO' && eventoVentanaYaCerro(e)) return 'FINALIZADO';
+    return e.estado;
+  });
+
+  readonly eventoEstadoLabelFn = eventoEstadoLabel;
 
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -158,6 +178,13 @@ export class EventoDetallePage {
   }
 
   volver() {
-    this.router.navigate(['/eventos']);
+    const r = this.auth.rol();
+    if (r === 'ORGANIZADOR') {
+      this.router.navigate(['/organizador/eventos']);
+    } else if (r === 'STAFF') {
+      this.router.navigate(['/staff/eventos']);
+    } else {
+      this.router.navigate(['/eventos']);
+    }
   }
 }

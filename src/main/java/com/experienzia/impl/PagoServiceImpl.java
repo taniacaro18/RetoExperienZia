@@ -100,6 +100,12 @@ public class PagoServiceImpl implements PagoService {
                             + "Estado actual: " + evento.getEstado() + ".",
                     HttpStatus.BAD_REQUEST);
         }
+        if (evento.getCosto() <= 0) {
+            throw new CustomException(
+                    "Este evento no tiene tarifa de activación (costo $0). No debes subir comprobante; "
+                            + "debería activarse solo al ser aprobado por el administrador.",
+                    HttpStatus.BAD_REQUEST);
+        }
 
         Optional<Pago> existente = pagoRepository.findByEventoId(eventoId);
         if (existente.isPresent()) {

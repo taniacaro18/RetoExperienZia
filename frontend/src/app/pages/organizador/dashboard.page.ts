@@ -14,6 +14,7 @@ import {
   eventoEstadoLabel,
   eventoEstadoSeverity
 } from '../../shared/estado.helpers';
+import { instanteFinEventoMs } from '../../shared/evento-catalogo.helpers';
 
 interface BarraSerie {
   periodo: string;
@@ -69,9 +70,9 @@ export class OrgDashboardPage {
   });
 
   readonly proximos = computed(() => {
-    const ahora = new Date();
+    const ahora = Date.now();
     return this.eventosFiltradosDash()
-      .filter((e) => e.estado === 'ACTIVO' && new Date(e.fecha) >= ahora)
+      .filter((e) => e.estado === 'ACTIVO' && instanteFinEventoMs(e) > ahora)
       .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
       .slice(0, 6);
   });

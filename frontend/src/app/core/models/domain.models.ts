@@ -33,11 +33,7 @@ export interface LoginResponse {
 }
 
 export interface ActualizarPerfil {
-  nombre?: string;
-  email?: string;
   telefono?: string;
-  tipoDocumento?: string;
-  numeroDocumento?: string;
   nuevaPassword?: string;
 }
 
@@ -70,6 +66,15 @@ export interface Inscripcion {
   fechaCheckIn?: string | null;
   fechaCheckOut?: string | null;
   codigoQR?: string | null;
+  /** Solo en respuestas de check-in / check-out (QR o manual). */
+  nombreAsistente?: string | null;
+  emailAsistente?: string | null;
+  tipoDocumento?: string | null;
+  numeroDocumento?: string | null;
+  nombreEvento?: string | null;
+  fechaEvento?: string | null;
+  fechaFinEvento?: string | null;
+  ubicacionEvento?: string | null;
 }
 
 export interface AsistenteEvento {
@@ -80,6 +85,8 @@ export interface AsistenteEvento {
   telefono?: string;
   tipoDocumento?: string;
   numeroDocumento?: string;
+  /** Código QR de la inscripción (búsqueda y verificación en staff). */
+  codigoQR?: string | null;
   estadoInscripcion: EstadoInscripcion;
   fechaInscripcion?: string;
   fechaCheckIn?: string | null;

@@ -217,33 +217,6 @@ export class AdminUsuariosPage {
     });
   }
 
-  reenviarCredenciales(u: Usuario) {
-    this.confirm.confirm({
-      header: 'Reenviar credenciales',
-      message: `Se restablecerá la contraseña de ${u.nombre} y se le notificará. ¿Continuar?`,
-      icon: 'pi pi-key',
-      acceptLabel: 'Reenviar',
-      rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: '!bg-brand-600 !border-brand-600',
-      accept: () => {
-        const adminId = this.store.usuario()?.id;
-        this.procesando.set(u.id);
-        this.usuarioApi.reenviarCredenciales(u.id, adminId).subscribe({
-          next: (r) => {
-            this.procesando.set(null);
-            this.messages.add({
-              severity: 'success',
-              summary: 'Credenciales reenviadas',
-              detail: r.mensaje + ' (Pwd temporal: ' + r.passwordTemporal + ')',
-              life: 8000
-            });
-          },
-          error: () => this.procesando.set(null)
-        });
-      }
-    });
-  }
-
   abrirCambioRol(u: Usuario) {
     this.usuarioRol.set(u);
     this.rolNuevo = u.rol;

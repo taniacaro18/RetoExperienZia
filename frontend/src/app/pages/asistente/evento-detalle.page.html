@@ -5,7 +5,7 @@
 } @else if (evento(); as e) {
   <div class="space-y-5">
     <button type="button" (click)="volver()" class="ez-btn-ghost">
-      <i class="pi pi-arrow-left text-[10px]"></i> Volver al catálogo
+      <i class="pi pi-arrow-left text-[10px]"></i> {{ textoVolver() }}
     </button>
 
     @if (e.imagen) {
@@ -26,8 +26,15 @@
               <span class="ez-badge ez-badge-finalizado">{{ e.categoria }}</span>
             }
             <span class="ez-badge"
-                  [ngClass]="e.estado === 'ACTIVO' ? 'ez-badge-activo' : 'ez-badge-pendiente'">
-              {{ e.estado }}
+                  [ngClass]="{
+                    'ez-badge-activo': estadoBadge() === 'ACTIVO',
+                    'ez-badge-aprobado': estadoBadge() === 'APROBADO',
+                    'ez-badge-pendiente': estadoBadge() === 'PENDIENTE',
+                    'ez-badge-finalizado': estadoBadge() === 'FINALIZADO',
+                    'ez-badge-rechazado': estadoBadge() === 'RECHAZADO',
+                    'ez-badge-cancelado': estadoBadge() === 'CANCELADO'
+                  }">
+              {{ eventoEstadoLabelFn(estadoBadge()) }}
             </span>
           </div>
           <h1 class="ez-section-title !text-2xl !normal-case !tracking-normal text-surface-900">
@@ -99,9 +106,17 @@
             </div>
 
             @if (soyOrganizadorDelEvento()) {
-              <div class="bg-brand-50 border border-brand-200 rounded-md p-3 text-[12px] text-brand-800">
-                <i class="pi pi-info-circle mr-1"></i>
-                Eres el organizador de este evento. Tu asistencia está garantizada de forma automática.
+              <div class="bg-brand-50 border border-brand-200 rounded-md p-3 text-[12px] text-brand-800 space-y-2">
+                @if (e.estado === 'PENDIENTE') {
+                  <p class="m-0 flex items-start gap-1">
+                    <i class="pi pi-clock mt-0.5"></i>
+                    <span>Tu solicitud está <strong>pendiente de aprobación</strong> por el administrador. Aún no aparece en el catálogo público.</span>
+                  </p>
+                }
+                <p class="m-0 flex items-start gap-1">
+                  <i class="pi pi-info-circle mt-0.5"></i>
+                  <span>Eres el organizador de este evento. Tu asistencia está garantizada de forma automática.</span>
+                </p>
               </div>
             } @else if (miInscripcion(); as ins) {
               <div class="bg-emerald-50 border border-emerald-200 rounded-md p-3 text-[12px]">

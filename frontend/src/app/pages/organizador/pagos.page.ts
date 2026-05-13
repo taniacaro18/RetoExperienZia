@@ -81,13 +81,20 @@ export class OrgPagosPage {
   }
 
   /**
-   * Solo se muestran eventos que ya pasaron por la aprobación preliminar del admin
-   * (APROBADO, ACTIVO, FINALIZADO). Los PENDIENTE aún no permiten subir comprobante.
+   * Eventos ya aprobados por admin y visibles en flujo de pago.
+   * Se excluyen los de costo $0 (sin tarifa / no requieren comprobante).
    */
   readonly filas = computed<FilaEventoConPago[]>(() => {
     const pagos = this.pagos();
     return this.eventos()
-      .filter((e) => e.estado === 'APROBADO' || e.estado === 'ACTIVO' || e.estado === 'FINALIZADO')
+      .filter((e) => {
+        if (e.estado !== 'APROBADO' && e.estado !== 'ACTIVO' && e.estado !== 'FINALIZADO') {
+          return false;
+        }
+        const tieneTarifa = (e.costo ?? 0) > 0;
+        const tieneHistorialPago = pagos.some((p) => p.eventoId === e.id);
+        return tieneTarifa || tieneHistorialPago;
+      })
       .map((evento) => {
         const pago = pagos.find((p) => p.eventoId === evento.id);
         const estadoPago: FilaEventoConPago['estadoPago'] = pago ? pago.estado : 'NO_PAGADO';

@@ -1,16 +1,41 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn
+} from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
-import { SelectModule } from 'primeng/select';
 import { AvatarModule } from 'primeng/avatar';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
+import { ActualizarPerfil } from '../../core/models/domain.models';
+
+function telefonoPerfilValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const raw = (control.value ?? '').toString().trim();
+    if (!raw) return null;
+    if (raw.length < 7 || raw.length > 20) return { telefonoLongitud: true };
+    if (!/^[0-9+\s().-]+$/.test(raw)) return { telefonoFormato: true };
+    return null;
+  };
+}
+
+function nuevaPasswordOpcionalValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const raw = (control.value ?? '').toString();
+    if (!raw.trim()) return null;
+    if (raw.length < 4) return { minlength: { requiredLength: 4, actualLength: raw.length } };
+    return null;
+  };
+}
 
 @Component({
   selector: 'app-perfil-page',
@@ -23,7 +48,6 @@ import { AuthStore } from '../../core/auth/auth.store';
     PasswordModule,
     CardModule,
     TagModule,
-    SelectModule,
     AvatarModule
   ],
   templateUrl: './perfil.page.html'
@@ -36,20 +60,9 @@ export class PerfilPage {
 
   readonly cargando = signal(false);
 
-  readonly tiposDocumento = [
-    { label: 'Cédula de Ciudadanía', value: 'CC' },
-    { label: 'Cédula de Extranjería', value: 'CE' },
-    { label: 'Pasaporte', value: 'PA' },
-    { label: 'Tarjeta de Identidad', value: 'TI' }
-  ];
-
   readonly formulario = this.fb.nonNullable.group({
-    nombre: [this.store.usuario()?.nombre ?? '', [Validators.required, Validators.minLength(3)]],
-    email: [this.store.usuario()?.email ?? '', [Validators.required, Validators.email]],
-    telefono: [this.store.usuario()?.telefono ?? ''],
-    tipoDocumento: [this.store.usuario()?.tipoDocumento ?? 'CC'],
-    numeroDocumento: [this.store.usuario()?.numeroDocumento ?? ''],
-    nuevaPassword: ['']
+    telefono: [this.store.usuario()?.telefono ?? '', [telefonoPerfilValidator()]],
+    nuevaPassword: ['', [nuevaPasswordOpcionalValidator()]]
   });
 
   guardar() {
@@ -60,20 +73,23 @@ export class PerfilPage {
     const u = this.store.usuario();
     if (!u) return;
 
-    const v = this.formulario.value;
-    const payload: any = {};
-    if (v.nombre && v.nombre !== u.nombre) payload.nombre = v.nombre;
-    if (v.email && v.email !== u.email) payload.email = v.email;
-    if (v.telefono !== undefined) payload.telefono = v.telefono;
-    if (v.tipoDocumento && v.tipoDocumento !== u.tipoDocumento) payload.tipoDocumento = v.tipoDocumento;
-    if (v.numeroDocumento && v.numeroDocumento !== u.numeroDocumento) payload.numeroDocumento = v.numeroDocumento;
-    if (v.nuevaPassword && v.nuevaPassword.length > 0) payload.nuevaPassword = v.nuevaPassword;
+    const v = this.formulario.getRawValue();
+    const telefonoAntes = (u.telefono ?? '').trim();
+    const telefonoDespues = (v.telefono ?? '').trim();
+    const payload: ActualizarPerfil = {};
+    if (telefonoDespues !== telefonoAntes) {
+      payload.telefono = telefonoDespues;
+    }
+    const pass = v.nuevaPassword?.trim() ?? '';
+    if (pass.length > 0) {
+      payload.nuevaPassword = pass;
+    }
 
     if (Object.keys(payload).length === 0) {
       this.messages.add({
         severity: 'info',
         summary: 'Sin cambios',
-        detail: 'No modificaste ningún campo.'
+        detail: 'No modificaste el teléfono ni la contraseña.'
       });
       return;
     }
@@ -83,6 +99,9 @@ export class PerfilPage {
       next: () => {
         this.cargando.set(false);
         this.formulario.patchValue({ nuevaPassword: '' });
+        this.formulario.controls.nuevaPassword.markAsUntouched();
+        const t = this.store.usuario()?.telefono ?? '';
+        this.formulario.patchValue({ telefono: t });
         this.messages.add({
           severity: 'success',
           summary: 'Perfil actualizado',
@@ -91,8 +110,9 @@ export class PerfilPage {
       },
       error: (err) => {
         this.cargando.set(false);
-        const detalle = err?.error?.message
-          || 'No fue posible actualizar el perfil. Revisa los datos e intenta de nuevo.';
+        const detalle =
+          err?.error?.message ||
+          'No fue posible actualizar el perfil. Revisa los datos e intenta de nuevo.';
         this.messages.add({
           severity: 'error',
           summary: 'No se pudo guardar',
@@ -109,5 +129,16 @@ export class PerfilPage {
     const a = partes[0]?.[0] ?? '';
     const b = partes[partes.length - 1]?.[0] ?? '';
     return (a + (partes.length > 1 ? b : '')).toUpperCase();
+  }
+
+  etiquetaTipoDocumento(codigo?: string | null): string {
+    const map: Record<string, string> = {
+      CC: 'Cédula de Ciudadanía',
+      CE: 'Cédula de Extranjería',
+      PA: 'Pasaporte',
+      TI: 'Tarjeta de Identidad'
+    };
+    if (!codigo) return '—';
+    return map[codigo] ?? codigo;
   }
 }

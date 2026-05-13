@@ -7,18 +7,19 @@ import com.experienzia.dto.LoginResponseDTO;
 import com.experienzia.dto.RecuperarPasswordDTO;
 import com.experienzia.dto.RecuperarPasswordResponseDTO;
 import com.experienzia.dto.UsuarioDTO;
+import com.experienzia.exceptions.CustomException;
 import com.experienzia.security.JwtService;
 import com.experienzia.service.AuditoriaService;
 import com.experienzia.service.UsuarioService;
 import com.experienzia.spec.UsuarioSpecification.UsuarioSearchCriteria;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import com.experienzia.util.ClientIpResolver;
-
 import jakarta.servlet.http.HttpServletRequest;
-
 import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -79,18 +80,33 @@ public class UsuarioController {
     }
 
     /**
-     * Reenviar credenciales de un usuario (acción del organizador/admin
-     * para asistentes cargados masivamente que olvidaron su contraseña inicial).
-     * Resetea la contraseña al número de documento (o genera una temporal) y notifica al usuario.
+     * Reenviar credenciales de un usuario (acción del organizador para asistentes cargados
+     * masivamente que olvidaron su contraseña inicial).
+     * Los administradores no pueden usar este endpoint (no restablecen contraseñas de terceros).
      */
     @PostMapping("/{id}/reenviar-credenciales")
     public ResponseEntity<RecuperarPasswordResponseDTO> reenviarCredenciales(
             @PathVariable Long id,
             @RequestParam(required = false) Long actorId,
             HttpServletRequest request) {
+        if (autenticadoEsAdmin()) {
+            throw new CustomException(
+                    "Los administradores no pueden restablecer contraseñas de otros usuarios.",
+                    HttpStatus.FORBIDDEN);
+        }
         RecuperarPasswordResponseDTO r = usuarioService.reenviarCredenciales(id);
         auditoriaService.registrar(actorId, "CREDENCIALES_REENVIADAS", "Usuario", id,
                 ClientIpResolver.resolve(request));
         return ResponseEntity.ok(r);
+    }
+
+    private static boolean autenticadoEsAdmin() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
     }
 }

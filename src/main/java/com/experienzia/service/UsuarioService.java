@@ -45,7 +45,7 @@ public interface UsuarioService {
     /** HU-005: ver perfil. */
     UsuarioDTO obtenerPorId(Long id);
 
-    /** HU-005: editar perfil (campos editables). */
+    /** HU-005: editar perfil (solo teléfono y contraseña). */
     UsuarioDTO actualizarPerfil(Long id, ActualizarPerfilDTO dto);
 
     /** HU-006: recuperación de contraseña sin correo (devuelve la temporal). */

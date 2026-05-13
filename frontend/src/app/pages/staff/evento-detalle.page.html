@@ -68,50 +68,98 @@
       </div>
     </div>
 
-    <!-- Filtros -->
-    <div class="bg-white border border-brand-100 rounded-2xl p-4 shadow-soft flex flex-wrap items-end gap-4">
+    <!-- Búsqueda en tiempo real + filtros -->
+    <div class="bg-white border border-brand-100 rounded-2xl p-4 shadow-soft flex flex-col gap-4">
       <div class="flex-1 min-w-[240px]">
         <label class="ez-field-label">
-          Buscar asistente
+          Buscar asistente (tiempo real)
         </label>
         <div class="flex gap-2">
           <span class="block relative flex-1">
             <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400"></i>
             <input pInputText
                    [ngModel]="busqueda()"
-                   (ngModelChange)="busqueda.set($event)"
+                   (ngModelChange)="onCambioBusqueda($event)"
                    (keyup.enter)="buscarAsistentes()"
                    class="w-full pl-9"
-                   placeholder="Nombre, email o documento" />
+                   placeholder="Nombre y apellidos, documento, correo, teléfono o código QR" />
           </span>
           <button type="button"
                   (click)="buscarAsistentes()"
-                  class="ez-btn-primary">
+                  class="ez-btn-primary shrink-0">
             Buscar
           </button>
         </div>
+        <p class="text-[11px] text-surface-500 mt-2">
+          La lista se actualiza mientras escribes. Usa varias palabras para acotar (ej. nombre y apellido).
+        </p>
       </div>
+
+      @if (asistenteSeleccionado(); as sel) {
+        <div class="rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div class="text-sm">
+            <span class="font-bold text-brand-900">Seleccionado:</span>
+            <span class="text-surface-800 ml-1">{{ sel.nombre }}</span>
+            @if (sel.numeroDocumento) {
+              <span class="text-surface-600 text-xs ml-2">{{ sel.tipoDocumento }} {{ sel.numeroDocumento }}</span>
+            }
+            @if (sel.estadoInscripcion === 'ASISTIO') {
+              <span class="block text-xs text-emerald-800 mt-1">
+                <i class="pi pi-check-circle"></i>
+                Ya ingresado
+                @if (sel.fechaCheckIn) {
+                  · {{ sel.fechaCheckIn | date: 'dd MMM yyyy · HH:mm' }}
+                }
+              </span>
+            }
+          </div>
+          <div class="flex flex-wrap gap-2">
+            @if (sel.estadoInscripcion === 'INSCRITO' && puedeCheckIn() && !checkInOutBloqueado()) {
+              <button type="button"
+                      (click)="marcarCheckIn(sel)"
+                      [disabled]="procesando() === sel.inscripcionId"
+                      class="ez-btn-success ez-btn-sm">
+                @if (procesando() === sel.inscripcionId) {
+                  <i class="pi pi-spin pi-spinner text-[10px]"></i>
+                } @else {
+                  <i class="pi pi-sign-in text-[10px]"></i>
+                }
+                Registrar entrada
+              </button>
+            }
+            @if (sel.estadoInscripcion === 'ASISTIO' && !sel.fechaCheckOut && puedeCheckOut() && !checkInOutBloqueado()) {
+              <button type="button"
+                      (click)="marcarCheckOut(sel)"
+                      [disabled]="procesando() === sel.inscripcionId"
+                      class="ez-btn-secondary ez-btn-sm border-coral-200 text-coral-800">
+                Registrar salida
+              </button>
+            }
+          </div>
+        </div>
+      }
+
       <div class="flex flex-wrap items-center gap-2">
         <button type="button"
-                (click)="filtro.set('TODOS')"
+                (click)="cambiarFiltro('TODOS')"
                 [class]="filtro() === 'TODOS' ? 'bg-brand-600 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-brand-50'"
                 class="px-3 h-9 rounded-full font-semibold text-xs transition">
           Todos
         </button>
         <button type="button"
-                (click)="filtro.set('INSCRITO')"
+                (click)="cambiarFiltro('INSCRITO')"
                 [class]="filtro() === 'INSCRITO' ? 'bg-brand-600 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-brand-50'"
                 class="px-3 h-9 rounded-full font-semibold text-xs transition">
           Inscritos
         </button>
         <button type="button"
-                (click)="filtro.set('ASISTIO')"
+                (click)="cambiarFiltro('ASISTIO')"
                 [class]="filtro() === 'ASISTIO' ? 'bg-emerald-600 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-emerald-50'"
                 class="px-3 h-9 rounded-full font-semibold text-xs transition">
-          Asistieron
+          Ingresados
         </button>
         <button type="button"
-                (click)="filtro.set('PRESENTES')"
+                (click)="cambiarFiltro('PRESENTES')"
                 [class]="filtro() === 'PRESENTES' ? 'bg-coral-500 text-white' : 'bg-white text-surface-700 border border-surface-200 hover:bg-coral-50'"
                 class="px-3 h-9 rounded-full font-semibold text-xs transition">
           Presentes
@@ -127,22 +175,45 @@
 
     <!-- Tabla asistentes -->
     <div class="ez-card !p-0 overflow-hidden">
-      @if (cargando()) {
+      @if (buscandoLista() && asistentes().length === 0) {
         <div class="flex justify-center py-12">
           <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
+        </div>
+      } @else if (busqueda().trim().length > 0 && !buscandoLista() && asistentes().length === 0) {
+        <div class="text-center py-12 px-4">
+          <i class="pi pi-user-minus text-4xl text-amber-400 mb-2"></i>
+          <p class="text-surface-800 font-semibold">Asistente no encontrado en el evento</p>
+          <p class="text-surface-500 text-sm mt-1 max-w-md mx-auto">
+            No hay coincidencias con “{{ busqueda().trim() }}” entre los inscritos de este evento.
+            Revisa el criterio o prueba con nombre, apellidos, documento, correo o código QR.
+          </p>
+        </div>
+      } @else if (asistentes().length > 0 && asistentesFiltrados().length === 0) {
+        <div class="text-center py-12 px-4">
+          <i class="pi pi-filter-slash text-4xl text-brand-300 mb-2"></i>
+          <p class="text-surface-600 font-medium">Ningún resultado con este filtro</p>
+          <p class="text-surface-400 text-xs">Hay resultados de búsqueda, pero ninguno cumple el filtro de estado seleccionado.</p>
         </div>
       } @else if (asistentesFiltrados().length === 0) {
         <div class="text-center py-12">
           <i class="pi pi-users text-4xl text-brand-300 mb-2"></i>
           <p class="text-surface-600 font-medium">No hay asistentes que mostrar</p>
-          <p class="text-surface-400 text-xs">Cambia el filtro o limpia la búsqueda.</p>
+          <p class="text-surface-400 text-xs">Aún no hay inscripciones activas en este evento.</p>
         </div>
       } @else {
-        <div class="overflow-x-auto">
-          <table class="ez-table w-full"><thead>
+        <div class="relative">
+          @if (buscandoLista()) {
+            <div class="absolute top-2 right-3 z-10 flex items-center gap-2 rounded-full bg-white/95 border border-brand-100 px-3 py-1 text-xs font-semibold text-brand-800 shadow-sm">
+              <i class="pi pi-spin pi-spinner"></i>
+              Actualizando…
+            </div>
+          }
+          <div class="overflow-x-auto transition-opacity" [class.opacity-60]="buscandoLista()">
+            <table class="ez-table w-full"><thead>
               <tr>
                 <th class="text-left px-4 py-3 font-bold">Asistente</th>
                 <th class="text-left px-4 py-3 font-bold hidden md:table-cell">Documento</th>
+                <th class="text-left px-4 py-3 font-bold hidden xl:table-cell">QR</th>
                 <th class="text-left px-4 py-3 font-bold">Estado</th>
                 <th class="text-left px-4 py-3 font-bold hidden lg:table-cell">Check-in</th>
                 <th class="text-left px-4 py-3 font-bold hidden lg:table-cell">Check-out</th>
@@ -151,10 +222,19 @@
             </thead>
             <tbody>
               @for (a of asistentesFiltrados(); track a.inscripcionId) {
-                <tr class="border-t border-surface-100 hover:bg-brand-50/40 transition">
+                <tr class="border-t border-surface-100 transition cursor-pointer"
+                    (click)="seleccionarFila(a, $event)"
+                    [class.bg-brand-50]="filaSeleccionada(a)"
+                    [class.ring-2]="filaSeleccionada(a)"
+                    [class.ring-inset]="filaSeleccionada(a)"
+                    [class.ring-brand-400]="filaSeleccionada(a)"
+                    [class.hover:bg-brand-50/40]="!filaSeleccionada(a)">
                   <td>
                     <div class="font-semibold text-surface-900">{{ a.nombre }}</div>
                     <div class="text-xs text-surface-500">{{ a.email }}</div>
+                    @if (a.telefono) {
+                      <div class="text-[11px] text-surface-400">{{ a.telefono }}</div>
+                    }
                   </td>
                   <td class="px-4 py-3 hidden md:table-cell text-surface-600 text-xs">
                     @if (a.numeroDocumento) {
@@ -163,8 +243,18 @@
                       <span class="text-surface-300">—</span>
                     }
                   </td>
+                  <td class="px-4 py-3 hidden xl:table-cell text-xs font-mono text-surface-500 max-w-[140px]">
+                    @if (a.codigoQR) {
+                      <span [title]="a.codigoQR" class="truncate block">{{ a.codigoQR }}</span>
+                    } @else {
+                      <span class="text-surface-300">—</span>
+                    }
+                  </td>
                   <td>
-                    <p-tag [value]="a.estadoInscripcion" [severity]="estadoSeverity(a.estadoInscripcion)"></p-tag>
+                    <p-tag
+                      [value]="etiquetaEstadoInscripcion(a.estadoInscripcion)"
+                      [severity]="estadoSeverity(a.estadoInscripcion)">
+                    </p-tag>
                   </td>
                   <td class="px-4 py-3 hidden lg:table-cell text-xs text-surface-600">
                     {{ a.fechaCheckIn ? (a.fechaCheckIn | date: 'dd MMM HH:mm') : '—' }}
@@ -173,14 +263,39 @@
                     {{ a.fechaCheckOut ? (a.fechaCheckOut | date: 'dd MMM HH:mm') : '—' }}
                   </td>
                   <td class="!text-right">
-                    <div class="inline-flex items-center gap-2 justify-end">
-                      @if (a.estadoInscripcion === 'INSCRITO') {
+                    <div class="inline-flex flex-col sm:flex-row items-end sm:items-center gap-2 justify-end">
+                      @if (a.estadoInscripcion === 'INSCRITO' && puedeCheckIn() && !checkInOutBloqueado()) {
+                        <button type="button"
+                                (click)="marcarCheckIn(a)"
+                                [disabled]="procesando() === a.inscripcionId"
+                                class="ez-btn-success ez-btn-sm whitespace-nowrap">
+                          @if (procesando() === a.inscripcionId) {
+                            <i class="pi pi-spin pi-spinner text-[10px]"></i>
+                          } @else {
+                            <i class="pi pi-sign-in text-[10px]"></i>
+                          }
+                          Entrada
+                        </button>
+                      } @else if (a.estadoInscripcion === 'INSCRITO') {
                         <span class="text-[11px] text-surface-500 italic flex items-center gap-1">
                           <i class="pi pi-qrcode text-brand-400"></i>
                           Esperando QR
                         </span>
                       }
-                      @if (a.estadoInscripcion === 'ASISTIO' && !a.fechaCheckOut) {
+                      @if (a.estadoInscripcion === 'ASISTIO' && !a.fechaCheckOut && puedeCheckOut() && !checkInOutBloqueado()) {
+                        <button type="button"
+                                (click)="marcarCheckOut(a)"
+                                [disabled]="procesando() === a.inscripcionId"
+                                class="ez-btn-secondary ez-btn-sm whitespace-nowrap border-coral-200 text-coral-800 hover:bg-coral-50">
+                          @if (procesando() === a.inscripcionId) {
+                            <i class="pi pi-spin pi-spinner text-[10px]"></i>
+                          } @else {
+                            <i class="pi pi-sign-out text-[10px]"></i>
+                          }
+                          Salida
+                        </button>
+                      }
+                      @if (a.estadoInscripcion === 'ASISTIO' && !a.fechaCheckOut && (!puedeCheckOut() || checkInOutBloqueado())) {
                         <span class="text-[11px] text-emerald-700 italic flex items-center gap-1">
                           <i class="pi pi-bolt text-emerald-500"></i>
                           Presente
@@ -201,6 +316,7 @@
               }
             </tbody>
           </table>
+          </div>
         </div>
       }
     </div>

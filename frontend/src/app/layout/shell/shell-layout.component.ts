@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -40,19 +40,34 @@ interface ItemNavegacion {
   templateUrl: './shell-layout.component.html',
   styleUrl: './shell-layout.component.scss'
 })
-export class ShellLayoutComponent {
+export class ShellLayoutComponent implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   readonly store = inject(AuthStore);
   readonly notif = inject(NotificacionStore);
+
+  private mqEscritorio?: MediaQueryList;
+  private readonly mqListener = () =>
+    this.pantallaGrande.set(this.mqEscritorio?.matches ?? false);
+
+  /** Desde 1024px el sidebar va en el flujo (estático); en pantallas pequeñas es drawer fijo. */
+  readonly pantallaGrande = signal(
+    typeof window !== 'undefined' && window.innerWidth >= 1024
+  );
 
   readonly sidebarAbierto = signal(false);
   textoBusqueda = '';
   readonly anio = new Date().getFullYear();
 
   ngOnInit() {
-    // Arranca el polling del badge de notificaciones (refresca cada 60s).
     this.notif.iniciarPolling();
+    this.mqEscritorio = window.matchMedia('(min-width: 1024px)');
+    this.pantallaGrande.set(this.mqEscritorio.matches);
+    this.mqEscritorio.addEventListener('change', this.mqListener);
+  }
+
+  ngOnDestroy() {
+    this.mqEscritorio?.removeEventListener('change', this.mqListener);
   }
 
   toggleSidebar() {

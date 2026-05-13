@@ -46,7 +46,7 @@
     <div class="flex items-end justify-between gap-4 flex-wrap mb-4">
       <div>
         <h1 class="ez-section-title">Eventos disponibles</h1>
-        <p class="ez-page-subtitle !mb-0">Explora y participa en los eventos públicos.</p>
+        <p class="ez-page-subtitle !mb-0">Explora eventos públicos. Tarifas e inscripción solo tras iniciar sesión.</p>
       </div>
     </div>
 
@@ -108,28 +108,13 @@
               @if (e.descripcion) {
                 <p class="text-surface-600 line-clamp-2">{{ e.descripcion }}</p>
               }
-
-              <div class="pt-1">
-                <div class="flex items-center justify-between text-[11px] text-surface-500 mb-1">
-                  <span class="uppercase tracking-wider font-bold">Aforo</span>
-                  <span>{{ e.aforoActual }} / {{ e.aforoMaximo }}</span>
-                </div>
-                <div class="h-1.5 bg-surface-100 rounded-full overflow-hidden">
-                  <div class="h-full bg-brand-600" [style.width.%]="porcentajeOcupacion(e)"></div>
-                </div>
-              </div>
             </div>
 
             <footer class="ez-event-card-footer">
               <a [routerLink]="['/catalogo', e.id]"
-                 class="ez-btn-outline ez-btn-sm"
+                 class="ez-btn-primary ez-btn-sm w-full justify-center"
                  (click)="$event.stopPropagation()">
-                Ver Detalles
-              </a>
-              <a routerLink="/login"
-                 class="ez-btn-primary ez-btn-sm"
-                 (click)="$event.stopPropagation()">
-                Inscríbete
+                Ver detalles
               </a>
             </footer>
           </article>

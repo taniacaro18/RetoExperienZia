@@ -72,8 +72,12 @@
 /* -----------------------------------------------------------
    2. Reset y base
    ----------------------------------------------------------- */
-html, body {
+html {
   height: 100%;
+}
+
+html,
+body {
   margin: 0;
   font-family: var(--font-sans);
   font-size: 14px;
@@ -81,6 +85,35 @@ html, body {
   color: var(--surface-900);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100%;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+/** Cadena de altura: viewport dinámico + zona de rutas que ocupa el resto (shell, login, etc.). */
+app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+app-root > .app-router-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-router-host > router-outlet + * {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -457,19 +490,25 @@ button { font-family: inherit; }
   gap: 12px;
   padding: 10px 14px;
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--brand-800);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
   font-weight: 600;
   font-size: 13px;
-  transition: background .15s ease, transform .1s ease;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  transition: background .15s ease, transform .1s ease, color .15s ease, border-color .15s ease;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(4px);
 }
-.sidebar-item:hover { background: #ffffff; transform: translateX(2px); }
-.sidebar-item.active {
-  background: var(--brand-700);
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(50, 25, 80, 0.20);
-  border-color: transparent;
+  transform: translateX(2px);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.sidebar-item.active {
+  background: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  border-color: rgba(255, 255, 255, 0.38);
 }
 
 /* -----------------------------------------------------------

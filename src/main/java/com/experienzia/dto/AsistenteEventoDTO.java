@@ -18,6 +18,8 @@ public class AsistenteEventoDTO {
     private String telefono;
     private String tipoDocumento;
     private String numeroDocumento;
+    /** Código QR de la inscripción (útil para búsqueda y verificación en staff). */
+    private String codigoQR;
     private EstadoInscripcion estadoInscripcion;
     private LocalDateTime fechaInscripcion;
     private LocalDateTime fechaCheckIn;

@@ -125,10 +125,15 @@
                     <i class="pi pi-clock text-[10px] mt-[2px]"></i>
                     <span>Esperando aprobación del administrador.</span>
                   </div>
-                } @else if (e.estado === 'APROBADO') {
+                } @else if (e.estado === 'APROBADO' && requiereComprobante(e)) {
                   <div class="text-[11px] text-brand-700 mt-1 max-w-[220px] flex items-start gap-1">
                     <i class="pi pi-info-circle text-[10px] mt-[2px]"></i>
                     <span>Sube el comprobante de pago para activar.</span>
+                  </div>
+                } @else if (e.estado === 'APROBADO' && !requiereComprobante(e)) {
+                  <div class="text-[11px] text-surface-600 mt-1 max-w-[220px] flex items-start gap-1">
+                    <i class="pi pi-check-circle text-[10px] mt-[2px]"></i>
+                    <span>Sin tarifa de activación. No requiere comprobante.</span>
                   </div>
                 } @else if (e.estado === 'RECHAZADO' && e.motivoRechazo) {
                   <div class="text-[11px] text-rose-600 mt-1 max-w-[220px]">
@@ -145,17 +150,15 @@
               </td>
               <td>
                 <div class="flex items-center justify-end gap-2 flex-wrap">
-                  @if (e.estado !== 'PENDIENTE') {
-                    <a [routerLink]="['/eventos', e.id]" class="ez-btn-ghost ez-btn-sm">
-                      <i class="pi pi-eye text-[10px]"></i> Ver
-                    </a>
-                  }
+                  <a [routerLink]="['/eventos', e.id]" class="ez-btn-ghost ez-btn-sm">
+                    <i class="pi pi-eye text-[10px]"></i> Ver
+                  </a>
                   @if (puedeEditar(e)) {
                     <button type="button" (click)="abrirEditar(e)" class="ez-btn-secondary ez-btn-sm">
                       <i class="pi pi-pencil text-[10px]"></i> Editar
                     </button>
                   }
-                  @if (e.estado === 'APROBADO') {
+                  @if (e.estado === 'APROBADO' && requiereComprobante(e)) {
                     <a routerLink="/organizador/pagos" class="ez-btn-primary ez-btn-sm">
                       <i class="pi pi-upload text-[10px]"></i> Subir Comprobante
                     </a>

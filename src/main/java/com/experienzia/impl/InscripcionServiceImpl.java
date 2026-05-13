@@ -250,7 +250,9 @@ public class InscripcionServiceImpl implements InscripcionService {
         notificacionService.crear(ins.getUsuarioId(),
                 "Tu asistencia al evento \"" + evento.getNombre() + "\" fue registrada.",
                 TipoNotificacion.INFO);
-        return toDto(guardada);
+        InscripcionDTO dto = toDto(guardada);
+        enriquecerDatosCheckInEnDto(dto, ins.getUsuarioId(), ins.getEventoId());
+        return dto;
     }
 
     @Override
@@ -289,7 +291,9 @@ public class InscripcionServiceImpl implements InscripcionService {
         notificacionService.crear(ins.getUsuarioId(),
                 "Tu salida del evento \"" + evento.getNombre() + "\" fue registrada.",
                 TipoNotificacion.INFO);
-        return toDto(guardada);
+        InscripcionDTO dto = toDto(guardada);
+        enriquecerDatosCheckInEnDto(dto, ins.getUsuarioId(), ins.getEventoId());
+        return dto;
     }
 
     @Override
@@ -345,7 +349,7 @@ public class InscripcionServiceImpl implements InscripcionService {
             if (ins.getEstado() == EstadoInscripcion.CANCELADO) continue;
             Usuario asistente = usuarioRepository.findById(ins.getUsuarioId()).orElse(null);
             if (asistente == null) continue;
-            if (filtro != null && !filtro.isBlank() && !coincideFiltro(asistente, filtro)) continue;
+            if (filtro != null && !filtro.isBlank() && !coincideFiltro(asistente, ins, filtro)) continue;
             resultado.add(toAsistenteDto(ins, asistente));
         }
         return resultado;
@@ -759,10 +763,47 @@ public class InscripcionServiceImpl implements InscripcionService {
         }
     }
 
-    private static boolean coincideFiltro(Usuario u, String filtro) {
-        return (u.getNombre() != null && u.getNombre().toLowerCase(Locale.ROOT).contains(filtro))
-                || (u.getEmail() != null && u.getEmail().toLowerCase(Locale.ROOT).contains(filtro))
-                || (u.getNumeroDocumento() != null && u.getNumeroDocumento().toLowerCase(Locale.ROOT).contains(filtro));
+    /**
+     * Coincidencia por texto: nombre (puede incluir apellidos), email, documento, teléfono, tipo doc. o código QR.
+     * Si el criterio tiene varias palabras, todas deben aparecer en algún campo (búsqueda tipo “nombre apellido”).
+     */
+    private static boolean coincideFiltro(Usuario u, Inscripcion ins, String filtro) {
+        String hay = construirTextoBusquedaAsistente(u, ins);
+        if (hay.isEmpty()) {
+            return false;
+        }
+        for (String token : filtro.split("\\s+")) {
+            if (token.isBlank()) {
+                continue;
+            }
+            if (!hay.contains(token)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String construirTextoBusquedaAsistente(Usuario u, Inscripcion ins) {
+        StringBuilder sb = new StringBuilder();
+        appendNorm(sb, u.getNombre());
+        appendNorm(sb, u.getEmail());
+        appendNorm(sb, u.getTelefono());
+        appendNorm(sb, u.getTipoDocumento());
+        appendNorm(sb, u.getNumeroDocumento());
+        if (ins.getCodigoQR() != null && !ins.getCodigoQR().isBlank()) {
+            appendNorm(sb, ins.getCodigoQR());
+        }
+        return sb.toString();
+    }
+
+    private static void appendNorm(StringBuilder sb, String part) {
+        if (part == null || part.isBlank()) {
+            return;
+        }
+        if (sb.length() > 0) {
+            sb.append(' ');
+        }
+        sb.append(part.toLowerCase(Locale.ROOT).trim());
     }
 
     private Inscripcion buscarInscripcion(Long id) {
@@ -772,6 +813,22 @@ public class InscripcionServiceImpl implements InscripcionService {
 
     private InscripcionDTO toDto(Inscripcion ins) {
         return modelMapper.map(ins, InscripcionDTO.class);
+    }
+
+    /** Añade nombre, documento y datos del evento para pantallas de staff (check-in/out). */
+    private void enriquecerDatosCheckInEnDto(InscripcionDTO dto, Long usuarioId, Long eventoId) {
+        usuarioRepository.findById(usuarioId).ifPresent(u -> {
+            dto.setNombreAsistente(u.getNombre());
+            dto.setEmailAsistente(u.getEmail());
+            dto.setTipoDocumento(u.getTipoDocumento());
+            dto.setNumeroDocumento(u.getNumeroDocumento());
+        });
+        eventoRepository.findById(eventoId).ifPresent(ev -> {
+            dto.setNombreEvento(ev.getNombre());
+            dto.setFechaEvento(ev.getFecha());
+            dto.setFechaFinEvento(ev.getFechaFin());
+            dto.setUbicacionEvento(ev.getUbicacion());
+        });
     }
 
     private AsistenteEventoDTO toAsistenteDto(Inscripcion ins, Usuario u) {
@@ -787,6 +844,7 @@ public class InscripcionServiceImpl implements InscripcionService {
         dto.setFechaInscripcion(ins.getFechaInscripcion());
         dto.setFechaCheckIn(ins.getFechaCheckIn());
         dto.setFechaCheckOut(ins.getFechaCheckOut());
+        dto.setCodigoQR(ins.getCodigoQR());
         return dto;
     }
 }

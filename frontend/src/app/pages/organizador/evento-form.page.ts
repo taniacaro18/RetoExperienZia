@@ -12,10 +12,41 @@ import { MessageService } from 'primeng/api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { EventoApi } from '../../core/api/evento.api';
 import { Evento } from '../../core/models/domain.models';
+import { eventoVentanaYaCerro } from '../../shared/evento-catalogo.helpers';
 
 const PRECIO_POR_HORA = 100000;
 const AFORO_MAXIMO_PERMITIDO = 600;
 const UBICACION_DEFECTO = 'Salón principal';
+
+/** ISO sin zona: el backend usa LocalDateTime; evita el desfase de `toISOString()` (UTC). */
+function toLocalDateTimeIso(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/**
+ * Inicio/fin del evento en fecha del calendario: si la hora de fin es menor o igual que la de inicio,
+ * el fin se interpreta al día siguiente (misma noche).
+ */
+function ventanaHorariaLocal(
+  fecha: Date,
+  horaInicio: Date,
+  horaFin: Date
+): { inicio: Date; fin: Date } | null {
+  const base = new Date(fecha);
+  const inicio = new Date(base);
+  inicio.setHours(horaInicio.getHours(), horaInicio.getMinutes(), 0, 0);
+  const fin = new Date(base);
+  fin.setHours(horaFin.getHours(), horaFin.getMinutes(), 0, 0);
+  if (fin.getTime() <= inicio.getTime()) {
+    fin.setDate(fin.getDate() + 1);
+  }
+  return { inicio, fin };
+}
+
+function minutosDelDia(d: Date): number {
+  return d.getHours() * 60 + d.getMinutes();
+}
 
 function fechaFutura(control: AbstractControl): ValidationErrors | null {
   const v = control.value;
@@ -55,6 +86,8 @@ export class OrgEventoFormPage {
   readonly guardando = signal(false);
   readonly minFecha = new Date();
   readonly imagenError = signal(false);
+  /** Al editar: costo original del API (para textos de ayuda). */
+  readonly costoEventoCargado = signal<number | null>(null);
 
   readonly precioPorHora = PRECIO_POR_HORA;
   readonly aforoMaximoPermitido = AFORO_MAXIMO_PERMITIDO;
@@ -102,10 +135,13 @@ export class OrgEventoFormPage {
 
   /** Duración en horas calculada a partir de horaInicio y horaFin (redondeo hacia arriba). */
   readonly duracionCalculada = computed(() => {
+    const fecha = this.formulario.controls.fecha.value;
     const inicio = this.formulario.controls.horaInicio.value;
     const fin = this.formulario.controls.horaFin.value;
-    if (!inicio || !fin) return 0;
-    const minutos = (fin.getTime() - inicio.getTime()) / 60000;
+    if (!fecha || !inicio || !fin) return 0;
+    const v = ventanaHorariaLocal(fecha, inicio, fin);
+    if (!v) return 0;
+    const minutos = (v.fin.getTime() - v.inicio.getTime()) / 60000;
     if (minutos <= 0) return 0;
     return Math.ceil(minutos / 60);
   });
@@ -113,11 +149,20 @@ export class OrgEventoFormPage {
   /** Costo automático = precio por hora * duración. */
   readonly costoCalculado = computed(() => this.precioPorHora * Math.max(0, this.duracionCalculada()));
 
-  readonly horaFinValida = computed(() => {
-    const inicio = this.formulario.controls.horaInicio.value;
-    const fin = this.formulario.controls.horaFin.value;
-    if (!inicio || !fin) return true;
-    return fin.getTime() > inicio.getTime();
+  /** Misma hora en el reloj (mismo día calendario del evento) → duración cero; no permitir guardar. */
+  readonly horaInicioFinIguales = computed(() => {
+    const a = this.formulario.controls.horaInicio.value;
+    const b = this.formulario.controls.horaFin.value;
+    if (!a || !b) return false;
+    return minutosDelDia(a) === minutosDelDia(b);
+  });
+
+  /** Solo reloj: fin antes que inicio → se guardará el fin al día siguiente. */
+  readonly cruzaMedianoche = computed(() => {
+    const a = this.formulario.controls.horaInicio.value;
+    const b = this.formulario.controls.horaFin.value;
+    if (!a || !b) return false;
+    return minutosDelDia(b) < minutosDelDia(a);
   });
 
   ngOnInit() {
@@ -145,10 +190,22 @@ export class OrgEventoFormPage {
           this.router.navigate(['/organizador/eventos']);
           return;
         }
+        if (e.estado === 'FINALIZADO' || (e.estado === 'ACTIVO' && eventoVentanaYaCerro(e))) {
+          this.messages.add({
+            severity: 'info',
+            summary: 'Evento finalizado',
+            detail: 'Este evento ya terminó; no se puede editar.'
+          });
+          this.router.navigate(['/organizador/eventos']);
+          return;
+        }
         const fechaInicio = new Date(e.fecha);
+        const horasFallback =
+          e.duracionHoras != null && e.duracionHoras > 0 ? e.duracionHoras : 1;
         const fechaFin = e.fechaFin
           ? new Date(e.fechaFin)
-          : new Date(fechaInicio.getTime() + (e.duracionHoras || 2) * 3600000);
+          : new Date(fechaInicio.getTime() + horasFallback * 3600000);
+        this.costoEventoCargado.set(e.costo ?? 0);
         this.formulario.patchValue({
           nombre: e.nombre,
           categoria: (e.categoria || 'FIESTA').toUpperCase(),
@@ -208,8 +265,8 @@ export class OrgEventoFormPage {
     if (f.horaInicio.errors?.['required']) problemas.push('Hora de inicio');
     if (f.horaFin.errors?.['required']) problemas.push('Hora de fin');
 
-    if (!f.horaInicio.errors && !f.horaFin.errors && !this.horaFinValida()) {
-      problemas.push('La hora de fin debe ser posterior a la de inicio');
+    if (!f.horaInicio.errors && !f.horaFin.errors && this.horaInicioFinIguales()) {
+      problemas.push('La hora de fin no puede ser igual a la de inicio');
     }
 
     return problemas;
@@ -233,17 +290,9 @@ export class OrgEventoFormPage {
     if (!orgId) return;
 
     const v = this.formulario.getRawValue();
-    const fechaBase = new Date(v.fecha!);
-
-    const inicio = new Date(fechaBase);
-    inicio.setHours(v.horaInicio!.getHours(), v.horaInicio!.getMinutes(), 0, 0);
-
-    const fin = new Date(fechaBase);
-    fin.setHours(v.horaFin!.getHours(), v.horaFin!.getMinutes(), 0, 0);
-    // Si la hora fin es menor o igual que la de inicio, asumimos que pasa al día siguiente.
-    if (fin.getTime() <= inicio.getTime()) {
-      fin.setDate(fin.getDate() + 1);
-    }
+    const ventana = ventanaHorariaLocal(v.fecha!, v.horaInicio!, v.horaFin!);
+    if (!ventana) return;
+    const { inicio, fin } = ventana;
 
     if (inicio.getTime() < Date.now()) {
       this.messages.add({
@@ -262,8 +311,8 @@ export class OrgEventoFormPage {
       tipoEvento: v.tipoEvento,
       descripcion: v.descripcion.trim(),
       aforoMaximo: v.aforoMaximo,
-      fecha: inicio.toISOString(),
-      fechaFin: fin.toISOString(),
+      fecha: toLocalDateTimeIso(inicio),
+      fechaFin: toLocalDateTimeIso(fin),
       ubicacion: ubicacionFinal,
       imagen: v.imagen?.trim() || undefined,
       organizadorId: orgId
@@ -272,13 +321,24 @@ export class OrgEventoFormPage {
     this.guardando.set(true);
     if (this.editando()) {
       this.api.editar(this.eventoId()!, payload).subscribe({
-        next: () => {
+        next: (ev) => {
           this.guardando.set(false);
+          const pendiente = ev.estado === 'PENDIENTE';
+          const sinTarifa = (ev.costo ?? 0) <= 0;
+          let detail: string;
+          if (pendiente) {
+            detail = 'Los cambios se enviaron a re-aprobación.';
+          } else if (sinTarifa) {
+            detail =
+              'Los cambios se guardaron. Este evento no tiene tarifa de activación; no debes subir comprobante.';
+          } else {
+            detail = 'Los cambios se guardaron.';
+          }
           this.messages.add({
             severity: 'success',
             summary: 'Evento actualizado',
-            detail: 'Los cambios se enviaron a re-aprobación.',
-            life: 4500
+            detail,
+            life: 5000
           });
           this.router.navigate(['/organizador/eventos']);
         },

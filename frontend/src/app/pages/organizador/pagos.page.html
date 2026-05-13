@@ -138,7 +138,10 @@
             </div>
           }
 
-          @if (fila.estadoPago === 'NO_PAGADO' || fila.estadoPago === 'RECHAZADO') {
+          @if (
+            (fila.estadoPago === 'NO_PAGADO' || fila.estadoPago === 'RECHAZADO')
+            && (fila.evento.costo ?? 0) > 0
+          ) {
             <button type="button" (click)="abrirSubir(fila.evento)"
                     [disabled]="subiendo() === fila.evento.id"
                     class="ez-btn-primary w-full">

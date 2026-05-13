@@ -8,11 +8,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ActualizarPerfilDTO {
-    private String nombre;
-    private String email;
+    /** Cadena vacía borra el teléfono; null no modifica el valor guardado. */
     private String telefono;
-    private String tipoDocumento;
-    private String numeroDocumento;
-    /** Si va vacío/null, no cambia. */
+    /** Si va vacío/null, no cambia la contraseña. */
     private String nuevaPassword;
 }

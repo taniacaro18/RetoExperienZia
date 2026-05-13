@@ -114,12 +114,7 @@ public class EventoController {
 
     @GetMapping("/catalogo/publicos/{id}")
     public ResponseEntity<EventoDTO> obtenerPublico(@PathVariable Long id) {
-        EventoDTO dto = eventoService.obtenerPorId(id);
-        if (dto.getTipoEvento() != com.experienzia.entity.TipoEvento.PUBLICO
-                || dto.getEstado() != com.experienzia.entity.EstadoEvento.ACTIVO) {
-            throw new CustomException("Evento no disponible en el catálogo público.", HttpStatus.NOT_FOUND);
-        }
-        return ResponseEntity.ok(dto);
+        return ResponseEntity.ok(eventoService.obtenerParaCatalogoPublico(id));
     }
 
     @GetMapping("/organizador/{organizadorId}")

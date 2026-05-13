@@ -1,6 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -8,6 +15,46 @@ import { PasswordModule } from 'primeng/password';
 import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../core/auth/auth.service';
+
+/** Solo letras Unicode y espacios (nombres compuestos). */
+const PAT_NOMBRE = /^[\p{L}\s]+$/u;
+
+function soloLetrasNombre(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const v = String(control.value ?? '').trim();
+    if (!v) return null;
+    return PAT_NOMBRE.test(v) ? null : { soloLetras: true };
+  };
+}
+
+/** Solo dígitos, longitud entre min y max (inclusive). */
+function soloDigitosEntre(min: number, max: number): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const v = String(control.value ?? '').trim();
+    if (!v) return null;
+    if (!/^\d+$/.test(v)) return { soloNumeros: true };
+    if (v.length < min) return { digitosMin: { min, actual: v.length } };
+    if (v.length > max) return { digitosMax: { max, actual: v.length } };
+    return null;
+  };
+}
+
+/**
+ * Más de 8 caracteres (mínimo 9), al menos una mayúscula, una minúscula y un carácter especial
+ * (no letra ni dígito ni espacio).
+ */
+function contrasenaFuerte(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const v = (control.value as string) ?? '';
+    if (!v) return null;
+    const err: ValidationErrors = {};
+    if (v.length < 9) err['passwordCorta'] = { min: 9, actual: v.length };
+    if (!/[\p{Lu}]/u.test(v)) err['passwordMayus'] = true;
+    if (!/[\p{Ll}]/u.test(v)) err['passwordMinus'] = true;
+    if (!/[^\p{L}\p{N}\s]/u.test(v)) err['passwordEspecial'] = true;
+    return Object.keys(err).length ? err : null;
+  };
+}
 
 @Component({
   selector: 'app-registro-page',
@@ -58,12 +105,12 @@ export class RegistroPage {
 
   readonly formulario = this.fb.nonNullable.group({
     tipo: ['ASISTENTE', Validators.required],
-    nombre: ['', [Validators.required, Validators.minLength(3)]],
+    nombre: ['', [Validators.required, Validators.minLength(3), soloLetrasNombre()]],
     email: ['', [Validators.required, Validators.email]],
-    telefono: [''],
+    telefono: ['', [Validators.required, soloDigitosEntre(10, 10)]],
     tipoDocumento: ['CC', Validators.required],
-    numeroDocumento: ['', [Validators.required, Validators.minLength(4)]],
-    password: ['', [Validators.required, Validators.minLength(4)]],
+    numeroDocumento: ['', [Validators.required, soloDigitosEntre(4, 10)]],
+    password: ['', [Validators.required, contrasenaFuerte()]],
     confirmar: ['', [Validators.required]]
   });
 
@@ -77,7 +124,7 @@ export class RegistroPage {
     switch (id) {
       case 'identidad': return f.nombre.valid;
       case 'contacto':  return f.email.valid;
-      case 'telefono':  return f.telefono.value.trim().length > 0;
+      case 'telefono':  return f.telefono.valid;
       case 'documento': return f.tipoDocumento.valid && f.numeroDocumento.valid;
       case 'seguridad': return f.password.valid && f.confirmar.valid && !this.contrasenasNoCoinciden();
       case 'rol':       return f.tipo.valid;
@@ -96,13 +143,24 @@ export class RegistroPage {
     if (f.tipo.invalid)            problemas.push('Tipo de cuenta');
     if (f.nombre.errors?.['required']) problemas.push('Nombre completo');
     else if (f.nombre.errors?.['minlength']) problemas.push('Nombre: mínimo 3 caracteres');
+    else if (f.nombre.errors?.['soloLetras']) problemas.push('Nombre: solo letras y espacios');
     if (f.email.errors?.['required']) problemas.push('Correo');
     else if (f.email.errors?.['email']) problemas.push('Correo no es válido');
+    if (f.telefono.errors?.['required']) problemas.push('Celular');
+    else if (f.telefono.errors?.['soloNumeros']) problemas.push('Celular: solo números');
+    else if (f.telefono.errors?.['digitosMin'] || f.telefono.errors?.['digitosMax']) {
+      problemas.push('Celular: debe tener 10 dígitos');
+    }
     if (f.tipoDocumento.invalid)   problemas.push('Tipo de documento');
     if (f.numeroDocumento.errors?.['required']) problemas.push('Número de documento');
-    else if (f.numeroDocumento.errors?.['minlength']) problemas.push('Documento: mínimo 4 dígitos');
+    else if (f.numeroDocumento.errors?.['soloNumeros']) problemas.push('Documento: solo números');
+    else if (f.numeroDocumento.errors?.['digitosMin']) problemas.push('Documento: mínimo 4 dígitos');
+    else if (f.numeroDocumento.errors?.['digitosMax']) problemas.push('Documento: máximo 10 dígitos');
     if (f.password.errors?.['required']) problemas.push('Contraseña');
-    else if (f.password.errors?.['minlength']) problemas.push('Contraseña: mínimo 4 caracteres');
+    else if (f.password.errors?.['passwordCorta']) problemas.push('Contraseña: más de 8 caracteres (mínimo 9)');
+    else if (f.password.errors?.['passwordMayus']) problemas.push('Contraseña: incluye una mayúscula');
+    else if (f.password.errors?.['passwordMinus']) problemas.push('Contraseña: incluye una minúscula');
+    else if (f.password.errors?.['passwordEspecial']) problemas.push('Contraseña: incluye un carácter especial');
     if (f.confirmar.errors?.['required']) problemas.push('Confirmación de contraseña');
     return problemas;
   }

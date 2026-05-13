@@ -53,11 +53,16 @@
                 formControlName="nombre"
                 class="reg-field__input"
                 placeholder="Escriba aquí"
+                autocomplete="name"
                 (focus)="focusSeccion('identidad')"
               />
             </div>
             @if (formulario.controls.nombre.touched && formulario.controls.nombre.invalid) {
-              <p class="reg-field__error">Mínimo 3 caracteres.</p>
+              @if (formulario.controls.nombre.errors?.['required'] || formulario.controls.nombre.errors?.['minlength']) {
+                <p class="reg-field__error">Mínimo 3 caracteres.</p>
+              } @else if (formulario.controls.nombre.errors?.['soloLetras']) {
+                <p class="reg-field__error">Solo se permiten letras y espacios.</p>
+              }
             }
           </div>
 
@@ -86,10 +91,22 @@
               <input
                 formControlName="telefono"
                 class="reg-field__input"
-                placeholder="Digite aquí"
+                placeholder="10 dígitos"
+                inputmode="numeric"
+                maxlength="10"
+                autocomplete="tel"
                 (focus)="focusSeccion('telefono')"
               />
             </div>
+            @if (formulario.controls.telefono.touched && formulario.controls.telefono.invalid) {
+              @if (formulario.controls.telefono.errors?.['required']) {
+                <p class="reg-field__error">El celular es obligatorio.</p>
+              } @else if (formulario.controls.telefono.errors?.['soloNumeros']) {
+                <p class="reg-field__error">Solo números, sin espacios ni símbolos.</p>
+              } @else if (formulario.controls.telefono.errors?.['digitosMin'] || formulario.controls.telefono.errors?.['digitosMax']) {
+                <p class="reg-field__error">Debe tener exactamente 10 dígitos.</p>
+              }
+            }
           </div>
         </div>
 
@@ -118,12 +135,23 @@
               <input
                 formControlName="numeroDocumento"
                 class="reg-field__input"
-                placeholder="Digite aquí"
+                placeholder="Solo números, máx. 10"
+                inputmode="numeric"
+                maxlength="10"
+                autocomplete="off"
                 (focus)="focusSeccion('documento')"
               />
             </div>
             @if (formulario.controls.numeroDocumento.touched && formulario.controls.numeroDocumento.invalid) {
-              <p class="reg-field__error">Mínimo 4 dígitos.</p>
+              @if (formulario.controls.numeroDocumento.errors?.['required']) {
+                <p class="reg-field__error">El documento es obligatorio.</p>
+              } @else if (formulario.controls.numeroDocumento.errors?.['soloNumeros']) {
+                <p class="reg-field__error">Solo números.</p>
+              } @else if (formulario.controls.numeroDocumento.errors?.['digitosMin']) {
+                <p class="reg-field__error">Mínimo 4 dígitos.</p>
+              } @else if (formulario.controls.numeroDocumento.errors?.['digitosMax']) {
+                <p class="reg-field__error">Máximo 10 dígitos.</p>
+              }
             }
           </div>
         </div>
@@ -146,6 +174,22 @@
                 <i [class]="mostrarPassword ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
               </button>
             </div>
+            @if (formulario.controls.password.touched && formulario.controls.password.invalid) {
+              @if (formulario.controls.password.errors?.['required']) {
+                <p class="reg-field__error">La contraseña es obligatoria.</p>
+              } @else if (formulario.controls.password.errors?.['passwordCorta']) {
+                <p class="reg-field__error">Más de 8 caracteres (mínimo 9).</p>
+              } @else if (formulario.controls.password.errors?.['passwordMayus']) {
+                <p class="reg-field__error">Incluye al menos una mayúscula.</p>
+              } @else if (formulario.controls.password.errors?.['passwordMinus']) {
+                <p class="reg-field__error">Incluye al menos una minúscula.</p>
+              } @else if (formulario.controls.password.errors?.['passwordEspecial']) {
+                <p class="reg-field__error">Incluye un carácter especial (por ejemplo ! @ # $ %).</p>
+              }
+            }
+            <p class="text-[11px] text-surface-500 mt-1 mb-0 leading-snug">
+              Mínimo 9 caracteres: mayúscula, minúscula y un símbolo.
+            </p>
           </div>
 
           <div class="reg-field">

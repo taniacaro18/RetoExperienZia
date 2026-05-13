@@ -19,4 +19,14 @@ public class InscripcionDTO {
     private LocalDateTime fechaCheckIn;
     private LocalDateTime fechaCheckOut;
     private String codigoQR;
+
+    /** Completado solo en respuestas de check-in / check-out (QR o manual). */
+    private String nombreAsistente;
+    private String emailAsistente;
+    private String tipoDocumento;
+    private String numeroDocumento;
+    private String nombreEvento;
+    private LocalDateTime fechaEvento;
+    private LocalDateTime fechaFinEvento;
+    private String ubicacionEvento;
 }
