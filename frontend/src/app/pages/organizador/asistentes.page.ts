@@ -12,7 +12,6 @@ import { MessageService } from 'primeng/api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { EventoApi } from '../../core/api/evento.api';
 import { InscripcionApi } from '../../core/api/inscripcion.api';
-import { UsuarioApi } from '../../core/api/usuario.api';
 import { AsistenteEvento, EstadoInscripcion, Evento } from '../../core/models/domain.models';
 import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 import { inscripcionEstadoSeverity } from '../../shared/estado.helpers';
@@ -44,7 +43,6 @@ export class OrgAsistentesPage {
   private readonly store = inject(AuthStore);
   private readonly eventoApi = inject(EventoApi);
   private readonly inscripcionApi = inject(InscripcionApi);
-  private readonly usuarioApi = inject(UsuarioApi);
   private readonly messages = inject(MessageService);
   private readonly route = inject(ActivatedRoute);
   private readonly exportSvc = inject(ExportService);
@@ -360,21 +358,6 @@ export class OrgAsistentesPage {
   }
 
   cerrarResultado() { this.modalResultado.set(null); }
-
-  reenviarCredenciales(a: AsistenteEvento) {
-    const orgId = this.store.usuario()?.id;
-    if (!orgId) return;
-    this.usuarioApi.reenviarCredenciales(a.usuarioId, orgId).subscribe({
-      next: (r) => {
-        this.messages.add({
-          severity: 'success',
-          summary: 'Credenciales reenviadas',
-          detail: `Contraseña temporal: ${r.passwordTemporal}`,
-          life: 7000
-        });
-      }
-    });
-  }
 
   exportarExcel() {
     const items = this.asistentesFiltrados();

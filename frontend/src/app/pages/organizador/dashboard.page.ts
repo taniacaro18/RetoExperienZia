@@ -101,12 +101,26 @@ export class OrgDashboardPage {
 
   readonly necesitaAtencion = computed(() => {
     return this.eventosFiltradosDash().filter(
-      (e) => e.estado === 'PENDIENTE' || e.estado === 'RECHAZADO'
+      (e) =>
+        e.estado === 'PENDIENTE' ||
+        e.estado === 'PENDIENTE_REVISION' ||
+        e.estado === 'PENDIENTE_SUPLEMENTO' ||
+        e.estado === 'PENDIENTE_CANCELACION' ||
+        e.estado === 'RECHAZADO'
     );
   });
 
   estadoLabel = eventoEstadoLabel;
   estadoSeverity = eventoEstadoSeverity;
+
+  /** Enlaces coherentes: suplemento → Pagos; revisión/cancelación en trámite → lista; resto → edición. */
+  rutaAtencionEvento(e: Evento): (string | number)[] {
+    if (e.estado === 'PENDIENTE_SUPLEMENTO') return ['/organizador/pagos'];
+    if (e.estado === 'PENDIENTE_REVISION' || e.estado === 'PENDIENTE_CANCELACION') {
+      return ['/organizador/eventos'];
+    }
+    return ['/organizador/eventos', e.id, 'editar'];
+  }
 
   ngOnInit() {
     const orgId = this.store.usuario()?.id;

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -38,6 +38,8 @@ export class LoginPage {
   readonly cargando = signal(false);
   mostrarPassword = false;
   readonly mostrarRecuperar = signal(false);
+  /** Popover de ayuda junto al logo (contraseña = documento si te registró un organizador). */
+  readonly ayudaOrganizadorVisible = signal(false);
 
   readonly formulario = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -80,6 +82,28 @@ export class LoginPage {
         });
       }
     });
+  }
+
+  toggleAyudaOrganizador(event: Event) {
+    event.stopPropagation();
+    this.ayudaOrganizadorVisible.update((v) => !v);
+  }
+
+  cerrarAyudaOrganizador() {
+    this.ayudaOrganizadorVisible.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(ev: MouseEvent) {
+    if (!this.ayudaOrganizadorVisible()) return;
+    const t = ev.target as HTMLElement | null;
+    if (t?.closest('.login-brand-row__hint-wrap')) return;
+    this.ayudaOrganizadorVisible.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeCerrarAyuda() {
+    this.ayudaOrganizadorVisible.set(false);
   }
 
   private rutaPorRol(rol: Rol): string {

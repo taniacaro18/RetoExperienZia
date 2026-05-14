@@ -71,7 +71,7 @@
             <a routerLink="/mis-inscripciones" class="ez-btn-outline ez-btn-sm">
               <i class="pi pi-qrcode text-[10px]"></i> Ver mi QR
             </a>
-            <a [routerLink]="['/eventos', p.evento.id]" class="ez-btn-primary ez-btn-sm">
+            <a [routerLink]="['/eventos', p.evento.id]" [queryParams]="{ retorno: 'inicio' }" class="ez-btn-primary ez-btn-sm">
               <i class="pi pi-arrow-right text-[10px]"></i> Detalles
             </a>
           </div>
@@ -103,7 +103,7 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           @for (e of sugeridos(); track e.id) {
-            <a [routerLink]="['/eventos', e.id]"
+            <a [routerLink]="['/eventos', e.id]" [queryParams]="{ retorno: 'inicio' }"
                class="ez-event-card hover:shadow-card transition">
               <div class="ez-event-card-header">
                 <span class="ez-event-card-badge">{{ primeraLetra(e.nombre) }}</span>

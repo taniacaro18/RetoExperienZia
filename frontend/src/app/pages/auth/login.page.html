@@ -12,9 +12,48 @@
   <!-- Lado derecho: formulario -->
   <div class="login-form-side">
     <div class="login-form-wrapper">
-      <!-- Logo -->
-      <div class="text-center mb-6">
-        <img src="/logo.png" alt="ExperienZia" class="mx-auto h-16 w-auto object-contain" />
+      <!-- Logo + ayuda contraseña (cuentas creadas por organizador) -->
+      <div class="login-brand-row">
+        <div class="login-brand-row__cluster">
+          <img src="/logo.png" alt="ExperienZia" class="login-brand-row__logo" />
+          <div class="login-brand-row__hint-wrap">
+            <button
+              type="button"
+              class="login-brand-row__hint"
+              [class.login-brand-row__hint--active]="ayudaOrganizadorVisible()"
+              (click)="toggleAyudaOrganizador($event)"
+              [attr.aria-expanded]="ayudaOrganizadorVisible()"
+              aria-controls="login-ayuda-organizador"
+              aria-label="Ayuda: contraseña si te registró un organizador"
+            >
+              <span class="login-brand-row__hint-glyph" aria-hidden="true">ℹ</span>
+            </button>
+            @if (ayudaOrganizadorVisible()) {
+              <div
+                class="login-brand-row__popover"
+                id="login-ayuda-organizador"
+                role="tooltip"
+                (click)="$event.stopPropagation()"
+              >
+                <div class="login-brand-row__popover-glow" aria-hidden="true"></div>
+                <div class="login-brand-row__popover-arrow" aria-hidden="true"></div>
+                <div class="login-brand-row__popover-inner">
+                  <span class="login-brand-row__popover-pill">Acceso</span>
+                  <h2 class="login-brand-row__popover-title">¿Te registró un organizador?</h2>
+                  <p class="login-brand-row__popover-lead">
+                    Tu contraseña para entrar es <strong>tu número de documento</strong>, el mismo que usaron al inscribirte.
+                  </p>
+                  <p class="login-brand-row__popover-note">
+                    Si ya la cambiaste desde tu perfil o con «Olvidé mi contraseña», usa la contraseña actual.
+                  </p>
+                  <button type="button" class="login-brand-row__popover-btn" (click)="cerrarAyudaOrganizador()">
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
       </div>
 
       <h1 class="login-greeting">¡Hola! Qué bueno verte de nuevo</h1>
@@ -46,10 +85,11 @@
 
         <!-- Contraseña -->
         <div class="login-field">
-          <label class="login-field__label">CONTRASEÑA</label>
+          <label class="login-field__label" for="login-password">CONTRASEÑA</label>
           <div class="login-field__input-wrap">
             <i class="pi pi-lock login-field__icon"></i>
             <input
+              id="login-password"
               [type]="mostrarPassword ? 'text' : 'password'"
               formControlName="password"
               class="login-field__input"

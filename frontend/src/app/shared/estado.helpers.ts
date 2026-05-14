@@ -10,6 +10,9 @@ export function eventoEstadoLabel(e: EstadoEvento | string): string {
     case 'RECHAZADO': return 'Rechazado';
     case 'CANCELADO': return 'Cancelado';
     case 'FINALIZADO': return 'Finalizado';
+    case 'PENDIENTE_REVISION': return 'Pend. revisión cambios';
+    case 'PENDIENTE_SUPLEMENTO': return 'Pend. pago adicional';
+    case 'PENDIENTE_CANCELACION': return 'Pend. cancelación';
     default: return String(e);
   }
 }
@@ -22,6 +25,9 @@ export function eventoEstadoSeverity(e: EstadoEvento | string): Severity {
     case 'RECHAZADO':
     case 'CANCELADO': return 'danger';
     case 'FINALIZADO': return 'secondary';
+    case 'PENDIENTE_REVISION': return 'warn';
+    case 'PENDIENTE_SUPLEMENTO': return 'warn';
+    case 'PENDIENTE_CANCELACION': return 'danger';
     default: return 'info';
   }
 }

@@ -56,4 +56,21 @@ public class FileStorageService {
             throw new CustomException("Error al guardar el archivo comprobante.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    /** Elimina un comprobante previamente guardado (ruta relativa tipo {@code /uploads/comprobantes/...}). */
+    public void borrarComprobantePublico(String urlRelativa) {
+        if (urlRelativa == null || urlRelativa.isBlank()) {
+            return;
+        }
+        try {
+            String rel = urlRelativa.startsWith("/") ? urlRelativa.substring(1) : urlRelativa;
+            if (!rel.startsWith(UPLOAD_DIR)) {
+                return;
+            }
+            Path filePath = Paths.get(rel);
+            Files.deleteIfExists(filePath);
+        } catch (IOException ignored) {
+            // No bloquear el flujo si el archivo ya no existe.
+        }
+    }
 }

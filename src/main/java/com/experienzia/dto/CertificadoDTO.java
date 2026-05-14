@@ -21,4 +21,9 @@ public class CertificadoDTO {
     private String nombreEvento;
     private LocalDateTime fechaEvento;
     private Integer duracionHoras;
+
+    /** Nombre del organizador del evento (firma en el certificado). */
+    private String nombreOrganizador;
+    /** Ciudad de expedición (p. ej. desde la ubicación del evento). */
+    private String ciudadExpedicion;
 }

@@ -56,6 +56,24 @@ export class OrgEventosListaPage {
   readonly cancelandoId = signal<number | null>(null);
   readonly procesandoCancelacion = signal(false);
 
+  readonly eventoParaCancelar = computed(() => {
+    const id = this.cancelandoId();
+    if (id == null) return null;
+    return this.eventos().find((x) => x.id === id) ?? null;
+  });
+
+  /** Cancelaciones que pasan por el administrador (70% devolución orientativa). */
+  readonly cancelacionPasaPorAdmin = computed(() => {
+    const e = this.eventoParaCancelar();
+    if (!e) return false;
+    return (
+      e.estado === 'ACTIVO' ||
+      e.estado === 'APROBADO' ||
+      e.estado === 'PENDIENTE_REVISION' ||
+      e.estado === 'PENDIENTE_SUPLEMENTO'
+    );
+  });
+
   readonly busqueda = signal('');
   readonly filtroEstado = signal<FiltroEstado>('TODOS');
   readonly orden = signal<Orden>('FECHA_DESC');
@@ -63,7 +81,11 @@ export class OrgEventosListaPage {
   readonly opcionesEstado = [
     { label: 'Todos', value: 'TODOS' },
     { label: 'Activos', value: 'ACTIVO' },
-    { label: 'Pendientes', value: 'PENDIENTE' },
+    { label: 'Pend. alta', value: 'PENDIENTE' },
+    { label: 'Pend. revisión cambios', value: 'PENDIENTE_REVISION' },
+    { label: 'Pend. pago adicional', value: 'PENDIENTE_SUPLEMENTO' },
+    { label: 'Pend. cancelación', value: 'PENDIENTE_CANCELACION' },
+    { label: 'Pend. pago (aprobado)', value: 'APROBADO' },
     { label: 'Rechazados', value: 'RECHAZADO' },
     { label: 'Cancelados', value: 'CANCELADO' },
     { label: 'Finalizados', value: 'FINALIZADO' }
@@ -82,6 +104,8 @@ export class OrgEventosListaPage {
       total: items.length,
       activos: items.filter((e) => e.estado === 'ACTIVO').length,
       pendientes: items.filter((e) => e.estado === 'PENDIENTE').length,
+      revision: items.filter((e) => e.estado === 'PENDIENTE_REVISION').length,
+      suplemento: items.filter((e) => e.estado === 'PENDIENTE_SUPLEMENTO').length,
       finalizados: items.filter((e) => e.estado === 'FINALIZADO').length
     };
   });
@@ -153,6 +177,13 @@ export class OrgEventosListaPage {
     if (e.estado === 'FINALIZADO' || e.estado === 'CANCELADO') {
       return false;
     }
+    if (
+      e.estado === 'PENDIENTE_REVISION' ||
+      e.estado === 'PENDIENTE_SUPLEMENTO' ||
+      e.estado === 'PENDIENTE_CANCELACION'
+    ) {
+      return false;
+    }
     const porEstado =
       e.estado === 'PENDIENTE' ||
       e.estado === 'APROBADO' ||
@@ -171,7 +202,22 @@ export class OrgEventosListaPage {
   }
 
   puedeCancelar(e: Evento): boolean {
-    return (e.estado === 'ACTIVO' || e.estado === 'PENDIENTE') && new Date(e.fecha) > new Date();
+    if (
+      e.estado === 'FINALIZADO' ||
+      e.estado === 'CANCELADO' ||
+      e.estado === 'PENDIENTE_CANCELACION' ||
+      e.estado === 'RECHAZADO'
+    ) {
+      return false;
+    }
+    if (new Date(e.fecha) <= new Date()) return false;
+    return (
+      e.estado === 'ACTIVO' ||
+      e.estado === 'PENDIENTE' ||
+      e.estado === 'APROBADO' ||
+      e.estado === 'PENDIENTE_REVISION' ||
+      e.estado === 'PENDIENTE_SUPLEMENTO'
+    );
   }
 
   abrirEditar(e: Evento) {
@@ -208,11 +254,16 @@ export class OrgEventosListaPage {
     }
     this.procesandoCancelacion.set(true);
     this.api.cancelar(id, orgId, motivo).subscribe({
-      next: () => {
+      next: (ev) => {
+        const pasaAdmin = ev.estado === 'PENDIENTE_CANCELACION';
         this.messages.add({
-          severity: 'success',
-          summary: 'Evento cancelado',
-          detail: 'Se notificó a los inscritos.'
+          severity: pasaAdmin ? 'info' : 'success',
+          summary: pasaAdmin ? 'Solicitud enviada' : 'Evento cancelado',
+          detail:
+            ev.alertaNegocio?.trim() ||
+            (pasaAdmin
+              ? 'Un administrador revisará la cancelación. Si se aprueba, la devolución orientativa es del 70% del valor pagado.'
+              : 'Se notificó a los inscritos.')
         });
         this.cerrarCancelacion();
         this.cargar();

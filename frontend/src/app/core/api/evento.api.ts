@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { EstadoEvento, Evento, TipoEvento } from '../models/domain.models';
+import { EstadoEvento, Evento, EventoNovedad, TipoEvento } from '../models/domain.models';
 
 export interface EventoSearchCriteria {
   nombre?: string;
@@ -76,5 +76,19 @@ export class EventoApi {
       organizadorId,
       motivo
     });
+  }
+
+  listarNovedades(id: number): Observable<EventoNovedad[]> {
+    return this.http.get<EventoNovedad[]>(this.base + '/' + id + '/novedades');
+  }
+
+  aprobarCancelacion(id: number, adminId?: number): Observable<Evento> {
+    const params = adminId ? new HttpParams().set('adminId', String(adminId)) : undefined;
+    return this.http.post<Evento>(this.base + '/' + id + '/cancelacion/aprobar', null, { params });
+  }
+
+  rechazarCancelacion(id: number, motivo: string, adminId?: number): Observable<Evento> {
+    const params = adminId ? new HttpParams().set('adminId', String(adminId)) : undefined;
+    return this.http.post<Evento>(this.base + '/' + id + '/cancelacion/rechazar', { motivo }, { params });
   }
 }

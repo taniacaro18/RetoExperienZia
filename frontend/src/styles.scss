@@ -439,6 +439,8 @@ button { font-family: inherit; }
 .ez-badge-rechazado   { background: #FEE2E2; color: #991B1B; border-color: #FCA5A5; }
 .ez-badge-cancelado   { background: var(--surface-100); color: var(--surface-700); border-color: var(--surface-200); }
 .ez-badge-revision    { background: #DBEAFE; color: #1E40AF; border-color: #93C5FD; }
+.ez-badge-suplemento  { background: #FFEDD5; color: #9A3412; border-color: #FDBA74; }
+.ez-badge-pend-cancel { background: #FCE7F3; color: #9D174D; border-color: #F9A8D4; }
 .ez-badge-disponible  { background: #ECFDF5; color: #047857; border-color: #6EE7B7; }
 .ez-badge-bloqueada   { background: #FEE2E2; color: #991B1B; border-color: #FCA5A5; }
 .ez-badge-provisional { background: #FEF3C7; color: #92400E; border-color: #FCD34D; }
@@ -464,6 +466,10 @@ button { font-family: inherit; }
 /* -----------------------------------------------------------
    12. Toasts
    ----------------------------------------------------------- */
+/* Por encima del shell (sidebar/header suelen usar z-40–50) */
+.p-toast {
+  z-index: 10050 !important;
+}
 .p-toast .p-toast-message-success {
   background: #ECFDF5 !important;
   border-left: 4px solid var(--accent-500) !important;

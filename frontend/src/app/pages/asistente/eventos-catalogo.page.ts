@@ -98,7 +98,7 @@ export class EventosCatalogoPage {
   }
 
   abrir(e: Evento) {
-    this.router.navigate(['/eventos', e.id]);
+    this.router.navigate(['/eventos', e.id], { queryParams: { retorno: 'eventos' } });
   }
 
   cuposDisponibles(e: Evento): number {

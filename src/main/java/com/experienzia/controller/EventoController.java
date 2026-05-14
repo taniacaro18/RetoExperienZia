@@ -2,6 +2,7 @@ package com.experienzia.controller;
 
 import com.experienzia.dto.CancelarEventoDTO;
 import com.experienzia.dto.EventoDTO;
+import com.experienzia.dto.EventoNovedadDTO;
 import com.experienzia.dto.RechazarEventoDTO;
 import com.experienzia.entity.TipoNotificacion;
 import com.experienzia.exceptions.CustomException;
@@ -47,9 +48,26 @@ public class EventoController {
         EventoDTO actualizado = eventoService.editar(id, dto);
         auditoriaService.registrar(dto.getOrganizadorId(), "EVENTO_EDITADO", "Evento", actualizado.getId(),
                 ClientIpResolver.resolve(request));
-        notificacionService.crear(actualizado.getOrganizadorId(),
-                "Tu evento \"" + actualizado.getNombre() + "\" fue actualizado y quedó en estado PENDIENTE de re-aprobación.",
-                TipoNotificacion.INFO);
+        String detalle;
+        if (actualizado.getEstado() == com.experienzia.entity.EstadoEvento.PENDIENTE_SUPLEMENTO) {
+            detalle = "Tu evento \"" + actualizado.getNombre()
+                    + "\" requiere pago adicional por horas ampliadas. Sube el comprobante solo por la diferencia.";
+        } else if (actualizado.getEstado() == com.experienzia.entity.EstadoEvento.PENDIENTE_REVISION) {
+            detalle = "Tu evento \"" + actualizado.getNombre()
+                    + "\" quedó pendiente de aprobación administrativa por los cambios realizados.";
+        } else if (actualizado.getEstado() == com.experienzia.entity.EstadoEvento.PENDIENTE_CANCELACION) {
+            detalle = "Solicitaste cancelar el evento \"" + actualizado.getNombre()
+                    + "\". Un administrador revisará tu solicitud.";
+        } else if (actualizado.getEstado() == com.experienzia.entity.EstadoEvento.PENDIENTE) {
+            detalle = "Tu evento \"" + actualizado.getNombre()
+                    + "\" fue actualizado y quedó PENDIENTE de re-aprobación por el administrador.";
+        } else {
+            detalle = "Tu evento \"" + actualizado.getNombre() + "\" fue actualizado.";
+            if (actualizado.getCosto() != null && actualizado.getCosto() > 0) {
+                detalle += " Si ampliaste la duración y ya tenías un pago aprobado, revisa la sección Pagos: puede pedirse un comprobante solo por la diferencia.";
+            }
+        }
+        notificacionService.crear(actualizado.getOrganizadorId(), detalle, TipoNotificacion.INFO);
         return ResponseEntity.ok(actualizado);
     }
 
@@ -95,6 +113,33 @@ public class EventoController {
         auditoriaService.registrar(body.getOrganizadorId(), "EVENTO_CANCELADO", "Evento", cancelado.getId(),
                 ClientIpResolver.resolve(request));
         return ResponseEntity.ok(cancelado);
+    }
+
+    @GetMapping("/{id}/novedades")
+    public ResponseEntity<List<EventoNovedadDTO>> novedades(@PathVariable Long id) {
+        return ResponseEntity.ok(eventoService.listarNovedades(id));
+    }
+
+    @PostMapping("/{id}/cancelacion/aprobar")
+    public ResponseEntity<EventoDTO> aprobarCancelacion(@PathVariable Long id,
+                                                        @RequestParam(required = false) Long adminId,
+                                                        HttpServletRequest request) {
+        EventoDTO dto = eventoService.aprobarCancelacion(id);
+        auditoriaService.registrar(adminId, "EVENTO_CANCELACION_APROBADA", "Evento", dto.getId(),
+                ClientIpResolver.resolve(request));
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/{id}/cancelacion/rechazar")
+    public ResponseEntity<EventoDTO> rechazarCancelacion(@PathVariable Long id,
+                                                         @RequestBody(required = false) RechazarEventoDTO body,
+                                                         @RequestParam(required = false) Long adminId,
+                                                         HttpServletRequest request) {
+        String motivo = body != null ? body.getMotivo() : null;
+        EventoDTO dto = eventoService.rechazarCancelacion(id, motivo);
+        auditoriaService.registrar(adminId, "EVENTO_CANCELACION_RECHAZADA", "Evento", dto.getId(),
+                ClientIpResolver.resolve(request));
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping

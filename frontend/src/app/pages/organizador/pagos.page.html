@@ -5,8 +5,9 @@
         Pagos de mis eventos
       </h1>
       <p class="text-surface-500 text-sm mt-1">
-        Sube el comprobante de pago de tu evento (tarifa = duración × $100.000).
-        Una vez aprobado, el evento se activa automáticamente.
+        Sube el comprobante de pago de tu evento (tarifa = duración × $100.000). Al enviarlo, el pago queda
+        <strong>pendiente de aprobación</strong> hasta que un administrador lo valide; entonces el evento pasa a ACTIVO.
+        Si ampliaste horas en un evento ya activo, verás el estado <strong>PENDIENTE_SUPLEMENTO</strong>: sube aquí el comprobante solo por la diferencia.
       </p>
     </div>
     <a routerLink="/organizador/dashboard"
@@ -48,8 +49,8 @@
     <div class="bg-amber-50 border border-amber-200 rounded-md p-4 flex items-start gap-3">
       <i class="pi pi-info-circle text-amber-600 text-xl mt-0.5"></i>
       <div class="text-sm text-amber-800">
-        Tienes <strong>{{ pendientesAdmin() }}</strong> evento(s) en estado PENDIENTE.
-        Solo podrás subir el comprobante cuando el administrador apruebe preliminarmente cada evento.
+        Tienes <strong>{{ pendientesAdmin() }}</strong> evento(s) en revisión administrativa (alta nueva o cambios).
+        Solo podrás subir o completar comprobantes cuando el administrador apruebe cada solicitud según corresponda.
       </div>
     </div>
   }
@@ -93,7 +94,7 @@
 
           <div class="bg-brand-50 border border-brand-200 rounded-md p-3 flex items-center justify-between">
             <div>
-              <div class="ez-field-label !mb-0">Tarifa a pagar</div>
+              <div class="ez-field-label !mb-0">Tarifa del evento</div>
               <div class="text-xl font-extrabold text-brand-800 font-display">
                 {{ fila.evento.costo | currency: 'COP':'symbol-narrow':'1.0-0' }}
               </div>
@@ -105,6 +106,15 @@
               </div>
             </div>
           </div>
+
+          @if (fila.pago?.saldoAprobadoPrevio != null && (fila.pago?.saldoAprobadoPrevio ?? 0) > 0) {
+            <div class="rounded-md border border-violet-200 bg-violet-50/90 p-3 text-[12px] text-violet-950">
+              <strong>Complemento por más horas:</strong> ya quedó aprobado
+              {{ fila.pago!.saldoAprobadoPrevio | currency: 'COP':'symbol-narrow':'1.0-0' }}.
+              Debes subir el comprobante solo por el <strong>incremento</strong> de
+              {{ (fila.pago!.monto ?? 0) | currency: 'COP':'symbol-narrow':'1.0-0' }} (no repitas el pago completo).
+            </div>
+          }
 
           @if (fila.pago) {
             <div class="space-y-2">
@@ -139,18 +149,28 @@
           }
 
           @if (
-            (fila.estadoPago === 'NO_PAGADO' || fila.estadoPago === 'RECHAZADO')
-            && (fila.evento.costo ?? 0) > 0
+            (fila.estadoPago === 'NO_PAGADO' || fila.estadoPago === 'RECHAZADO'
+              || (fila.estadoPago === 'PENDIENTE' && fila.pago && fila.pago.saldoAprobadoPrevio != null))
+            && fila.evento.costo > 0
           ) {
             <button type="button" (click)="abrirSubir(fila.evento)"
                     [disabled]="subiendo() === fila.evento.id"
                     class="ez-btn-primary w-full">
               <i class="pi pi-cloud-upload text-[10px]"></i>
-              {{ fila.estadoPago === 'RECHAZADO' ? 'Subir nuevo comprobante' : 'Subir comprobante' }}
+              @if (fila.estadoPago === 'RECHAZADO') {
+                Subir nuevo comprobante
+              } @else if (fila.pago?.saldoAprobadoPrevio != null) {
+                Subir comprobante del incremento
+              } @else {
+                Subir comprobante
+              }
             </button>
           } @else if (fila.estadoPago === 'PENDIENTE') {
-            <div class="bg-amber-50 border border-amber-200 rounded-md p-3 text-[12px] text-amber-800 text-center">
-              Comprobante enviado. Esperando validación del administrador.
+            <div class="bg-amber-50 border border-amber-200 rounded-md p-3 text-[12px] text-amber-900 text-center space-y-1">
+              <p class="!m-0 font-semibold">Pago pendiente de aprobación</p>
+              <p class="!m-0 text-amber-800/95">
+                Ya recibimos tu comprobante. Un administrador lo revisará; no hace falta volver a enviarlo salvo que te lo indiquemos.
+              </p>
             </div>
           } @else {
             <div class="bg-emerald-50 border border-emerald-200 rounded-md p-3 text-[12px] text-emerald-800 text-center font-semibold">
@@ -180,9 +200,9 @@
           {{ eventoSeleccionado()!.fecha | date: 'dd MMM yyyy · HH:mm' }}
         </div>
         <div class="mt-2 flex items-center justify-between">
-          <span class="ez-field-label !mb-0">Monto</span>
+          <span class="ez-field-label !mb-0">Monto en este comprobante</span>
           <span class="text-base font-extrabold text-brand-800 font-display">
-            {{ eventoSeleccionado()!.costo | currency: 'COP':'symbol-narrow':'1.0-0' }}
+            {{ montoModalSubida() | currency: 'COP':'symbol-narrow':'1.0-0' }}
           </span>
         </div>
       </div>
@@ -203,9 +223,14 @@
         }
       </div>
 
-      <div class="bg-amber-50 border border-amber-200 rounded-md p-3 text-[11px] text-amber-800">
-        <i class="pi pi-info-circle"></i>
-        Una vez subido, el administrador validará el comprobante. Si lo aprueban, tu evento pasará a estado <strong>ACTIVO</strong> automáticamente.
+      <div class="bg-amber-50 border border-amber-200 rounded-md p-3 text-[11px] text-amber-800 space-y-1.5">
+        <p class="!m-0">
+          <i class="pi pi-info-circle"></i>
+          Al pulsar <strong>Enviar comprobante</strong>, tu pago quedará <strong>pendiente de aprobación</strong> hasta que un administrador revise el archivo.
+        </p>
+        <p class="!m-0">
+          Si lo aprueban, tu evento pasará a estado <strong>ACTIVO</strong> automáticamente y verás la confirmación en esta misma página.
+        </p>
       </div>
 
       <div class="flex justify-end gap-2 pt-2">

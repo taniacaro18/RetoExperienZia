@@ -5,7 +5,9 @@ import com.experienzia.dto.CertificadoDTO;
 import com.experienzia.dto.EventoDTO;
 import com.experienzia.exceptions.CustomException;
 import com.experienzia.service.export.ExportService;
+import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.FontFactory;
@@ -13,6 +15,9 @@ import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
+import com.lowagie.text.pdf.BaseFont;
+import com.lowagie.text.pdf.PdfContentByte;
+import com.lowagie.text.pdf.PdfGState;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -32,8 +37,10 @@ import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
 
@@ -51,6 +58,9 @@ public class ExportServiceImpl implements ExportService {
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final Color BRAND = new Color(124, 99, 196);
     private static final Color BRAND_LIGHT = new Color(248, 244, 255);
+    /** Fondo del certificado de asistencia (plantilla oficial). */
+    private static final Color CERT_BG = new Color(167, 139, 250);
+    private static final String CERT_URL_VALIDACION = "experienzia.com/validar";
 
     @Override
     public byte[] resumenAsistentesExcel(EventoDTO evento, List<AsistenteEventoDTO> asistentes) {
@@ -218,58 +228,178 @@ public class ExportServiceImpl implements ExportService {
     @Override
     public byte[] certificadoPdf(CertificadoDTO c) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Document doc = new Document(PageSize.A4.rotate(), 48, 48, 48, 48);
-            PdfWriter.getInstance(doc, out);
+            Document doc = new Document(PageSize.A4.rotate(), 56, 56, 48, 56);
+            PdfWriter writer = PdfWriter.getInstance(doc, out);
             doc.open();
 
-            Font tituloF = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, BRAND);
-            Font marcaF = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 28, BRAND);
-            Font cuerpoF = FontFactory.getFont(FontFactory.HELVETICA, 12, Color.DARK_GRAY);
-            Font nombreF = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, new Color(17, 24, 39));
-            Font monoF = FontFactory.getFont(FontFactory.COURIER, 9, Color.GRAY);
+            Rectangle ps = doc.getPageSize();
+            pintarFondoCertificado(writer, ps);
 
-            doc.add(new Paragraph("CERTIFICADO DE ASISTENCIA", tituloF));
-            doc.add(new Paragraph("ExperienZia", marcaF));
-            doc.add(new Paragraph(" ", cuerpoF));
+            BaseFont times = BaseFont.createFont(BaseFont.TIMES_ROMAN, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+            Font titleFont = new Font(times, 24, Font.BOLD, Color.BLACK);
+            Font bodyFont = new Font(times, 12, Font.NORMAL, Color.BLACK);
+            Font nameFont = new Font(times, 17, Font.BOLD, Color.BLACK);
+            Font eventNameFont = new Font(times, 14, Font.BOLD, Color.BLACK);
+            Font footerBold = new Font(times, 11, Font.BOLD, Color.BLACK);
+            Font footerNorm = new Font(times, 11, Font.NORMAL, Color.BLACK);
 
-            doc.add(new Paragraph("Se certifica que", cuerpoF));
-            doc.add(new Paragraph(safe(c.getNombreAsistente()), nombreF));
-            doc.add(new Paragraph(" ", cuerpoF));
+            Paragraph p;
+            p = new Paragraph("CERTIFICADO DE ASISTENCIA", titleFont);
+            p.setAlignment(Element.ALIGN_CENTER);
+            p.setSpacingAfter(18f);
+            doc.add(p);
 
-            StringBuilder descripcion = new StringBuilder();
-            descripcion.append("Participó en el programa / evento: ");
-            descripcion.append(safe(c.getNombreEvento()));
+            p = new Paragraph("Este Documento Certifica Que:", bodyFont);
+            p.setAlignment(Element.ALIGN_CENTER);
+            p.setSpacingAfter(10f);
+            doc.add(p);
+
+            p = new Paragraph(safe(c.getNombreAsistente()).isEmpty() ? "—" : c.getNombreAsistente(), nameFont);
+            p.setAlignment(Element.ALIGN_CENTER);
+            p.setSpacingAfter(14f);
+            doc.add(p);
+
+            p = new Paragraph("Ha participado satisfactoriamente en el evento:", bodyFont);
+            p.setAlignment(Element.ALIGN_CENTER);
+            p.setSpacingAfter(8f);
+            doc.add(p);
+
+            p = new Paragraph(safe(c.getNombreEvento()).isEmpty() ? "—" : c.getNombreEvento(), eventNameFont);
+            p.setAlignment(Element.ALIGN_CENTER);
+            p.setSpacingAfter(14f);
+            doc.add(p);
+
+            StringBuilder realizado = new StringBuilder("Realizado el día ");
             if (c.getFechaEvento() != null) {
-                descripcion.append(", realizado el ");
-                descripcion.append(c.getFechaEvento().format(
-                        DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(new Locale("es", "CO"))));
+                realizado.append(fechaDiaMesAnioTitulado(c.getFechaEvento()));
+            } else {
+                realizado.append("—");
             }
             if (c.getDuracionHoras() != null && c.getDuracionHoras() > 0) {
-                descripcion.append(", con una duración de ");
-                descripcion.append(c.getDuracionHoras());
-                descripcion.append(" hora(s).");
+                realizado.append(", con una duración total de ");
+                realizado.append(c.getDuracionHoras());
+                realizado.append(c.getDuracionHoras() == 1 ? " hora." : " horas.");
             } else {
-                descripcion.append(".");
+                realizado.append(".");
             }
-            doc.add(new Paragraph(descripcion.toString(), cuerpoF));
-            doc.add(new Paragraph(" ", cuerpoF));
+            p = new Paragraph(realizado.toString(), bodyFont);
+            p.setAlignment(Element.ALIGN_CENTER);
+            p.setSpacingAfter(16f);
+            doc.add(p);
 
-            if (c.getFechaGeneracion() != null) {
-                doc.add(new Paragraph(
-                        "Fecha de emisión: " + c.getFechaGeneracion().format(FECHA_FMT),
-                        FontFactory.getFont(FontFactory.HELVETICA, 10, Color.GRAY)));
+            String ciudad = safe(c.getCiudadExpedicion());
+            if (ciudad.isEmpty()) {
+                ciudad = "Bogotá";
             }
+            LocalDateTime exp = c.getFechaGeneracion() != null ? c.getFechaGeneracion() : LocalDateTime.now();
+            String fraseExp = fraseExpedicionTitulada(exp);
+            p = new Paragraph(
+                    "Por lo cual, se expide el presente certificado en la ciudad de " + ciudad + ", " + fraseExp + ".",
+                    bodyFont);
+            p.setAlignment(Element.ALIGN_CENTER);
+            p.setSpacingAfter(28f);
+            doc.add(p);
 
-            doc.add(new Paragraph(" ", cuerpoF));
-            doc.add(new Paragraph("Código único de verificación (API / web pública):", monoF));
-            doc.add(new Paragraph(safe(c.getCodigoUnico()), FontFactory.getFont(FontFactory.COURIER, 10, BRAND)));
+            PdfPTable foot = new PdfPTable(2);
+            foot.setWidthPercentage(100);
+            foot.setWidths(new float[]{1f, 1f});
+            foot.setSpacingBefore(8f);
+
+            String orgNombre = safe(c.getNombreOrganizador());
+            if (orgNombre.isEmpty()) {
+                orgNombre = "Organizador";
+            }
+            PdfPCell izq = new PdfPCell();
+            izq.setBorder(Rectangle.NO_BORDER);
+            izq.setHorizontalAlignment(Element.ALIGN_LEFT);
+            izq.setVerticalAlignment(Element.ALIGN_BOTTOM);
+            Paragraph bloqueOrg = new Paragraph();
+            bloqueOrg.add(new Chunk(orgNombre + "\n", footerBold));
+            bloqueOrg.add(new Chunk("___________________________\n", footerNorm));
+            bloqueOrg.add(new Chunk("Firma Organizador", footerNorm));
+            izq.addElement(bloqueOrg);
+
+            String serial = "Serial: " + serialCertificado(c);
+            PdfPCell der = new PdfPCell();
+            der.setBorder(Rectangle.NO_BORDER);
+            der.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            der.setVerticalAlignment(Element.ALIGN_BOTTOM);
+            Paragraph bloqueVal = new Paragraph();
+            bloqueVal.setAlignment(Element.ALIGN_RIGHT);
+            bloqueVal.add(new Chunk(serial + "\n", footerBold));
+            bloqueVal.add(new Chunk("Validar autenticidad en: " + CERT_URL_VALIDACION, footerBold));
+            der.addElement(bloqueVal);
+
+            foot.addCell(izq);
+            foot.addCell(der);
+            doc.add(foot);
 
             doc.close();
             return out.toByteArray();
+        } catch (DocumentException e) {
+            throw new CustomException("No se pudo generar el PDF del certificado: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (IOException e) {
             throw new CustomException("No se pudo generar el PDF del certificado: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private void pintarFondoCertificado(PdfWriter writer, Rectangle ps) {
+        float w = ps.getWidth();
+        float h = ps.getHeight();
+        PdfContentByte under = writer.getDirectContentUnder();
+        under.saveState();
+        under.setColorFill(CERT_BG);
+        under.rectangle(0, 0, w, h);
+        under.fill();
+        under.restoreState();
+
+        try {
+            BaseFont times = BaseFont.createFont(BaseFont.TIMES_ROMAN, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+            under.saveState();
+            PdfGState gs = new PdfGState();
+            gs.setFillOpacity(0.14f);
+            under.setGState(gs);
+            under.setColorFill(Color.WHITE);
+            float cx = w / 2f;
+            float cy = h / 2f;
+            under.beginText();
+            under.setFontAndSize(times, 96);
+            under.showTextAligned(Element.ALIGN_CENTER, "\u2605", cx, cy + 42f, 0);
+            under.setFontAndSize(times, 40);
+            under.showTextAligned(Element.ALIGN_CENTER, "ExperienZia", cx, cy - 32f, 0);
+            under.endText();
+            under.restoreState();
+        } catch (DocumentException | IOException ignored) {
+            // Si falla la marca de agua, el PDF sigue con el fondo lila.
+        }
+    }
+
+    private static String fechaDiaMesAnioTitulado(java.time.LocalDateTime dt) {
+        Locale es = new Locale("es", "CO");
+        String mes = dt.getMonth().getDisplayName(TextStyle.FULL, es);
+        mes = mes.substring(0, 1).toUpperCase(Locale.ROOT) + mes.substring(1);
+        return dt.getDayOfMonth() + " de " + mes + " de " + dt.getYear();
+    }
+
+    private static String fraseExpedicionTitulada(LocalDateTime fg) {
+        Locale es = new Locale("es", "CO");
+        String mes = fg.getMonth().getDisplayName(TextStyle.FULL, es);
+        mes = mes.substring(0, 1).toUpperCase(Locale.ROOT) + mes.substring(1);
+        return "a los " + fg.getDayOfMonth() + " días del mes de " + mes + " de " + fg.getYear();
+    }
+
+    private static String serialCertificado(CertificadoDTO c) {
+        int y = c.getFechaGeneracion() != null ? c.getFechaGeneracion().getYear() : LocalDateTime.now().getYear();
+        String alnum = safe(c.getCodigoUnico()).replace("-", "").toUpperCase(Locale.ROOT);
+        if (alnum.length() > 6) {
+            alnum = alnum.substring(0, 6);
+        }
+        while (alnum.length() < 6) {
+            alnum = alnum + "0";
+        }
+        return "EXP-" + y + "-" + alnum;
     }
 
     private CellStyle headerStyle(Workbook wb) {
@@ -317,7 +447,7 @@ public class ExportServiceImpl implements ExportService {
         return c;
     }
 
-    private String safe(Object v) {
+    private static String safe(Object v) {
         return v == null ? "" : v.toString();
     }
 }

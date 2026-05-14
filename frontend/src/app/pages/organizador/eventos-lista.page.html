@@ -13,10 +13,12 @@
   </div>
 
   <!-- Stats -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
     <app-stat-card label="Total" [value]="conteo().total" icon="pi-calendar"></app-stat-card>
     <app-stat-card label="Activos" [value]="conteo().activos" icon="pi-check-circle"></app-stat-card>
-    <app-stat-card label="Pendientes" [value]="conteo().pendientes" icon="pi-clock"></app-stat-card>
+    <app-stat-card label="Pend. alta" [value]="conteo().pendientes" icon="pi-clock"></app-stat-card>
+    <app-stat-card label="Rev. cambios" [value]="conteo().revision" icon="pi-eye" tone="info"></app-stat-card>
+    <app-stat-card label="Pago adic." [value]="conteo().suplemento" icon="pi-wallet" tone="warn"></app-stat-card>
     <app-stat-card label="Finalizados" [value]="conteo().finalizados" icon="pi-flag"></app-stat-card>
   </div>
 
@@ -114,6 +116,9 @@
                         'ez-badge-activo': e.estado === 'ACTIVO',
                         'ez-badge-aprobado': e.estado === 'APROBADO',
                         'ez-badge-pend-apro': e.estado === 'PENDIENTE',
+                        'ez-badge-revision': e.estado === 'PENDIENTE_REVISION',
+                        'ez-badge-suplemento': e.estado === 'PENDIENTE_SUPLEMENTO',
+                        'ez-badge-pend-cancel': e.estado === 'PENDIENTE_CANCELACION',
                         'ez-badge-rechazado': e.estado === 'RECHAZADO',
                         'ez-badge-finalizado': e.estado === 'FINALIZADO',
                         'ez-badge-cancelado': e.estado === 'CANCELADO'
@@ -125,10 +130,25 @@
                     <i class="pi pi-clock text-[10px] mt-[2px]"></i>
                     <span>Esperando aprobación del administrador.</span>
                   </div>
+                } @else if (e.estado === 'PENDIENTE_REVISION') {
+                  <div class="text-[11px] text-sky-800 mt-1 max-w-[240px] flex items-start gap-1">
+                    <i class="pi pi-eye text-[10px] mt-[2px] shrink-0"></i>
+                    <span>Cambios a la espera del administrador. No podrás editar hasta que apruebe o rechace.</span>
+                  </div>
+                } @else if (e.estado === 'PENDIENTE_SUPLEMENTO') {
+                  <div class="text-[11px] text-orange-900 mt-1 max-w-[260px] flex items-start gap-1">
+                    <i class="pi pi-wallet text-[10px] mt-[2px] shrink-0"></i>
+                    <span>Debes pagar solo las horas adicionales y subir el comprobante en Pagos. Luego el administrador validará y reactivará el evento.</span>
+                  </div>
+                } @else if (e.estado === 'PENDIENTE_CANCELACION') {
+                  <div class="text-[11px] text-rose-800 mt-1 max-w-[240px] flex items-start gap-1">
+                    <i class="pi pi-ban text-[10px] mt-[2px] shrink-0"></i>
+                    <span>Cancelación en revisión. Si se aprueba, la devolución orientativa es del 70% del valor pagado.</span>
+                  </div>
                 } @else if (e.estado === 'APROBADO' && requiereComprobante(e)) {
-                  <div class="text-[11px] text-brand-700 mt-1 max-w-[220px] flex items-start gap-1">
-                    <i class="pi pi-info-circle text-[10px] mt-[2px]"></i>
-                    <span>Sube el comprobante de pago para activar.</span>
+                  <div class="text-[11px] text-brand-700 mt-1 max-w-[240px] flex items-start gap-1">
+                    <i class="pi pi-info-circle text-[10px] mt-[2px] shrink-0"></i>
+                    <span>Sube el comprobante desde Pagos; al enviarlo, el pago queda pendiente de aprobación hasta que un administrador lo valide y active el evento.</span>
                   </div>
                 } @else if (e.estado === 'APROBADO' && !requiereComprobante(e)) {
                   <div class="text-[11px] text-surface-600 mt-1 max-w-[220px] flex items-start gap-1">
@@ -150,7 +170,7 @@
               </td>
               <td>
                 <div class="flex items-center justify-end gap-2 flex-wrap">
-                  <a [routerLink]="['/eventos', e.id]" class="ez-btn-ghost ez-btn-sm">
+                  <a [routerLink]="['/eventos', e.id]" [queryParams]="{ retorno: 'organizador-eventos' }" class="ez-btn-ghost ez-btn-sm">
                     <i class="pi pi-eye text-[10px]"></i> Ver
                   </a>
                   @if (puedeEditar(e)) {
@@ -161,6 +181,11 @@
                   @if (e.estado === 'APROBADO' && requiereComprobante(e)) {
                     <a routerLink="/organizador/pagos" class="ez-btn-primary ez-btn-sm">
                       <i class="pi pi-upload text-[10px]"></i> Subir Comprobante
+                    </a>
+                  }
+                  @if (e.estado === 'PENDIENTE_SUPLEMENTO' && requiereComprobante(e)) {
+                    <a routerLink="/organizador/pagos" class="ez-btn-primary ez-btn-sm">
+                      <i class="pi pi-upload text-[10px]"></i> Pago adicional
                     </a>
                   }
                   @if (e.estado === 'ACTIVO') {
@@ -201,8 +226,19 @@
   [style]="{ width: '460px' }"
 >
   <div class="space-y-4 pt-2">
+    @if (cancelacionPasaPorAdmin()) {
+      <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+        <strong class="block text-xs uppercase text-amber-900 mb-1">Importante</strong>
+        Tu solicitud será revisada por un administrador. Si se aprueba la cancelación, solo se realizará la devolución del
+        <strong>70%</strong> del valor pagado a la plataforma (orientativo).
+      </div>
+    }
     <p class="text-sm text-surface-700">
-      Indica un motivo claro. Esta acción notificará a todos los asistentes inscritos y no se puede deshacer.
+      @if (cancelacionPasaPorAdmin()) {
+        Describe el motivo con claridad; quedará registrado para trazabilidad.
+      } @else {
+        Indica un motivo claro. Esta acción notificará a todos los asistentes inscritos y no se puede deshacer.
+      }
     </p>
     <textarea
       pTextarea

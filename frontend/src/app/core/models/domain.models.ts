@@ -1,9 +1,25 @@
 export type Rol = 'ADMIN' | 'ORGANIZADOR' | 'ASISTENTE' | 'STAFF';
 export type EstadoUsuario = 'ACTIVO' | 'PENDIENTE' | 'RECHAZADO' | 'INACTIVO';
 export type TipoEvento = 'PUBLICO' | 'PRIVADO';
-export type EstadoEvento = 'PENDIENTE' | 'APROBADO' | 'ACTIVO' | 'RECHAZADO' | 'CANCELADO' | 'FINALIZADO';
+export type EstadoEvento =
+  | 'PENDIENTE'
+  | 'APROBADO'
+  | 'ACTIVO'
+  | 'RECHAZADO'
+  | 'CANCELADO'
+  | 'FINALIZADO'
+  | 'PENDIENTE_REVISION'
+  | 'PENDIENTE_SUPLEMENTO'
+  | 'PENDIENTE_CANCELACION';
 export type EstadoInscripcion = 'INSCRITO' | 'ASISTIO' | 'CANCELADO';
 export type EstadoPago = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO';
+export type TipoNovedadEvento =
+  | 'EDICION_METADATOS'
+  | 'EDICION_TIPO_CATEGORIA'
+  | 'AUMENTO_HORAS'
+  | 'DISMINUCION_HORAS'
+  | 'CANCELACION_SOLICITUD';
+export type EstadoNovedadEvento = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO';
 export type FuncionStaff = 'CHECK_IN_QR' | 'CHECK_IN_MANUAL' | 'REGISTRO_SALIDA' | 'GENERAL';
 export type TipoNotificacion = 'INFO' | 'ALERTA' | 'ERROR';
 
@@ -50,11 +66,32 @@ export interface Evento {
   aforoActual: number;
   costo: number;
   organizadorId: number;
+  /** Expuesto por el API (no en catálogo público anonimizado). */
+  organizadorNombre?: string | null;
+  organizadorEmail?: string | null;
   imagen?: string | null;
   categoria?: string | null;
   duracionHoras?: number | null;
   motivoRechazo?: string | null;
   motivoCancelacion?: string | null;
+  /** Texto para el admin: qué cambió en la solicitud de edición. */
+  resumenSolicitudEdicion?: string | null;
+  estadoPrevioRevision?: EstadoEvento | null;
+  /** Mensaje de negocio devuelto por el API al editar (no persistido). */
+  alertaNegocio?: string | null;
+}
+
+/** Historial de solicitudes y cambios del evento (GET /api/eventos/{id}/novedades). */
+export interface EventoNovedad {
+  id: number;
+  eventoId: number;
+  usuarioSolicitanteId?: number | null;
+  tipo: TipoNovedadEvento;
+  estado: EstadoNovedadEvento;
+  fechaSolicitud: string;
+  fechaResolucion?: string | null;
+  motivoResolucion?: string | null;
+  detalleJson?: string | null;
 }
 
 export interface Inscripcion {
@@ -136,6 +173,8 @@ export interface Pago {
   organizadorId: number;
   comprobanteUrl?: string;
   monto?: number;
+  /** Si existe, el comprobante pendiente es complemento sobre este monto ya aprobado. */
+  saldoAprobadoPrevio?: number | null;
   estado: EstadoPago;
   fecha: string;
   motivoRechazo?: string;
@@ -181,6 +220,8 @@ export interface Certificado {
   nombreEvento?: string;
   fechaEvento?: string;
   duracionHoras?: number;
+  nombreOrganizador?: string | null;
+  ciudadExpedicion?: string | null;
 }
 
 export interface PuntoSerie {

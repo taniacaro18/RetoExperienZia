@@ -16,6 +16,8 @@ public class PagoDTO {
     private Long organizadorId;
     private String comprobanteUrl;
     private Double monto;
+    /** Si no es null, el comprobante pendiente cubre solo la diferencia sobre este monto ya aprobado. */
+    private Double saldoAprobadoPrevio;
     private EstadoPago estado;
     private LocalDateTime fecha;
     private String motivoRechazo;

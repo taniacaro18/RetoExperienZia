@@ -1,15 +1,25 @@
 package com.experienzia.impl;
 
 import com.experienzia.dto.EventoDTO;
+import com.experienzia.dto.EventoNovedadDTO;
 import com.experienzia.entity.EstadoEvento;
 import com.experienzia.entity.EstadoInscripcion;
+import com.experienzia.entity.EstadoNovedadEvento;
+import com.experienzia.entity.EstadoPago;
 import com.experienzia.entity.Evento;
+import com.experienzia.entity.EventoNovedad;
 import com.experienzia.entity.Inscripcion;
+import com.experienzia.entity.Pago;
 import com.experienzia.entity.TipoEvento;
+import com.experienzia.entity.TipoNovedadEvento;
 import com.experienzia.entity.TipoNotificacion;
+import com.experienzia.entity.Usuario;
 import com.experienzia.exceptions.CustomException;
+import com.experienzia.repository.EventoNovedadRepository;
 import com.experienzia.repository.EventoRepository;
 import com.experienzia.repository.InscripcionRepository;
+import com.experienzia.repository.PagoRepository;
+import com.experienzia.repository.UsuarioRepository;
 import com.experienzia.service.EventoService;
 import com.experienzia.service.InscripcionService;
 import com.experienzia.service.NotificacionService;
@@ -20,13 +30,22 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -38,11 +57,17 @@ public class EventoServiceImpl implements EventoService {
     /** Ubicación por defecto cuando el organizador no la especifica. */
     private static final String UBICACION_POR_DEFECTO = "Salón principal";
 
+    private static final double PENALIZACION_POR_HORA_REDUCIDA = 0.05;
+
     private final EventoRepository eventoRepository;
     private final InscripcionRepository inscripcionRepository;
+    private final PagoRepository pagoRepository;
+    private final EventoNovedadRepository eventoNovedadRepository;
     private final NotificacionService notificacionService;
     private final InscripcionService inscripcionService;
     private final ModelMapper modelMapper;
+    private final UsuarioRepository usuarioRepository;
+    private final ObjectMapper objectMapper;
 
     /** Tarifa por hora del evento (configurable). El costo se calcula como precioHora * duracionHoras. */
     @Value("${experienzia.precio-por-hora:100000}")
@@ -57,14 +82,22 @@ public class EventoServiceImpl implements EventoService {
 
     public EventoServiceImpl(EventoRepository eventoRepository,
                              InscripcionRepository inscripcionRepository,
+                             PagoRepository pagoRepository,
+                             EventoNovedadRepository eventoNovedadRepository,
                              NotificacionService notificacionService,
                              InscripcionService inscripcionService,
-                             ModelMapper modelMapper) {
+                             ModelMapper modelMapper,
+                             UsuarioRepository usuarioRepository,
+                             ObjectMapper objectMapper) {
         this.eventoRepository = eventoRepository;
         this.inscripcionRepository = inscripcionRepository;
+        this.pagoRepository = pagoRepository;
+        this.eventoNovedadRepository = eventoNovedadRepository;
         this.notificacionService = notificacionService;
         this.inscripcionService = inscripcionService;
         this.modelMapper = modelMapper;
+        this.usuarioRepository = usuarioRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -91,6 +124,7 @@ public class EventoServiceImpl implements EventoService {
         evento.setAforoActual(0);
         evento.setMotivoRechazo(null);
         evento.setMotivoCancelacion(null);
+        evento.setEstadoPrevioRevision(null);
         return toDto(eventoRepository.save(evento));
     }
 
@@ -111,6 +145,12 @@ public class EventoServiceImpl implements EventoService {
         if (evento.getEstado() == EstadoEvento.FINALIZADO) {
             throw new CustomException("No se puede editar un evento FINALIZADO.", HttpStatus.BAD_REQUEST);
         }
+        if (estadoBloqueaEdicion(evento.getEstado())) {
+            throw new CustomException(
+                    "Este evento tiene un trámite pendiente de administración o de pago adicional por horas. "
+                            + "Espera la resolución antes de volver a editarlo.",
+                    HttpStatus.CONFLICT);
+        }
         validarAforo(dto.getAforoMaximo());
         if (dto.getAforoMaximo() < evento.getAforoActual()) {
             throw new CustomException(
@@ -121,32 +161,64 @@ public class EventoServiceImpl implements EventoService {
         LocalDateTime finAjustado = ajustarFinCruceMedianoche(inicio, dto.getFechaFin());
         validarFechas(inicio, finAjustado);
 
+        LocalDateTime viejoInicio = evento.getFecha();
+        LocalDateTime viejoFin = evento.getFechaFin();
+        int viejaDuracion = evento.getDuracionHoras() != null && evento.getDuracionHoras() > 0
+                ? evento.getDuracionHoras()
+                : calcularDuracionHoras(viejoInicio, viejoFin == null ? viejoInicio.plusHours(1) : viejoFin);
+        double viejoCosto = evento.getCosto();
+        EstadoEvento estadoAntes = evento.getEstado();
+
+        int nuevaDuracion = calcularDuracionHoras(inicio, finAjustado);
+        double costoFinal = calcularCosto(nuevaDuracion);
+
+        boolean cambiaNombre = cambiaTexto(evento.getNombre(), dto.getNombre());
+        boolean cambiaDescripcion = cambiaTexto(evento.getDescripcion(), dto.getDescripcion());
+        boolean cambiaImagen = cambiaTexto(evento.getImagen(), dto.getImagen());
+        String ubicNueva = ubicacionFinal(dto.getUbicacion());
+        boolean cambiaUbicacion = cambiaTexto(evento.getUbicacion(), ubicNueva);
+        boolean cambiaAforo = !Objects.equals(evento.getAforoMaximo(), dto.getAforoMaximo());
+        boolean cambiaTipo = dto.getTipoEvento() != null && dto.getTipoEvento() != evento.getTipoEvento();
+        boolean cambiaCategoria = dto.getCategoria() != null
+                && !normalizarCategoria(dto.getCategoria()).equalsIgnoreCase(normalizarCategoria(evento.getCategoria()));
+        boolean cambiaDuracion = nuevaDuracion != viejaDuracion;
+        boolean cambiaAgenda = !inicio.equals(viejoInicio) || !finAjustado.equals(viejoFin);
+
+        boolean requiereRevisionTipoCat = cambiaTipo || cambiaCategoria;
+        boolean soloMetadatosSinTipoCatNiHoras = !requiereRevisionTipoCat && !cambiaDuracion;
+        boolean aumentaHoras = nuevaDuracion > viejaDuracion;
+        boolean disminuyeHoras = nuevaDuracion < viejaDuracion;
+
+        java.util.Map<String, Object> snapshotAntes = snapshotEventoParaRevert(evento);
+
         evento.setNombre(dto.getNombre());
         evento.setDescripcion(dto.getDescripcion());
         evento.setFecha(inicio);
         evento.setFechaFin(finAjustado);
-        evento.setUbicacion(ubicacionFinal(dto.getUbicacion()));
+        evento.setUbicacion(ubicNueva);
         evento.setAforoMaximo(dto.getAforoMaximo());
         evento.setImagen(dto.getImagen());
-        if (dto.getCategoria() != null) evento.setCategoria(dto.getCategoria());
-        int nuevaDuracion = calcularDuracionHoras(inicio, finAjustado);
-        double costoAnterior = evento.getCosto();
-        double costoCalculado = calcularCosto(nuevaDuracion);
-        // Eventos sin tarifa (costo 0, p. ej. legado sin horas/cálculo) no deben generar cobro al editar.
-        double costoFinal = (costoAnterior <= 0) ? 0 : costoCalculado;
+        if (dto.getCategoria() != null) {
+            evento.setCategoria(dto.getCategoria());
+        }
+        if (dto.getTipoEvento() != null) {
+            evento.setTipoEvento(dto.getTipoEvento());
+        }
         evento.setDuracionHoras(nuevaDuracion);
         evento.setCosto(costoFinal);
-
-        EstadoEvento estadoAnterior = evento.getEstado();
         evento.setMotivoRechazo(null);
 
-        if (costoFinal <= 0) {
-            if (estadoAnterior == EstadoEvento.ACTIVO) {
+        Optional<Pago> pOpt = pagoRepository.findByEventoId(evento.getId());
+        boolean pagoAprobado = pOpt.isPresent() && pOpt.get().getEstado() == EstadoPago.APROBADO;
+
+        if (costoFinal <= 0.0) {
+            evento.setResumenSolicitudEdicion(null);
+            evento.setEstadoPrevioRevision(null);
+            if (estadoAntes == EstadoEvento.ACTIVO) {
                 evento.setEstado(EstadoEvento.ACTIVO);
-            } else if (estadoAnterior == EstadoEvento.APROBADO) {
+            } else if (estadoAntes == EstadoEvento.APROBADO) {
                 evento.setEstado(EstadoEvento.APROBADO);
             } else {
-                // PENDIENTE o RECHAZADO: sigue el flujo de aprobación admin sin paso de pago.
                 evento.setEstado(EstadoEvento.PENDIENTE);
             }
             Evento guardado = eventoRepository.save(evento);
@@ -158,12 +230,499 @@ public class EventoServiceImpl implements EventoService {
             } catch (RuntimeException ignored) {
                 // No bloquear la edición si la inscripción del organizador falla por cupo u otra causa.
             }
-            return toDto(eventoRepository.findById(guardado.getId()).orElse(guardado));
+            return conAlerta(eventoRepository.findByIdWithOrganizador(guardado.getId()).orElse(guardado), null);
         }
 
-        // HU-008: con tarifa > 0, tras editar vuelve a PENDIENTE para nueva aprobación del admin.
+        boolean gestionadoActivoOaprobado =
+                estadoAntes == EstadoEvento.ACTIVO || estadoAntes == EstadoEvento.APROBADO;
+
+        if (gestionadoActivoOaprobado && aumentaHoras && pagoAprobado) {
+            Pago p = pOpt.get();
+            double montoYaCobradoAprobado = p.getMonto();
+            if (costoFinal > montoYaCobradoAprobado + 0.01) {
+                prepararComplementoPago(p, costoFinal);
+                evento.setEstadoPrevioRevision(estadoAntes);
+                evento.setEstado(EstadoEvento.PENDIENTE_SUPLEMENTO);
+                evento.setResumenSolicitudEdicion(construirResumenEdicion(
+                        viejaDuracion,
+                        nuevaDuracion,
+                        p.getSaldoAprobadoPrevio() != null ? p.getSaldoAprobadoPrevio() : montoYaCobradoAprobado,
+                        costoFinal,
+                        cambiaNombre,
+                        cambiaDescripcion,
+                        cambiaImagen,
+                        cambiaUbicacion,
+                        cambiaAforo,
+                        cambiaTipo,
+                        cambiaCategoria,
+                        true,
+                        cambiaAgenda));
+                Evento guardado = eventoRepository.save(evento);
+                registrarNovedadAumentoHoras(guardado, dto.getOrganizadorId(), viejaDuracion, nuevaDuracion, p, snapshotAntes);
+                double adicional = costoFinal - (p.getSaldoAprobadoPrevio() != null ? p.getSaldoAprobadoPrevio() : p.getMonto());
+                String msg = "Aumentaste las horas: debes pagar solo el excedente (" + copTexto(adicional)
+                        + " COP) y subir un comprobante por esa diferencia. El evento queda en pendiente de suplemento hasta que el administrador apruebe el pago.";
+                return conAlerta(guardado, msg);
+            }
+            // Horas facturadas aumentaron pero el cobro no supera lo ya aprobado (inconsistencia o tarifa ya al día):
+            // nunca dejar ACTIVO sin revisión ni permitir "gratis" silencioso.
+            evento.setEstadoPrevioRevision(estadoAntes);
+            evento.setEstado(EstadoEvento.PENDIENTE_REVISION);
+            evento.setResumenSolicitudEdicion(construirResumenEdicion(
+                    viejaDuracion,
+                    nuevaDuracion,
+                    viejoCosto,
+                    costoFinal,
+                    cambiaNombre,
+                    cambiaDescripcion,
+                    cambiaImagen,
+                    cambiaUbicacion,
+                    cambiaAforo,
+                    cambiaTipo,
+                    cambiaCategoria,
+                    true,
+                    cambiaAgenda));
+            Evento guardado = eventoRepository.save(evento);
+            registrarNovedadEdicionBasica(
+                    guardado,
+                    dto.getOrganizadorId(),
+                    TipoNovedadEvento.AUMENTO_HORAS,
+                    snapshotAntes,
+                    guardado.getResumenSolicitudEdicion());
+            return conAlerta(
+                    guardado,
+                    "Aumentaste horas respecto al pago ya aprobado, pero el sistema no detecta saldo adicional pendiente. "
+                            + "Los cambios quedaron a revisión administrativa para validar tarifa y estado del pago.");
+        }
+
+        if (gestionadoActivoOaprobado && disminuyeHoras) {
+            int horasRed = viejaDuracion - nuevaDuracion;
+            double baseMonto = pagoAprobado ? pOpt.get().getMonto() : viejoCosto;
+            double penal = baseMonto * PENALIZACION_POR_HORA_REDUCIDA * horasRed;
+            evento.setEstadoPrevioRevision(estadoAntes);
+            evento.setEstado(EstadoEvento.PENDIENTE_REVISION);
+            evento.setResumenSolicitudEdicion(construirResumenEdicion(
+                    viejaDuracion,
+                    nuevaDuracion,
+                    viejoCosto,
+                    costoFinal,
+                    cambiaNombre,
+                    cambiaDescripcion,
+                    cambiaImagen,
+                    cambiaUbicacion,
+                    cambiaAforo,
+                    cambiaTipo,
+                    cambiaCategoria,
+                    true,
+                    cambiaAgenda)
+                    + " · Penalización estimada (5% por hora reducida): " + copTexto(penal) + " COP.");
+            Evento guardado = eventoRepository.save(evento);
+            registrarNovedadDisminucionHoras(
+                    guardado, dto.getOrganizadorId(), viejaDuracion, nuevaDuracion, penal, snapshotAntes);
+            String msg = "Se aplicará una penalización del 5% por cada hora reducida. No se reembolsa el valor completo del pago. "
+                    + "El administrador debe aprobar el cambio.";
+            return conAlerta(guardado, msg);
+        }
+
+        if (gestionadoActivoOaprobado
+                && ((soloMetadatosSinTipoCatNiHoras
+                                && (cambiaNombre
+                                        || cambiaDescripcion
+                                        || cambiaImagen
+                                        || cambiaUbicacion
+                                        || cambiaAforo
+                                        || cambiaAgenda))
+                        || requiereRevisionTipoCat)) {
+            evento.setEstadoPrevioRevision(estadoAntes);
+            evento.setEstado(EstadoEvento.PENDIENTE_REVISION);
+            TipoNovedadEvento tipoNov = requiereRevisionTipoCat
+                    ? TipoNovedadEvento.EDICION_TIPO_CATEGORIA
+                    : TipoNovedadEvento.EDICION_METADATOS;
+            evento.setResumenSolicitudEdicion(construirResumenEdicion(
+                    viejaDuracion,
+                    nuevaDuracion,
+                    viejoCosto,
+                    costoFinal,
+                    cambiaNombre,
+                    cambiaDescripcion,
+                    cambiaImagen,
+                    cambiaUbicacion,
+                    cambiaAforo,
+                    cambiaTipo,
+                    cambiaCategoria,
+                    cambiaDuracion,
+                    cambiaAgenda));
+            Evento guardado = eventoRepository.save(evento);
+            registrarNovedadEdicionBasica(
+                    guardado, dto.getOrganizadorId(), tipoNov, snapshotAntes, guardado.getResumenSolicitudEdicion());
+            String msg = requiereRevisionTipoCat
+                    ? "Cambiaste modalidad o categoría: el evento queda pendiente de aprobación administrativa (sin nuevo pago salvo reglas de horas)."
+                    : "Los cambios quedaron pendientes de aprobación del administrador. No se solicita nuevo pago mientras no aumente la duración facturada.";
+            return conAlerta(guardado, msg);
+        }
+
+        if (cambiaDuracion && (estadoAntes == EstadoEvento.APROBADO || estadoAntes == EstadoEvento.ACTIVO)) {
+            if (pOpt.isPresent() && pOpt.get().getEstado() == EstadoPago.PENDIENTE
+                    && pOpt.get().getSaldoAprobadoPrevio() == null) {
+                Pago pp = pOpt.get();
+                boolean tuvoCambioTarifa = Math.abs(costoFinal - viejoCosto) > 0.01;
+                pp.setMonto(costoFinal);
+                if (tuvoCambioTarifa) {
+                    pp.setComprobanteUrl(null);
+                }
+                pagoRepository.save(pp);
+                evento.setEstado(estadoAntes);
+                evento.setResumenSolicitudEdicion(null);
+                evento.setEstadoPrevioRevision(null);
+                return conAlerta(eventoRepository.save(evento), null);
+            }
+
+            boolean necesitaRevisionEvento = pOpt.isEmpty() || pOpt.get().getEstado() == EstadoPago.RECHAZADO;
+            if (necesitaRevisionEvento) {
+                evento.setEstado(EstadoEvento.PENDIENTE);
+                evento.setEstadoPrevioRevision(null);
+                evento.setResumenSolicitudEdicion(construirResumenEdicion(
+                        viejaDuracion, nuevaDuracion, viejoCosto, costoFinal, cambiaNombre, cambiaDescripcion,
+                        cambiaImagen, cambiaUbicacion, cambiaAforo, cambiaTipo, cambiaCategoria,
+                        cambiaDuracion, cambiaAgenda));
+                return conAlerta(eventoRepository.save(evento), null);
+            }
+
+            // Pago complementario (delta) pendiente de comprobante: el evento debe seguir en flujo de suplemento.
+            if (pOpt.get().getEstado() == EstadoPago.PENDIENTE && pOpt.get().getSaldoAprobadoPrevio() != null) {
+                evento.setEstado(EstadoEvento.PENDIENTE_SUPLEMENTO);
+                if (evento.getEstadoPrevioRevision() == null) {
+                    evento.setEstadoPrevioRevision(estadoAntes);
+                }
+                return conAlerta(
+                        eventoRepository.save(evento),
+                        "Tienes un pago adicional pendiente de validación. Completa el comprobante o espera al administrador.");
+            }
+
+            // Pago ya aprobado + cambio de duración que no encajó arriba: nunca aplicar silenciosamente.
+            if (pOpt.get().getEstado() == EstadoPago.APROBADO) {
+                evento.setEstadoPrevioRevision(estadoAntes);
+                evento.setEstado(EstadoEvento.PENDIENTE_REVISION);
+                evento.setResumenSolicitudEdicion(construirResumenEdicion(
+                        viejaDuracion,
+                        nuevaDuracion,
+                        viejoCosto,
+                        costoFinal,
+                        cambiaNombre,
+                        cambiaDescripcion,
+                        cambiaImagen,
+                        cambiaUbicacion,
+                        cambiaAforo,
+                        cambiaTipo,
+                        cambiaCategoria,
+                        cambiaDuracion,
+                        cambiaAgenda));
+                Evento guardado = eventoRepository.save(evento);
+                registrarNovedadEdicionBasica(
+                        guardado,
+                        dto.getOrganizadorId(),
+                        TipoNovedadEvento.EDICION_METADATOS,
+                        snapshotAntes,
+                        guardado.getResumenSolicitudEdicion());
+                return conAlerta(
+                        guardado,
+                        "Cambio de duración con pago ya aprobado: queda a revisión administrativa para validar tarifa y estado.");
+            }
+
+            evento.setEstado(estadoAntes);
+            evento.setResumenSolicitudEdicion(null);
+            evento.setEstadoPrevioRevision(null);
+            return conAlerta(eventoRepository.save(evento), null);
+        }
+
         evento.setEstado(EstadoEvento.PENDIENTE);
-        return toDto(eventoRepository.save(evento));
+        evento.setEstadoPrevioRevision(null);
+        evento.setResumenSolicitudEdicion(construirResumenEdicion(
+                viejaDuracion, nuevaDuracion, viejoCosto, costoFinal, cambiaNombre, cambiaDescripcion,
+                cambiaImagen, cambiaUbicacion, cambiaAforo, cambiaTipo, cambiaCategoria,
+                cambiaDuracion, cambiaAgenda));
+        return conAlerta(eventoRepository.save(evento), null);
+    }
+
+    private static String normalizarCategoria(String cat) {
+        return cat == null || cat.isBlank() ? "" : cat.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private static boolean cambiaTexto(String actual, String nuevo) {
+        String a = actual == null ? "" : actual.trim();
+        String b = nuevo == null ? "" : nuevo.trim();
+        return !a.equals(b);
+    }
+
+    private void prepararComplementoPago(Pago p, double nuevoCostoEvento) {
+        if (p.getEstado() != EstadoPago.APROBADO) {
+            return;
+        }
+        double montoPrevio = p.getMonto();
+        if (nuevoCostoEvento <= montoPrevio + 0.01) {
+            return;
+        }
+        double delta = nuevoCostoEvento - montoPrevio;
+        p.setSaldoAprobadoPrevio(montoPrevio);
+        p.setMonto(delta);
+        p.setEstado(EstadoPago.PENDIENTE);
+        p.setComprobanteUrl(null);
+        p.setMotivoRechazo(null);
+        p.setAprobadorId(null);
+        p.setFechaResolucion(null);
+        pagoRepository.save(p);
+    }
+
+    private static String construirResumenEdicion(
+            int viejaDuracion,
+            int nuevaDuracion,
+            double viejoCosto,
+            double nuevoCosto,
+            boolean cambiaNombre,
+            boolean cambiaDescripcion,
+            boolean cambiaImagen,
+            boolean cambiaUbicacion,
+            boolean cambiaAforo,
+            boolean cambiaTipo,
+            boolean cambiaCategoria,
+            boolean cambiaDuracion,
+            boolean cambiaAgenda) {
+        List<String> partes = new ArrayList<>();
+        if (cambiaNombre) {
+            partes.add("Nombre");
+        }
+        if (cambiaDescripcion) {
+            partes.add("Descripción");
+        }
+        if (cambiaImagen) {
+            partes.add("Imagen");
+        }
+        if (cambiaUbicacion) {
+            partes.add("Ubicación");
+        }
+        if (cambiaAforo) {
+            partes.add("Aforo máximo");
+        }
+        if (cambiaTipo) {
+            partes.add("Modalidad (público/privado)");
+        }
+        if (cambiaCategoria) {
+            partes.add("Categoría");
+        }
+        if (cambiaDuracion || Math.abs(nuevoCosto - viejoCosto) > 0.01) {
+            partes.add(String.format(Locale.ROOT,
+                    "Duración/tarifa: %d h (%s COP) → %d h (%s COP)",
+                    viejaDuracion, copTexto(viejoCosto), nuevaDuracion, copTexto(nuevoCosto)));
+        } else if (cambiaAgenda) {
+            partes.add("Fechas u horario del evento (misma duración facturada)");
+        }
+        if (partes.isEmpty()) {
+            return "Edición de solicitud (revisar datos del evento).";
+        }
+        return String.join(" · ", partes);
+    }
+
+    private static boolean estadoBloqueaEdicion(EstadoEvento e) {
+        return e == EstadoEvento.PENDIENTE_REVISION
+                || e == EstadoEvento.PENDIENTE_SUPLEMENTO
+                || e == EstadoEvento.PENDIENTE_CANCELACION;
+    }
+
+    private EventoDTO conAlerta(Evento evento, String alerta) {
+        EventoDTO dto = toDto(evento);
+        dto.setAlertaNegocio(alerta);
+        return dto;
+    }
+
+    private java.util.Map<String, Object> snapshotEventoParaRevert(Evento e) {
+        java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("nombre", e.getNombre());
+        m.put("descripcion", e.getDescripcion());
+        m.put("fecha", e.getFecha() != null ? e.getFecha().toString() : null);
+        m.put("fechaFin", e.getFechaFin() != null ? e.getFechaFin().toString() : null);
+        m.put("ubicacion", e.getUbicacion());
+        m.put("aforoMaximo", e.getAforoMaximo());
+        m.put("tipoEvento", e.getTipoEvento() != null ? e.getTipoEvento().name() : null);
+        m.put("categoria", e.getCategoria());
+        m.put("duracionHoras", e.getDuracionHoras());
+        m.put("costo", e.getCosto());
+        m.put("imagen", e.getImagen());
+        return m;
+    }
+
+    private void aplicarSnapshotEvento(Evento evento, JsonNode antes) throws Exception {
+        if (antes == null || antes.isNull()) {
+            return;
+        }
+        if (antes.hasNonNull("nombre")) {
+            evento.setNombre(antes.get("nombre").asText());
+        }
+        if (antes.hasNonNull("descripcion")) {
+            evento.setDescripcion(antes.get("descripcion").asText());
+        }
+        if (antes.hasNonNull("fecha")) {
+            evento.setFecha(LocalDateTime.parse(antes.get("fecha").asText()));
+        }
+        if (antes.hasNonNull("fechaFin")) {
+            evento.setFechaFin(LocalDateTime.parse(antes.get("fechaFin").asText()));
+        }
+        if (antes.hasNonNull("ubicacion")) {
+            evento.setUbicacion(antes.get("ubicacion").asText());
+        }
+        if (antes.has("aforoMaximo")) {
+            evento.setAforoMaximo(antes.get("aforoMaximo").asInt());
+        }
+        if (antes.hasNonNull("tipoEvento")) {
+            evento.setTipoEvento(TipoEvento.valueOf(antes.get("tipoEvento").asText()));
+        }
+        if (antes.has("categoria")) {
+            evento.setCategoria(antes.get("categoria").isNull() ? null : antes.get("categoria").asText());
+        }
+        if (antes.has("duracionHoras")) {
+            evento.setDuracionHoras(antes.get("duracionHoras").asInt());
+        }
+        if (antes.has("costo")) {
+            evento.setCosto(antes.get("costo").asDouble());
+        }
+        if (antes.has("imagen")) {
+            evento.setImagen(antes.get("imagen").isNull() ? null : antes.get("imagen").asText());
+        }
+    }
+
+    private void registrarNovedadEdicionBasica(
+            Evento evento,
+            Long orgId,
+            TipoNovedadEvento tipo,
+            java.util.Map<String, Object> eventoAntes,
+            String resumen) {
+        try {
+            ObjectNode root = objectMapper.createObjectNode();
+            if (evento.getEstadoPrevioRevision() != null) {
+                root.put("estadoPrevio", evento.getEstadoPrevioRevision().name());
+            }
+            root.set("eventoAntes", objectMapper.valueToTree(eventoAntes));
+            root.put("resumen", resumen != null ? resumen : "");
+            EventoNovedad n = new EventoNovedad();
+            n.setEventoId(evento.getId());
+            n.setUsuarioSolicitanteId(orgId);
+            n.setTipo(tipo);
+            n.setEstado(EstadoNovedadEvento.PENDIENTE);
+            n.setFechaSolicitud(LocalDateTime.now());
+            n.setDetalleJson(objectMapper.writeValueAsString(root));
+            eventoNovedadRepository.save(n);
+        } catch (Exception ex) {
+            throw new CustomException("No se pudo registrar la novedad del evento.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void registrarNovedadAumentoHoras(
+            Evento evento,
+            Long orgId,
+            int horasAntes,
+            int horasDespues,
+            Pago p,
+            java.util.Map<String, Object> snapshotAntes) {
+        try {
+            ObjectNode root = objectMapper.createObjectNode();
+            root.put(
+                    "estadoPrevio",
+                    evento.getEstadoPrevioRevision() != null ? evento.getEstadoPrevioRevision().name() : "");
+            root.set("eventoAntes", objectMapper.valueToTree(snapshotAntes));
+            root.put("horasAntes", horasAntes);
+            root.put("horasDespues", horasDespues);
+            double montoPrevio = p.getSaldoAprobadoPrevio() != null ? p.getSaldoAprobadoPrevio() : p.getMonto();
+            root.put("montoPagadoPrevio", montoPrevio);
+            root.put("montoAdicional", p.getMonto());
+            EventoNovedad n = new EventoNovedad();
+            n.setEventoId(evento.getId());
+            n.setUsuarioSolicitanteId(orgId);
+            n.setTipo(TipoNovedadEvento.AUMENTO_HORAS);
+            n.setEstado(EstadoNovedadEvento.PENDIENTE);
+            n.setFechaSolicitud(LocalDateTime.now());
+            n.setDetalleJson(objectMapper.writeValueAsString(root));
+            eventoNovedadRepository.save(n);
+        } catch (Exception ex) {
+            throw new CustomException("No se pudo registrar la novedad del evento.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void registrarNovedadDisminucionHoras(
+            Evento evento,
+            Long orgId,
+            int horasAntes,
+            int horasDespues,
+            double penalizacion,
+            java.util.Map<String, Object> snapshotAntes) {
+        try {
+            ObjectNode root = objectMapper.createObjectNode();
+            root.put(
+                    "estadoPrevio",
+                    evento.getEstadoPrevioRevision() != null ? evento.getEstadoPrevioRevision().name() : "");
+            root.set("eventoAntes", objectMapper.valueToTree(snapshotAntes));
+            root.put("horasAntes", horasAntes);
+            root.put("horasDespues", horasDespues);
+            root.put("horasReducidas", horasAntes - horasDespues);
+            root.put("penalizacionEstimada", penalizacion);
+            EventoNovedad n = new EventoNovedad();
+            n.setEventoId(evento.getId());
+            n.setUsuarioSolicitanteId(orgId);
+            n.setTipo(TipoNovedadEvento.DISMINUCION_HORAS);
+            n.setEstado(EstadoNovedadEvento.PENDIENTE);
+            n.setFechaSolicitud(LocalDateTime.now());
+            n.setDetalleJson(objectMapper.writeValueAsString(root));
+            eventoNovedadRepository.save(n);
+        } catch (Exception ex) {
+            throw new CustomException("No se pudo registrar la novedad del evento.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void registrarNovedadCancelacionSolicitud(Evento evento, Long orgId, double valorPagado) {
+        try {
+            ObjectNode root = objectMapper.createObjectNode();
+            root.put(
+                    "estadoPrevio",
+                    evento.getEstadoPrevioRevision() != null ? evento.getEstadoPrevioRevision().name() : "");
+            root.put("motivo", evento.getMotivoCancelacion());
+            root.put("valorPagadoPlataforma", valorPagado);
+            root.put("reembolsoPropuesto70", valorPagado * 0.70);
+            EventoNovedad n = new EventoNovedad();
+            n.setEventoId(evento.getId());
+            n.setUsuarioSolicitanteId(orgId);
+            n.setTipo(TipoNovedadEvento.CANCELACION_SOLICITUD);
+            n.setEstado(EstadoNovedadEvento.PENDIENTE);
+            n.setFechaSolicitud(LocalDateTime.now());
+            n.setDetalleJson(objectMapper.writeValueAsString(root));
+            eventoNovedadRepository.save(n);
+        } catch (Exception ex) {
+            throw new CustomException("No se pudo registrar la novedad del evento.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void marcarUltimaNovedadResuelta(Long eventoId, EstadoNovedadEvento resolucion, String motivo) {
+        eventoNovedadRepository
+                .findFirstByEventoIdAndEstadoOrderByFechaSolicitudDesc(eventoId, EstadoNovedadEvento.PENDIENTE)
+                .ifPresent(n -> {
+                    n.setEstado(resolucion);
+                    n.setFechaResolucion(LocalDateTime.now());
+                    n.setMotivoResolucion(motivo);
+                    eventoNovedadRepository.save(n);
+                });
+    }
+
+    private void revertirEventoDesdeUltimaNovedad(Evento evento) throws Exception {
+        Optional<EventoNovedad> nov = eventoNovedadRepository
+                .findFirstByEventoIdAndEstadoOrderByFechaSolicitudDesc(evento.getId(), EstadoNovedadEvento.PENDIENTE);
+        if (nov.isEmpty()) {
+            return;
+        }
+        JsonNode root = objectMapper.readTree(nov.get().getDetalleJson());
+        if (root.has("eventoAntes")) {
+            aplicarSnapshotEvento(evento, root.get("eventoAntes"));
+        }
+    }
+
+    private static String copTexto(double v) {
+        return String.format(Locale.ROOT, "%.0f", v);
     }
 
     /** Activa un evento APROBADO e inscribe al organizador (mismo efecto que al aprobar un pago). */
@@ -236,10 +795,22 @@ public class EventoServiceImpl implements EventoService {
     @Override
     public EventoDTO aprobar(Long id) {
         Evento evento = buscarPorId(id);
+        if (evento.getEstado() == EstadoEvento.PENDIENTE_REVISION) {
+            marcarUltimaNovedadResuelta(evento.getId(), EstadoNovedadEvento.APROBADO, null);
+            EstadoEvento volver =
+                    evento.getEstadoPrevioRevision() != null ? evento.getEstadoPrevioRevision() : EstadoEvento.ACTIVO;
+            evento.setEstado(volver);
+            evento.setEstadoPrevioRevision(null);
+            evento.setResumenSolicitudEdicion(null);
+            return toDto(eventoRepository.save(evento));
+        }
         if (evento.getEstado() != EstadoEvento.PENDIENTE) {
-            throw new CustomException("Solo se pueden aprobar eventos PENDIENTES.", HttpStatus.BAD_REQUEST);
+            throw new CustomException(
+                    "Solo se pueden aprobar eventos en estado PENDIENTE (alta nueva) o PENDIENTE_REVISION (cambios).",
+                    HttpStatus.BAD_REQUEST);
         }
         evento.setEstado(EstadoEvento.APROBADO);
+        evento.setResumenSolicitudEdicion(null);
         Evento guardado = eventoRepository.save(evento);
         if (guardado.getCosto() <= 0) {
             return activarYAcompanarOrganizador(guardado.getId());
@@ -250,8 +821,26 @@ public class EventoServiceImpl implements EventoService {
     @Override
     public EventoDTO rechazar(Long id, String motivo) {
         Evento evento = buscarPorId(id);
+        if (evento.getEstado() == EstadoEvento.PENDIENTE_REVISION) {
+            EstadoEvento volver =
+                    evento.getEstadoPrevioRevision() != null ? evento.getEstadoPrevioRevision() : EstadoEvento.ACTIVO;
+            try {
+                revertirEventoDesdeUltimaNovedad(evento);
+            } catch (Exception e) {
+                throw new CustomException(
+                        "No se pudo revertir la edición: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            marcarUltimaNovedadResuelta(evento.getId(), EstadoNovedadEvento.RECHAZADO, motivo);
+            evento.setEstado(volver);
+            evento.setEstadoPrevioRevision(null);
+            evento.setResumenSolicitudEdicion(null);
+            evento.setMotivoRechazo(motivo != null && !motivo.isBlank() ? motivo.trim() : null);
+            return toDto(eventoRepository.save(evento));
+        }
         if (evento.getEstado() != EstadoEvento.PENDIENTE) {
-            throw new CustomException("Solo se pueden rechazar eventos PENDIENTES.", HttpStatus.BAD_REQUEST);
+            throw new CustomException(
+                    "Solo se pueden rechazar eventos en estado PENDIENTE (alta nueva) o PENDIENTE_REVISION (cambios).",
+                    HttpStatus.BAD_REQUEST);
         }
         evento.setEstado(EstadoEvento.RECHAZADO);
         evento.setMotivoRechazo(motivo != null && !motivo.isBlank() ? motivo.trim() : null);
@@ -264,31 +853,120 @@ public class EventoServiceImpl implements EventoService {
         if (evento.getOrganizadorId() == null || !evento.getOrganizadorId().equals(organizadorId)) {
             throw new CustomException("Solo el organizador puede cancelar el evento.", HttpStatus.FORBIDDEN);
         }
+        if (motivo == null || motivo.isBlank()) {
+            throw new CustomException("El motivo de cancelación es obligatorio.", HttpStatus.BAD_REQUEST);
+        }
         if (evento.getEstado() == EstadoEvento.CANCELADO) {
             throw new CustomException("El evento ya está cancelado.", HttpStatus.BAD_REQUEST);
         }
         if (evento.getEstado() == EstadoEvento.FINALIZADO) {
             throw new CustomException("No se puede cancelar un evento ya FINALIZADO.", HttpStatus.BAD_REQUEST);
         }
-        evento.setEstado(EstadoEvento.CANCELADO);
-        evento.setMotivoCancelacion(motivo != null && !motivo.isBlank() ? motivo.trim() : null);
-        Evento guardado = eventoRepository.save(evento);
+        if (evento.getEstado() == EstadoEvento.PENDIENTE_CANCELACION) {
+            throw new CustomException("Ya existe una solicitud de cancelación pendiente de revisión.", HttpStatus.CONFLICT);
+        }
 
-        // HU-009: notificar a los inscritos (solo en sistema, sin correo).
-        List<Inscripcion> inscripciones = inscripcionRepository.findByEventoId(id);
+        if (evento.getEstado() == EstadoEvento.PENDIENTE) {
+            evento.setEstado(EstadoEvento.CANCELADO);
+            evento.setMotivoCancelacion(motivo.trim());
+            evento.setEstadoPrevioRevision(null);
+            Evento guardado = eventoRepository.save(evento);
+            notificarInscritosCancelacion(guardado);
+            return toDto(guardado);
+        }
+
+        if (evento.getEstado() == EstadoEvento.ACTIVO
+                || evento.getEstado() == EstadoEvento.APROBADO
+                || evento.getEstado() == EstadoEvento.PENDIENTE_REVISION
+                || evento.getEstado() == EstadoEvento.PENDIENTE_SUPLEMENTO) {
+            double valorPagado = pagoRepository.findByEventoId(id)
+                    .filter((p) -> p.getEstado() == EstadoPago.APROBADO)
+                    .map(Pago::getMonto)
+                    .orElse(0.0);
+            evento.setEstadoPrevioRevision(evento.getEstado());
+            evento.setEstado(EstadoEvento.PENDIENTE_CANCELACION);
+            evento.setMotivoCancelacion(motivo.trim());
+            Evento guardado = eventoRepository.save(evento);
+            registrarNovedadCancelacionSolicitud(guardado, organizadorId, valorPagado);
+            return conAlerta(
+                    guardado,
+                    "La cancelación quedó pendiente de aprobación del administrador. Si se aprueba, solo se reembolsará el 70% del valor pagado a la plataforma.");
+        }
+
+        evento.setEstado(EstadoEvento.CANCELADO);
+        evento.setMotivoCancelacion(motivo.trim());
+        evento.setEstadoPrevioRevision(null);
+        Evento guardado = eventoRepository.save(evento);
+        notificarInscritosCancelacion(guardado);
+        return toDto(guardado);
+    }
+
+    @Override
+    public EventoDTO aprobarCancelacion(Long id) {
+        Evento evento = buscarPorId(id);
+        if (evento.getEstado() != EstadoEvento.PENDIENTE_CANCELACION) {
+            throw new CustomException("Solo se puede aprobar una cancelación en estado PENDIENTE_CANCELACION.",
+                    HttpStatus.BAD_REQUEST);
+        }
+        double valorPagado = pagoRepository.findByEventoId(id)
+                .filter((p) -> p.getEstado() == EstadoPago.APROBADO)
+                .map(Pago::getMonto)
+                .orElse(0.0);
+        marcarNovedadCancelacionAprobada(evento.getId());
+        evento.setEstado(EstadoEvento.CANCELADO);
+        evento.setEstadoPrevioRevision(null);
+        Evento guardado = eventoRepository.save(evento);
+        notificarInscritosCancelacion(guardado);
+        notificacionService.crear(
+                guardado.getOrganizadorId(),
+                "Tu solicitud de cancelación fue aprobada. Valor pagado a la plataforma: " + copTexto(valorPagado)
+                        + " COP. Monto orientativo a devolver (70%): " + copTexto(valorPagado * 0.70) + " COP.",
+                TipoNotificacion.INFO);
+        return toDto(guardado);
+    }
+
+    @Override
+    public EventoDTO rechazarCancelacion(Long id, String motivo) {
+        if (motivo == null || motivo.isBlank()) {
+            throw new CustomException("El motivo de rechazo es obligatorio.", HttpStatus.BAD_REQUEST);
+        }
+        Evento evento = buscarPorId(id);
+        if (evento.getEstado() != EstadoEvento.PENDIENTE_CANCELACION) {
+            throw new CustomException("Solo se puede rechazar una cancelación en estado PENDIENTE_CANCELACION.",
+                    HttpStatus.BAD_REQUEST);
+        }
+        marcarNovedadCancelacionRechazada(evento.getId(), motivo.trim());
+        EstadoEvento volver =
+                evento.getEstadoPrevioRevision() != null ? evento.getEstadoPrevioRevision() : EstadoEvento.ACTIVO;
+        evento.setEstado(volver);
+        evento.setEstadoPrevioRevision(null);
+        evento.setMotivoCancelacion(null);
+        Evento guardado = eventoRepository.save(evento);
+        notificacionService.crear(
+                guardado.getOrganizadorId(),
+                "Tu solicitud de cancelación fue rechazada. Motivo: " + motivo.trim(),
+                TipoNotificacion.ALERTA);
+        return toDto(guardado);
+    }
+
+    private void notificarInscritosCancelacion(Evento guardado) {
+        List<Inscripcion> inscripciones = inscripcionRepository.findByEventoId(guardado.getId());
         for (Inscripcion ins : inscripciones) {
-            if (ins.getEstado() == EstadoInscripcion.CANCELADO) continue;
-            notificacionService.crear(ins.getUsuarioId(),
+            if (ins.getEstado() == EstadoInscripcion.CANCELADO) {
+                continue;
+            }
+            notificacionService.crear(
+                    ins.getUsuarioId(),
                     "El evento \"" + guardado.getNombre() + "\" fue cancelado por el organizador."
                             + (guardado.getMotivoCancelacion() != null
                                     ? " Motivo: " + guardado.getMotivoCancelacion()
                                     : ""),
                     TipoNotificacion.ALERTA);
         }
-        return toDto(guardado);
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public EventoDTO activarPorPago(Long id) {
         Evento evento = buscarPorId(id);
         if (evento.getEstado() != EstadoEvento.APROBADO) {
@@ -296,6 +974,88 @@ public class EventoServiceImpl implements EventoService {
         }
         evento.setEstado(EstadoEvento.ACTIVO);
         return toDto(eventoRepository.save(evento));
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public EventoDTO activarTrasSuplementoPago(Long eventoId) {
+        Evento evento = buscarPorId(eventoId);
+        if (evento.getEstado() != EstadoEvento.PENDIENTE_SUPLEMENTO) {
+            throw new CustomException(
+                    "El evento no está pendiente de suplemento de pago.", HttpStatus.BAD_REQUEST);
+        }
+        EstadoEvento volver =
+                evento.getEstadoPrevioRevision() != null ? evento.getEstadoPrevioRevision() : EstadoEvento.ACTIVO;
+        evento.setEstado(volver);
+        evento.setEstadoPrevioRevision(null);
+        evento.setResumenSolicitudEdicion(null);
+        marcarNovedadSuplementoAprobada(eventoId);
+        return toDto(eventoRepository.save(evento));
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void resolverComplementoPagoSobreEventoActivo(Long eventoId) {
+        Evento evento = buscarPorId(eventoId);
+        if (evento.getEstado() != EstadoEvento.ACTIVO) {
+            return;
+        }
+        marcarNovedadSuplementoAprobada(eventoId);
+    }
+
+    private void marcarNovedadSuplementoAprobada(Long eventoId) {
+        eventoNovedadRepository
+                .findFirstByEventoIdAndEstadoAndTipoOrderByFechaSolicitudDesc(
+                        eventoId, EstadoNovedadEvento.PENDIENTE, TipoNovedadEvento.AUMENTO_HORAS)
+                .ifPresent(n -> {
+                    n.setEstado(EstadoNovedadEvento.APROBADO);
+                    n.setFechaResolucion(LocalDateTime.now());
+                    eventoNovedadRepository.save(n);
+                });
+    }
+
+    private void marcarNovedadCancelacionAprobada(Long eventoId) {
+        eventoNovedadRepository
+                .findFirstByEventoIdAndEstadoAndTipoOrderByFechaSolicitudDesc(
+                        eventoId, EstadoNovedadEvento.PENDIENTE, TipoNovedadEvento.CANCELACION_SOLICITUD)
+                .ifPresent(n -> {
+                    n.setEstado(EstadoNovedadEvento.APROBADO);
+                    n.setFechaResolucion(LocalDateTime.now());
+                    eventoNovedadRepository.save(n);
+                });
+    }
+
+    private void marcarNovedadCancelacionRechazada(Long eventoId, String motivo) {
+        eventoNovedadRepository
+                .findFirstByEventoIdAndEstadoAndTipoOrderByFechaSolicitudDesc(
+                        eventoId, EstadoNovedadEvento.PENDIENTE, TipoNovedadEvento.CANCELACION_SOLICITUD)
+                .ifPresent(n -> {
+                    n.setEstado(EstadoNovedadEvento.RECHAZADO);
+                    n.setFechaResolucion(LocalDateTime.now());
+                    n.setMotivoResolucion(motivo);
+                    eventoNovedadRepository.save(n);
+                });
+    }
+
+    @Override
+    public List<EventoNovedadDTO> listarNovedades(Long eventoId) {
+        return eventoNovedadRepository.findByEventoIdOrderByFechaSolicitudDesc(eventoId).stream()
+                .map(this::toNovedadDto)
+                .toList();
+    }
+
+    private EventoNovedadDTO toNovedadDto(EventoNovedad n) {
+        EventoNovedadDTO d = new EventoNovedadDTO();
+        d.setId(n.getId());
+        d.setEventoId(n.getEventoId());
+        d.setUsuarioSolicitanteId(n.getUsuarioSolicitanteId());
+        d.setTipo(n.getTipo());
+        d.setEstado(n.getEstado());
+        d.setFechaSolicitud(n.getFechaSolicitud());
+        d.setFechaResolucion(n.getFechaResolucion());
+        d.setMotivoResolucion(n.getMotivoResolucion());
+        d.setDetalleJson(n.getDetalleJson());
+        return d;
     }
 
     @Override
@@ -428,7 +1188,7 @@ public class EventoServiceImpl implements EventoService {
     }
 
     private Evento buscarPorId(Long id) {
-        return eventoRepository.findById(id)
+        return eventoRepository.findByIdWithOrganizador(id)
                 .orElseThrow(() -> new CustomException("No se encontró el evento con ID: " + id, HttpStatus.NOT_FOUND));
     }
 
@@ -438,10 +1198,21 @@ public class EventoServiceImpl implements EventoService {
         dto.setAforoMaximo(null);
         dto.setAforoActual(null);
         dto.setOrganizadorId(null);
+        dto.setOrganizadorNombre(null);
+        dto.setOrganizadorEmail(null);
         return dto;
     }
 
     private EventoDTO toDto(Evento evento) {
-        return modelMapper.map(evento, EventoDTO.class);
+        EventoDTO dto = modelMapper.map(evento, EventoDTO.class);
+        Usuario org = evento.getOrganizador();
+        if (org == null && evento.getOrganizadorId() != null) {
+            org = usuarioRepository.findById(evento.getOrganizadorId()).orElse(null);
+        }
+        if (org != null) {
+            dto.setOrganizadorNombre(org.getNombre());
+            dto.setOrganizadorEmail(org.getEmail());
+        }
+        return dto;
     }
 }

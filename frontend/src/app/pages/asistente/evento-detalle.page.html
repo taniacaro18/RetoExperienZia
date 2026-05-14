@@ -1,167 +1,228 @@
+<p-confirmDialog></p-confirmDialog>
+
 @if (cargando()) {
   <div class="flex justify-center py-20">
     <p-progressSpinner styleClass="!w-10 !h-10" strokeWidth="4"></p-progressSpinner>
   </div>
 } @else if (evento(); as e) {
-  <div class="space-y-5">
+  <div class="ins-detalle-wrap space-y-5">
     <button type="button" (click)="volver()" class="ez-btn-ghost">
       <i class="pi pi-arrow-left text-[10px]"></i> {{ textoVolver() }}
     </button>
 
-    @if (e.imagen) {
-      <img [src]="e.imagen" [alt]="e.nombre" class="w-full h-60 object-cover rounded-xl border border-surface-200" />
-    } @else {
-      <div class="w-full h-60 rounded-xl bg-brand-gradient flex items-center justify-center text-white">
-        <i class="pi pi-calendar text-6xl opacity-90"></i>
-      </div>
-    }
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      <!-- Info principal -->
-      <div class="lg:col-span-2 space-y-4">
-        <div>
-          <div class="flex items-center gap-2 mb-2 flex-wrap">
-            <span class="ez-badge ez-badge-disponible">{{ e.tipoEvento }}</span>
-            @if (e.categoria) {
-              <span class="ez-badge ez-badge-finalizado">{{ e.categoria }}</span>
-            }
-            <span class="ez-badge"
-                  [ngClass]="{
-                    'ez-badge-activo': estadoBadge() === 'ACTIVO',
-                    'ez-badge-aprobado': estadoBadge() === 'APROBADO',
-                    'ez-badge-pendiente': estadoBadge() === 'PENDIENTE',
-                    'ez-badge-finalizado': estadoBadge() === 'FINALIZADO',
-                    'ez-badge-rechazado': estadoBadge() === 'RECHAZADO',
-                    'ez-badge-cancelado': estadoBadge() === 'CANCELADO'
-                  }">
-              {{ eventoEstadoLabelFn(estadoBadge()) }}
-            </span>
+    <article class="ins-card">
+      <header class="ins-card__head">
+        <span class="ins-card__avatar" aria-hidden="true">{{ inicialTitulo(e) }}</span>
+        <div class="ins-card__head-main">
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+              <span class="ez-badge ez-badge-disponible">{{ e.tipoEvento }}</span>
+              @if (e.categoria) {
+                <span class="ez-badge ez-badge-finalizado">{{ e.categoria }}</span>
+              }
+              <span
+                class="ez-badge"
+                [ngClass]="{
+                  'ez-badge-activo': estadoBadge() === 'ACTIVO',
+                  'ez-badge-aprobado': estadoBadge() === 'APROBADO',
+                  'ez-badge-pend-apro': estadoBadge() === 'PENDIENTE',
+                  'ez-badge-finalizado': estadoBadge() === 'FINALIZADO',
+                  'ez-badge-rechazado': estadoBadge() === 'RECHAZADO',
+                  'ez-badge-cancelado': estadoBadge() === 'CANCELADO'
+                }">
+                {{ eventoEstadoLabelFn(estadoBadge()) }}
+              </span>
+            </div>
+            <h1 class="ins-card__title !text-[1.2rem] md:!text-[1.35rem]">{{ e.nombre }}</h1>
           </div>
-          <h1 class="ez-section-title !text-2xl !normal-case !tracking-normal text-surface-900">
-            {{ e.nombre }}
-          </h1>
         </div>
+      </header>
 
-        @if (e.descripcion) {
-          <div class="ez-card">
-            <h2 class="ez-card-title">Sobre el evento</h2>
-            <p class="text-surface-700 leading-relaxed whitespace-pre-line text-[13px]">{{ e.descripcion }}</p>
+      <div class="ins-card__media !max-h-[220px]">
+        @if (e.imagen) {
+          <img [src]="e.imagen" [alt]="e.nombre" />
+        } @else {
+          <div class="ins-card__media-placeholder">
+            <i class="pi pi-calendar"></i>
           </div>
         }
-
-        <div class="ez-card">
-          <h2 class="ez-card-title">Detalles del Evento</h2>
-          <div class="space-y-2 text-[13px]">
-            <div class="flex items-center gap-2">
-              <span class="text-base">📅</span>
-              <span class="font-bold">Fecha:</span>
-              <span>{{ e.fecha | date: 'dd MMM yyyy' }}</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-base">⏰</span>
-              <span class="font-bold">Horario:</span>
-              <span>{{ e.fecha | date: 'h:mm a' }}@if (e.fechaFin) { - {{ e.fechaFin | date: 'h:mm a' }} }</span>
-            </div>
-            @if (e.duracionHoras) {
-              <div class="flex items-center gap-2">
-                <span class="text-base">⏳</span>
-                <span class="font-bold">Duración:</span>
-                <span>{{ e.duracionHoras }} Horas</span>
-              </div>
-            }
-            @if (e.ubicacion) {
-              <div class="flex items-center gap-2">
-                <span class="text-base">📍</span>
-                <span class="font-bold">Ubicación:</span>
-                <span>{{ e.ubicacion }}</span>
-              </div>
-            }
-            <div class="flex items-center gap-2">
-              <span class="text-base">👥</span>
-              <span class="font-bold">Aforo Total:</span>
-              <span>{{ e.aforoMaximo }} Personas Máximo</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-base">👥</span>
-              <span class="font-bold">Aforo Actual:</span>
-              <span>{{ e.aforoActual }}/{{ e.aforoMaximo }}</span>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <!-- Sidebar de inscripción -->
-      <aside class="space-y-3">
-        <div class="ez-card sticky top-4">
-          <h2 class="ez-card-title">Inscripción</h2>
-          <div class="space-y-3">
-            <div>
-              <div class="flex items-center justify-between text-[11px] text-surface-500 mb-1">
-                <span class="uppercase tracking-wider font-bold">Ocupación</span>
-                <span>{{ porcentajeOcupacion() }}%</span>
-              </div>
-              <div class="h-2 bg-surface-100 rounded-full overflow-hidden">
-                <div class="h-full bg-brand-600 transition-all" [style.width.%]="porcentajeOcupacion()"></div>
-              </div>
+      <div class="ins-card__body">
+        <p class="ins-card__org-label">Organizador</p>
+        <ul class="ins-card__org-list">
+          <li>
+            <span class="ins-card__org-k">Nombre:</span>
+            {{ e.organizadorNombre ?? '—' }}
+          </li>
+          <li>
+            <span class="ins-card__org-k">Contacto:</span>
+            {{ e.organizadorEmail ?? '—' }}
+          </li>
+        </ul>
+
+        @if (e.descripcion) {
+          <p class="ins-card__desc ins-card__desc--full whitespace-pre-line">{{ e.descripcion }}</p>
+        }
+
+        <section class="ins-detalles" aria-labelledby="detalle-evento-titulo">
+          <div class="ins-detalles__head">
+            <div class="ins-detalles__icon" aria-hidden="true">
+              <i class="pi pi-list-check"></i>
             </div>
-
-            @if (soyOrganizadorDelEvento()) {
-              <div class="bg-brand-50 border border-brand-200 rounded-md p-3 text-[12px] text-brand-800 space-y-2">
-                @if (e.estado === 'PENDIENTE') {
-                  <p class="m-0 flex items-start gap-1">
-                    <i class="pi pi-clock mt-0.5"></i>
-                    <span>Tu solicitud está <strong>pendiente de aprobación</strong> por el administrador. Aún no aparece en el catálogo público.</span>
-                  </p>
-                }
-                <p class="m-0 flex items-start gap-1">
-                  <i class="pi pi-info-circle mt-0.5"></i>
-                  <span>Eres el organizador de este evento. Tu asistencia está garantizada de forma automática.</span>
-                </p>
-              </div>
-            } @else if (miInscripcion(); as ins) {
-              <div class="bg-emerald-50 border border-emerald-200 rounded-md p-3 text-[12px]">
-                <div class="font-bold text-emerald-700 flex items-center gap-2">
-                  <i class="pi pi-check-circle"></i>
-                  Ya estás inscrito
-                </div>
-                <div class="text-[11px] text-surface-600 mt-1">
-                  Estado: <strong>{{ ins.estado }}</strong>
-                </div>
-              </div>
-
-              @if (puedeInscribirse() || ins.estado !== 'ASISTIO') {
-                <a routerLink="/mis-inscripciones" class="ez-btn-primary w-full">
-                  <i class="pi pi-qrcode text-[10px]"></i> Ver Mi QR
-                </a>
-              }
-
-              @if (puedeInscribirse()) {
-                <button type="button" class="ez-btn-danger w-full"
-                        [disabled]="procesando() || ins.estado === 'ASISTIO'"
-                        (click)="cancelarInscripcion()">
-                  @if (procesando()) { <i class="pi pi-spin pi-spinner text-[10px]"></i> }
-                  <i class="pi pi-times text-[10px]"></i> Cancelar Inscripción
-                </button>
-              }
-            } @else if (cuposDisponibles() === 0) {
-              <div class="bg-rose-50 border border-rose-200 rounded-md p-3 text-[12px] text-rose-700">
-                <i class="pi pi-times-circle mr-1"></i>
-                Sin cupos disponibles.
-              </div>
-            } @else if (puedeInscribirse()) {
-              <button type="button" class="ez-btn-primary w-full"
-                      [disabled]="procesando()" (click)="inscribirse()">
-                @if (procesando()) { <i class="pi pi-spin pi-spinner text-[10px]"></i> }
-                <i class="pi pi-ticket text-[10px]"></i> Inscríbete
-              </button>
-
-              <p class="text-[11px] text-surface-500 text-center">
-                Recibirás un código QR único que el staff escaneará en el evento.
-              </p>
-            }
+            <h2 id="detalle-evento-titulo" class="ins-detalles__title">Detalles del evento</h2>
           </div>
+
+          <div class="ins-detalles__row">
+            <span class="ins-detalles__row-icon"><i class="pi pi-calendar"></i></span>
+            <div class="ins-detalles__row-body">
+              <span class="ins-detalles__row-k">Fecha:</span>
+              {{ e.fecha | date: 'dd MMM yyyy' }}
+            </div>
+            <span class="ins-detalles__check"><i class="pi pi-check"></i></span>
+          </div>
+
+          <div class="ins-detalles__row">
+            <span class="ins-detalles__row-icon"><i class="pi pi-clock"></i></span>
+            <div class="ins-detalles__row-body">
+              <span class="ins-detalles__row-k">Horario:</span>
+              {{ e.fecha | date: 'h:mm a' }}
+              @if (e.fechaFin) {
+                &nbsp;– {{ e.fechaFin | date: 'h:mm a' }}
+              }
+            </div>
+            <span class="ins-detalles__check"><i class="pi pi-check"></i></span>
+          </div>
+
+          @if (e.duracionHoras) {
+            <div class="ins-detalles__row">
+              <span class="ins-detalles__row-icon"><i class="pi pi-hourglass"></i></span>
+              <div class="ins-detalles__row-body">
+                <span class="ins-detalles__row-k">Duración:</span>
+                {{ e.duracionHoras }} horas
+              </div>
+              <span class="ins-detalles__check"><i class="pi pi-check"></i></span>
+            </div>
+          }
+
+          @if (e.ubicacion) {
+            <div class="ins-detalles__row">
+              <span class="ins-detalles__row-icon"><i class="pi pi-map-marker"></i></span>
+              <div class="ins-detalles__row-body">
+                <span class="ins-detalles__row-k">Ubicación:</span>
+                {{ e.ubicacion }}
+              </div>
+              <span class="ins-detalles__check"><i class="pi pi-check"></i></span>
+            </div>
+          }
+
+          <div class="ins-detalles__row">
+            <span class="ins-detalles__row-icon"><i class="pi pi-users"></i></span>
+            <div class="ins-detalles__row-body">
+              <span class="ins-detalles__row-k">Aforo total:</span>
+              {{ e.aforoMaximo }} personas máximo
+            </div>
+            <span class="ins-detalles__check"><i class="pi pi-check"></i></span>
+          </div>
+
+          <div class="ins-detalles__row">
+            <span class="ins-detalles__row-icon"><i class="pi pi-user-plus"></i></span>
+            <div class="ins-detalles__row-body">
+              <span class="ins-detalles__row-k">Aforo actual:</span>
+              {{ e.aforoActual }} / {{ e.aforoMaximo }}
+            </div>
+            <span class="ins-detalles__check"><i class="pi pi-check"></i></span>
+          </div>
+
+          @if (mostrarChipDisponible()) {
+            <div class="text-center">
+              <span class="ins-pill-disponible">Disponible</span>
+            </div>
+          } @else if (e.estado === 'ACTIVO' && cuposDisponibles() === 0 && !ventanaCerrada()) {
+            <div class="text-center">
+              <span class="ins-pill-disponible ins-pill-agotado">Sin cupos</span>
+            </div>
+          }
+        </section>
+
+        <app-aforo-bar
+          [value]="e.aforoActual"
+          [max]="e.aforoMaximo"
+          containerClass="ins-card__aforo"
+        />
+      </div>
+    </article>
+
+    <div class="ins-actions bg-white p-5 space-y-4">
+      @if (soyOrganizadorDelEvento()) {
+        <div class="bg-brand-50 border border-brand-200 rounded-xl p-4 text-[13px] text-brand-800 space-y-2">
+          @if (e.estado === 'PENDIENTE') {
+            <p class="m-0 flex items-start gap-2">
+              <i class="pi pi-clock mt-0.5 shrink-0"></i>
+              <span>Tu solicitud está <strong>pendiente de aprobación</strong> por el administrador. Aún no aparece en el catálogo público.</span>
+            </p>
+          }
+          <p class="m-0 flex items-start gap-2">
+            <i class="pi pi-info-circle mt-0.5 shrink-0"></i>
+            <span>Eres el organizador de este evento. Tu asistencia está garantizada de forma automática.</span>
+          </p>
         </div>
-      </aside>
+      } @else if (miInscripcion(); as ins) {
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50/90 p-4 text-[13px]">
+          <div class="font-bold text-emerald-800 flex items-center gap-2">
+            <i class="pi pi-check-circle"></i>
+            Ya estás inscrito
+          </div>
+          <div class="text-surface-600 mt-1">Estado: <strong>{{ ins.estado }}</strong></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row flex-wrap gap-2 justify-center">
+          @if (puedeInscribirse() || ins.estado !== 'ASISTIO') {
+            <a routerLink="/mis-inscripciones" class="ins-btn-primary w-full sm:w-auto justify-center">
+              <i class="pi pi-qrcode text-[10px]"></i> Ver mi QR
+            </a>
+          }
+          @if (puedeInscribirse()) {
+            <button
+              type="button"
+              class="ins-btn-ghost w-full sm:w-auto justify-center !border-rose-200 !bg-rose-50 !text-rose-800 hover:!bg-rose-100"
+              [disabled]="procesando() || ins.estado === 'ASISTIO'"
+              (click)="cancelarInscripcion()"
+            >
+              @if (procesando()) {
+                <i class="pi pi-spin pi-spinner text-[10px]"></i>
+              } @else {
+                <i class="pi pi-times text-[10px]"></i>
+              }
+              Cancelar inscripción
+            </button>
+          }
+        </div>
+      } @else if (cuposDisponibles() === 0) {
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-[13px] text-rose-800 text-center">
+          <i class="pi pi-times-circle mr-1"></i>
+          Sin cupos disponibles.
+        </div>
+      } @else if (puedeInscribirse()) {
+        <div class="text-center space-y-3">
+          <button
+            type="button"
+            class="ins-btn-primary w-full max-w-xs mx-auto justify-center"
+            [disabled]="procesando()"
+            (click)="inscribirse()"
+          >
+            @if (procesando()) {
+              <i class="pi pi-spin pi-spinner text-[10px]"></i>
+            } @else {
+              <i class="pi pi-ticket text-[10px]"></i>
+            }
+            Inscríbete
+          </button>
+          <p class="text-[11px] text-surface-500 m-0">
+            Recibirás un código QR único que el staff escaneará en el evento.
+          </p>
+        </div>
+      }
     </div>
   </div>
 } @else {

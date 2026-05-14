@@ -95,6 +95,15 @@
             </div>
           }
 
+          @if (p.saldoAprobadoPrevio != null && p.saldoAprobadoPrevio > 0) {
+            <div class="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[11px] text-violet-900 leading-snug">
+              <strong>Complemento:</strong> el organizador ya tenía aprobado
+              {{ p.saldoAprobadoPrevio | currency: 'COP':'symbol-narrow':'1.0-0' }}.
+              Valida que el archivo corresponda solo al incremento de
+              <strong>{{ p.monto | currency: 'COP':'symbol-narrow':'1.0-0' }}</strong>.
+            </div>
+          }
+
           @if (p.comprobanteUrl) {
             <button type="button"
                     (click)="verComprobante(p)"

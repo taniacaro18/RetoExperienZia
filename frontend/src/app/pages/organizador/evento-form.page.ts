@@ -190,6 +190,18 @@ export class OrgEventoFormPage {
           this.router.navigate(['/organizador/eventos']);
           return;
         }
+        if (['PENDIENTE_REVISION', 'PENDIENTE_SUPLEMENTO', 'PENDIENTE_CANCELACION'].includes(e.estado)) {
+          this.messages.add({
+            severity: 'info',
+            summary: 'Edición no disponible',
+            detail:
+              e.estado === 'PENDIENTE_SUPLEMENTO'
+                ? 'Este evento tiene un pago adicional pendiente. Completa el proceso en Pagos o espera la revisión del administrador.'
+                : 'Hay un trámite pendiente con el administrador. No puedes editar el evento hasta que se resuelva.'
+          });
+          this.router.navigate(['/organizador/eventos']);
+          return;
+        }
         if (e.estado === 'FINALIZADO' || (e.estado === 'ACTIVO' && eventoVentanaYaCerro(e))) {
           this.messages.add({
             severity: 'info',
@@ -320,25 +332,42 @@ export class OrgEventoFormPage {
 
     this.guardando.set(true);
     if (this.editando()) {
-      this.api.editar(this.eventoId()!, payload).subscribe({
+        this.api.editar(this.eventoId()!, payload).subscribe({
         next: (ev) => {
           this.guardando.set(false);
-          const pendiente = ev.estado === 'PENDIENTE';
-          const sinTarifa = (ev.costo ?? 0) <= 0;
+          const alerta = ev.alertaNegocio?.trim();
           let detail: string;
-          if (pendiente) {
-            detail = 'Los cambios se enviaron a re-aprobación.';
-          } else if (sinTarifa) {
+          let severity: 'success' | 'info' | 'warn' = 'success';
+          if (alerta) {
+            detail = alerta;
+            severity =
+              ev.estado === 'PENDIENTE_SUPLEMENTO' || ev.estado === 'PENDIENTE_REVISION'
+                ? 'info'
+                : 'success';
+          } else if (ev.estado === 'PENDIENTE_REVISION') {
             detail =
-              'Los cambios se guardaron. Este evento no tiene tarifa de activación; no debes subir comprobante.';
+              'Los cambios quedaron pendientes de aprobación del administrador. No se solicita nuevo pago salvo que hayas ampliado horas (revisa Pagos si aplica).';
+            severity = 'info';
+          } else if (ev.estado === 'PENDIENTE_SUPLEMENTO') {
+            detail =
+              'Ampliaste la duración: debes pagar solo el excedente y subir el comprobante en la sección Pagos.';
+            severity = 'warn';
+          } else if (ev.estado === 'PENDIENTE_CANCELACION') {
+            detail =
+              'Solicitud de cancelación registrada. Un administrador la revisará; si se aprueba, la devolución orientativa es del 70% del valor pagado.';
+            severity = 'info';
+          } else if (ev.estado === 'PENDIENTE') {
+            detail =
+              'Los cambios se enviaron a re-aprobación del administrador. Revisa el detalle en la bandeja de eventos.';
+            severity = 'info';
           } else {
-            detail = 'Los cambios se guardaron.';
+            detail = 'Los cambios se guardaron correctamente.';
           }
           this.messages.add({
-            severity: 'success',
+            severity,
             summary: 'Evento actualizado',
             detail,
-            life: 5000
+            life: 7000
           });
           this.router.navigate(['/organizador/eventos']);
         },

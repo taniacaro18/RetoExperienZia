@@ -2,7 +2,7 @@
 
 <div class="space-y-5">
   <div>
-    <h1 class="ez-section-title">Mis Inscripciones</h1>
+    <h1 class="ez-section-title">Mis inscripciones</h1>
     <p class="ez-page-subtitle !mb-0">Tus eventos confirmados, próximos y pasados.</p>
   </div>
 
@@ -22,20 +22,20 @@
   } @else {
     @if (proximas().length > 0) {
       <section>
-        <h2 class="text-xs font-bold text-brand-700 uppercase tracking-wider mb-2">Próximas</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h2 class="ins-section-title">Próximas</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           @for (item of proximas(); track item.inscripcion.id) {
-            <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: item }"></ng-container>
+            <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: item, pasada: false }"></ng-container>
           }
         </div>
       </section>
     }
     @if (pasadas().length > 0) {
       <section>
-        <h2 class="text-xs font-bold text-brand-700 uppercase tracking-wider mb-2">Pasadas</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h2 class="ins-section-title">Pasadas</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           @for (item of pasadas(); track item.inscripcion.id) {
-            <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: item }"></ng-container>
+            <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: item, pasada: true }"></ng-container>
           }
         </div>
       </section>
@@ -43,75 +43,88 @@
   }
 </div>
 
-<!-- Plantilla de tarjeta -->
-<ng-template #cardTpl let-item>
-  <article class="ez-card-sm !p-0 overflow-hidden">
-    <div class="p-4 flex items-start gap-3">
-      @if (item.inscripcion.estado !== 'CANCELADO' && thumbQR(item.inscripcion.id); as thumb) {
-        <button type="button" (click)="verQR(item)"
-                class="w-20 h-20 shrink-0 rounded-md bg-white border border-brand-200 hover:border-brand-500 transition p-1 flex items-center justify-center"
-                [title]="'Ampliar QR'">
-          <img [src]="thumb" alt="Código QR" class="w-full h-full object-contain" />
-        </button>
+<ng-template #cardTpl let-item let-pasada="pasada">
+  <article class="ins-card" [class.ins-card--past]="pasada">
+    <header class="ins-card__head">
+      <span class="ins-card__avatar" aria-hidden="true">{{ inicialEvento(item) }}</span>
+      <div class="ins-card__head-main">
+        <h3 class="ins-card__title">{{ item.evento?.nombre ?? 'Evento' }}</h3>
+        <span
+          class="ins-card__badge"
+          [class.ins-card__badge--ok]="item.inscripcion.estado === 'INSCRITO'"
+          [class.ins-card__badge--muted]="item.inscripcion.estado === 'CANCELADO'">
+          {{ item.inscripcion.estado }}
+        </span>
+      </div>
+    </header>
+
+    <div class="ins-card__media">
+      @if (item.evento?.imagen) {
+        <img [src]="item.evento!.imagen!" [alt]="item.evento!.nombre" />
       } @else {
-        <div class="w-12 h-12 shrink-0 rounded-md bg-brand-50 text-brand-700 flex items-center justify-center">
-          <i class="pi pi-calendar text-lg"></i>
+        <div class="ins-card__media-placeholder">
+          <i class="pi pi-image"></i>
         </div>
       }
-      <div class="flex-1 min-w-0">
-        <div class="flex items-start justify-between gap-2">
-          <h3 class="font-bold text-brand-800 truncate font-display">
-            {{ item.evento?.nombre ?? 'Evento eliminado' }}
-          </h3>
-          <span class="ez-badge"
-                [ngClass]="{
-                  'ez-badge-activo': item.inscripcion.estado === 'ASISTIO',
-                  'ez-badge-disponible': item.inscripcion.estado === 'INSCRITO',
-                  'ez-badge-cancelado': item.inscripcion.estado === 'CANCELADO'
-                }">
-            {{ item.inscripcion.estado }}
-          </span>
-        </div>
-        @if (item.evento) {
-          <div class="text-[12px] text-surface-600 flex items-center gap-2 mt-1">
-            <i class="pi pi-calendar text-[10px]"></i>
-            <span>{{ item.evento.fecha | date: 'dd MMM yyyy · HH:mm' }}</span>
-          </div>
-          @if (item.evento.ubicacion) {
-            <div class="text-[12px] text-surface-600 flex items-center gap-2 mt-0.5">
-              <i class="pi pi-map-marker text-[10px]"></i>
-              <span class="truncate">{{ item.evento.ubicacion }}</span>
-            </div>
-          }
-        }
-        @if (item.inscripcion.fechaCheckIn) {
-          <div class="text-[11px] text-accent-600 mt-2">
-            <i class="pi pi-check-circle"></i>
-            Check-in: {{ item.inscripcion.fechaCheckIn | date: 'dd/MM HH:mm' }}
-            @if (item.inscripcion.fechaCheckOut) {
-              · Salida: {{ item.inscripcion.fechaCheckOut | date: 'HH:mm' }}
-            }
-          </div>
-        }
-      </div>
     </div>
 
-    <div class="px-4 py-3 border-t border-surface-100 flex items-center justify-end gap-2">
-      @if (item.inscripcion.estado !== 'CANCELADO') {
-        <button type="button" class="ez-btn-outline ez-btn-sm" (click)="verQR(item)">
-          <i class="pi pi-qrcode text-[10px]"></i> Ver Mi QR
-        </button>
+    <div class="ins-card__body">
+      <p class="ins-card__org-label">Organizador</p>
+      <ul class="ins-card__org-list">
+        <li>
+          <span class="ins-card__org-k">Nombre:</span>
+          {{ item.evento?.organizadorNombre ?? '—' }}
+        </li>
+        <li>
+          <span class="ins-card__org-k">Contacto:</span>
+          {{ item.evento?.organizadorEmail ?? '—' }}
+        </li>
+      </ul>
+
+      @if (item.evento?.descripcion) {
+        <p class="ins-card__desc">{{ item.evento!.descripcion }}</p>
       }
+
+      @if (item.evento) {
+        <app-aforo-bar
+          [value]="item.evento.aforoActual"
+          [max]="item.evento.aforoMaximo"
+          containerClass="ins-card__aforo"
+        />
+      }
+
+      @if (item.inscripcion.fechaCheckIn) {
+        <div class="text-[11px] text-accent-700 flex items-center gap-1.5 flex-wrap">
+          <i class="pi pi-check-circle"></i>
+          Check-in {{ item.inscripcion.fechaCheckIn | date: 'dd/MM HH:mm' }}
+          @if (item.inscripcion.fechaCheckOut) {
+            <span class="text-surface-400">·</span>
+            <span>Salida {{ item.inscripcion.fechaCheckOut | date: 'HH:mm' }}</span>
+          }
+        </div>
+      }
+    </div>
+
+    <footer class="ins-card__foot">
       @if (item.inscripcion.estado === 'INSCRITO') {
-        <button type="button" class="ez-btn-danger ez-btn-sm" (click)="cancelar(item)">
+        <button type="button" class="ins-btn-ghost" (click)="cancelar(item)">
           <i class="pi pi-times text-[10px]"></i> Cancelar
         </button>
       }
-    </div>
+      @if (item.evento?.id) {
+        <a [routerLink]="['/eventos', item.evento!.id]" [queryParams]="{ retorno: 'mis-inscripciones' }" class="ins-btn-primary">
+          <i class="pi pi-eye text-[10px]"></i> Ver detalles
+        </a>
+      }
+      @if (item.inscripcion.estado !== 'CANCELADO') {
+        <button type="button" class="ins-btn-primary" (click)="verQR(item)">
+          <i class="pi pi-qrcode text-[10px]"></i> Ver mi QR
+        </button>
+      }
+    </footer>
   </article>
 </ng-template>
 
-<!-- Diálogo del QR -->
 <p-dialog
   [visible]="qrAbierto() !== null"
   (visibleChange)="!$event && cerrarQR()"

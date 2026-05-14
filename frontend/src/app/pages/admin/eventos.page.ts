@@ -11,7 +11,7 @@ import { MessageService } from 'primeng/api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { EventoApi } from '../../core/api/evento.api';
 import { UsuarioApi } from '../../core/api/usuario.api';
-import { EstadoEvento, Evento, Usuario } from '../../core/models/domain.models';
+import { EstadoEvento, Evento, EventoNovedad, Usuario } from '../../core/models/domain.models';
 import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 import { AforoBarComponent } from '../../shared/aforo-bar/aforo-bar.component';
 import { eventoEstadoLabel, eventoEstadoSeverity } from '../../shared/estado.helpers';
@@ -59,11 +59,15 @@ export class AdminEventosPage {
 
   readonly mostrarModalRechazo = signal(false);
   readonly eventoARechazar = signal<Evento | null>(null);
+  /** Rechazo de alta/revisión vs rechazo de solicitud de cancelación. */
+  readonly tipoRechazo = signal<'evento' | 'cancelacion'>('evento');
   motivoRechazo = '';
 
   readonly mostrarModalDetalle = signal(false);
   readonly eventoDetalle = signal<Evento | null>(null);
   readonly cargandoDetalleModal = signal(false);
+  readonly novedades = signal<EventoNovedad[]>([]);
+  readonly cargandoNovedades = signal(false);
 
   estadoLabel = eventoEstadoLabel;
   estadoSeverity = eventoEstadoSeverity;
@@ -73,6 +77,9 @@ export class AdminEventosPage {
     return {
       total: items.length,
       pendientes: items.filter((e) => e.estado === 'PENDIENTE').length,
+      revision: items.filter((e) => e.estado === 'PENDIENTE_REVISION').length,
+      suplemento: items.filter((e) => e.estado === 'PENDIENTE_SUPLEMENTO').length,
+      pendCancel: items.filter((e) => e.estado === 'PENDIENTE_CANCELACION').length,
       aprobados: items.filter((e) => e.estado === 'APROBADO').length,
       activos: items.filter((e) => e.estado === 'ACTIVO').length,
       rechazados: items.filter((e) => e.estado === 'RECHAZADO').length,
@@ -109,7 +116,17 @@ export class AdminEventosPage {
       );
     }
     lista.sort((a, b) => {
-      const orden = { PENDIENTE: 0, APROBADO: 1, ACTIVO: 2, FINALIZADO: 3, RECHAZADO: 4, CANCELADO: 5 } as const;
+      const orden = {
+        PENDIENTE: 0,
+        PENDIENTE_REVISION: 1,
+        PENDIENTE_SUPLEMENTO: 2,
+        PENDIENTE_CANCELACION: 3,
+        APROBADO: 4,
+        ACTIVO: 5,
+        FINALIZADO: 6,
+        RECHAZADO: 7,
+        CANCELADO: 8
+      } as const;
       const oa = orden[a.estado as keyof typeof orden] ?? 9;
       const ob = orden[b.estado as keyof typeof orden] ?? 9;
       if (oa !== ob) return oa - ob;
@@ -187,6 +204,8 @@ export class AdminEventosPage {
     this.eventoDetalle.set(e);
     this.mostrarModalDetalle.set(true);
     this.cargandoDetalleModal.set(true);
+    this.novedades.set([]);
+    this.cargarNovedades(e.id);
     this.eventoApi.obtener(e.id).subscribe({
       next: (fresh) => {
         this.eventoDetalle.set(fresh);
@@ -209,6 +228,127 @@ export class AdminEventosPage {
     this.mostrarModalDetalle.set(false);
     this.eventoDetalle.set(null);
     this.cargandoDetalleModal.set(false);
+    this.novedades.set([]);
+  }
+
+  private cargarNovedades(eventoId: number) {
+    this.cargandoNovedades.set(true);
+    this.eventoApi.listarNovedades(eventoId).subscribe({
+      next: (lista) => {
+        this.novedades.set(lista);
+        this.cargandoNovedades.set(false);
+      },
+      error: () => {
+        this.novedades.set([]);
+        this.cargandoNovedades.set(false);
+      }
+    });
+  }
+
+  labelTipoNovedad(t: EventoNovedad['tipo']): string {
+    const m: Record<EventoNovedad['tipo'], string> = {
+      EDICION_METADATOS: 'Edición datos',
+      EDICION_TIPO_CATEGORIA: 'Tipo / categoría',
+      AUMENTO_HORAS: 'Aumento de horas',
+      DISMINUCION_HORAS: 'Disminución de horas',
+      CANCELACION_SOLICITUD: 'Cancelación'
+    };
+    return m[t] ?? t;
+  }
+
+  labelEstadoNovedad(est: EventoNovedad['estado']): string {
+    const m: Record<EventoNovedad['estado'], string> = {
+      PENDIENTE: 'Pendiente',
+      APROBADO: 'Aprobado',
+      RECHAZADO: 'Rechazado'
+    };
+    return m[est] ?? est;
+  }
+
+  /** Texto claro para el admin a partir del JSON guardado en backend. */
+  detalleNovedadLegible(n: EventoNovedad): string {
+    const raw = n.detalleJson?.trim();
+    if (!raw) return '';
+    try {
+      const d = JSON.parse(raw) as Record<string, unknown>;
+      const out: string[] = [];
+      const ep = d['estadoPrevio'];
+      if (typeof ep === 'string' && ep.length > 0) {
+        out.push(`Estado del evento antes de la solicitud: ${ep}.`);
+      }
+      if (n.tipo === 'CANCELACION_SOLICITUD') {
+        const motivo = d['motivo'];
+        if (typeof motivo === 'string' && motivo.trim()) {
+          out.push(`Motivo indicado por el organizador: ${motivo.trim()}`);
+        }
+        out.push(`Valor pagado a la plataforma: ${this.formatCop(d['valorPagadoPlataforma'])}.`);
+        out.push(`Reembolso orientativo al 70%: ${this.formatCop(d['reembolsoPropuesto70'])}.`);
+        return out.join('\n');
+      }
+      if (n.tipo === 'AUMENTO_HORAS') {
+        out.push(
+          `Duración: ${d['horasAntes'] ?? '—'} h → ${d['horasDespues'] ?? '—'} h. Monto ya aprobado/pagado: ${this.formatCop(d['montoPagadoPrevio'])}; complemento registrado en la solicitud: ${this.formatCop(d['montoAdicional'])}.`
+        );
+        this.appendEventoAntesLines(out, d['eventoAntes']);
+        return out.join('\n');
+      }
+      if (n.tipo === 'DISMINUCION_HORAS') {
+        out.push(
+          `Duración: ${d['horasAntes'] ?? '—'} h → ${d['horasDespues'] ?? '—'} h (${d['horasReducidas'] ?? '—'} h menos). Penalización estimada (referencia): ${this.formatCop(d['penalizacionEstimada'])}.`
+        );
+        this.appendEventoAntesLines(out, d['eventoAntes']);
+        return out.join('\n');
+      }
+      const res = d['resumen'];
+      if (typeof res === 'string' && res.trim()) {
+        out.push(`Resumen de la solicitud: ${res.trim()}.`);
+      }
+      out.push('Valores previos a la solicitud (referencia si rechazas y se revierte):');
+      this.appendEventoAntesLines(out, d['eventoAntes']);
+      return out.join('\n');
+    } catch {
+      return raw;
+    }
+  }
+
+  private formatCop(v: unknown): string {
+    const n = typeof v === 'number' ? v : Number(v);
+    if (Number.isNaN(n)) return '—';
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      maximumFractionDigits: 0
+    }).format(n);
+  }
+
+  private formatFechaLegible(iso: unknown): string {
+    if (typeof iso !== 'string' || !iso.trim()) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  private appendEventoAntesLines(out: string[], raw: unknown): void {
+    if (!raw || typeof raw !== 'object') {
+      out.push('• (Sin detalle estructurado del evento anterior.)');
+      return;
+    }
+    const ea = raw as Record<string, unknown>;
+    const line = (label: string, val: string) => out.push(`• ${label}: ${val}`);
+    if (ea['nombre'] != null) line('Nombre', String(ea['nombre']));
+    if (ea['descripcion'] != null) {
+      const t = String(ea['descripcion']);
+      line('Descripción', t.length > 400 ? `${t.slice(0, 400)}…` : t);
+    }
+    if (ea['fecha'] != null) line('Inicio (antes)', this.formatFechaLegible(ea['fecha']));
+    if (ea['fechaFin'] != null) line('Fin (antes)', this.formatFechaLegible(ea['fechaFin']));
+    if (ea['ubicacion'] != null) line('Ubicación', String(ea['ubicacion']));
+    if (ea['aforoMaximo'] != null) line('Aforo máximo', String(ea['aforoMaximo']));
+    if (ea['tipoEvento'] != null) line('Modalidad', String(ea['tipoEvento']));
+    if (ea['categoria'] != null) line('Categoría', String(ea['categoria']));
+    if (ea['duracionHoras'] != null) line('Duración (h)', String(ea['duracionHoras']));
+    if (ea['costo'] != null) line('Costo/tarifa (antes)', this.formatCop(ea['costo']));
+    if (ea['imagen'] != null && String(ea['imagen']).trim()) line('Imagen (URL)', String(ea['imagen']));
   }
 
   abrirRechazoDesdeDetalle() {
@@ -216,12 +356,31 @@ export class AdminEventosPage {
     if (!e) return;
     this.mostrarModalDetalle.set(false);
     this.eventoDetalle.set(null);
+    this.novedades.set([]);
     this.abrirRechazo(e);
+  }
+
+  abrirRechazoCancelacionDesdeDetalle() {
+    const e = this.eventoDetalle();
+    if (!e) return;
+    this.mostrarModalDetalle.set(false);
+    this.eventoDetalle.set(null);
+    this.novedades.set([]);
+    this.abrirRechazoCancelacion(e);
   }
 
   subtituloModalDetalle(e: Evento): string {
     if (e.estado === 'PENDIENTE') {
       return 'Solicitud pendiente de revisión (alta o cambios del organizador). Revisa todos los datos antes de decidir.';
+    }
+    if (e.estado === 'PENDIENTE_REVISION') {
+      return 'Cambios pendientes de aprobación. Si apruebas, el evento vuelve al estado previo sin nuevo cobro (salvo que el resumen indique lo contrario).';
+    }
+    if (e.estado === 'PENDIENTE_SUPLEMENTO') {
+      return 'El organizador amplió horas: debe pagar solo el excedente y subir comprobante. Revisa el pago adicional antes de aprobar.';
+    }
+    if (e.estado === 'PENDIENTE_CANCELACION') {
+      return 'Solicitud de cancelación: revisa el motivo y el historial de pagos. Si apruebas, el evento queda cancelado (devolución orientativa 70% al organizador).';
     }
     return 'Información completa del evento en la plataforma.';
   }
@@ -231,9 +390,36 @@ export class AdminEventosPage {
   }
 
   abrirRechazo(e: Evento) {
+    this.tipoRechazo.set('evento');
     this.eventoARechazar.set(e);
     this.motivoRechazo = '';
     this.mostrarModalRechazo.set(true);
+  }
+
+  abrirRechazoCancelacion(e: Evento) {
+    this.tipoRechazo.set('cancelacion');
+    this.eventoARechazar.set(e);
+    this.motivoRechazo = '';
+    this.mostrarModalRechazo.set(true);
+  }
+
+  aprobarCancelacion(e: Evento) {
+    const adminId = this.store.usuario()?.id;
+    this.procesando.set(e.id);
+    this.eventoApi.aprobarCancelacion(e.id, adminId).subscribe({
+      next: (actualizado) => {
+        this.procesando.set(null);
+        this.actualizarEvento(actualizado);
+        this.cerrarDetalleSiCorresponde(actualizado.id);
+        this.messages.add({
+          severity: 'success',
+          summary: 'Cancelación aprobada',
+          detail: `"${actualizado.nombre}" quedó cancelado.`,
+          life: 4000
+        });
+      },
+      error: () => this.procesando.set(null)
+    });
   }
 
   confirmarRechazo() {
@@ -248,19 +434,28 @@ export class AdminEventosPage {
       return;
     }
     const adminId = this.store.usuario()?.id;
+    const tipo = this.tipoRechazo();
     this.procesando.set(e.id);
-    this.eventoApi.rechazar(e.id, this.motivoRechazo.trim(), adminId).subscribe({
+    const req =
+      tipo === 'cancelacion'
+        ? this.eventoApi.rechazarCancelacion(e.id, this.motivoRechazo.trim(), adminId)
+        : this.eventoApi.rechazar(e.id, this.motivoRechazo.trim(), adminId);
+    req.subscribe({
       next: (actualizado) => {
         this.procesando.set(null);
         this.mostrarModalRechazo.set(false);
         this.actualizarEvento(actualizado);
         this.cerrarDetalleSiCorresponde(actualizado.id);
+        const esCancel = tipo === 'cancelacion';
         this.messages.add({
           severity: 'success',
-          summary: 'Evento rechazado',
-          detail: `"${e.nombre}" fue rechazado con el motivo enviado al organizador.`,
+          summary: esCancel ? 'Solicitud de cancelación rechazada' : 'Evento rechazado',
+          detail: esCancel
+            ? `Se devolvió el evento al estado operativo y se notificó al organizador.`
+            : `"${e.nombre}" fue rechazado con el motivo enviado al organizador.`,
           life: 4000
         });
+        this.tipoRechazo.set('evento');
       },
       error: () => this.procesando.set(null)
     });
@@ -269,6 +464,7 @@ export class AdminEventosPage {
   cerrarRechazo() {
     this.mostrarModalRechazo.set(false);
     this.eventoARechazar.set(null);
+    this.tipoRechazo.set('evento');
   }
 
   private actualizarEvento(e: Evento) {
@@ -280,6 +476,7 @@ export class AdminEventosPage {
       this.mostrarModalDetalle.set(false);
       this.eventoDetalle.set(null);
       this.cargandoDetalleModal.set(false);
+      this.novedades.set([]);
     }
   }
 }

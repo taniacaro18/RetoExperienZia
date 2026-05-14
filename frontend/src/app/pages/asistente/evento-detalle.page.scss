@@ -1,0 +1,13 @@
+@use './asistente-inscripciones-ui';
+
+.ins-detalle-wrap {
+  max-width: 52rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ins-actions {
+  border-radius: 1.25rem;
+  border: 1px solid var(--brand-100);
+  box-shadow: 0 4px 20px rgba(78, 42, 111, 0.07);
+}

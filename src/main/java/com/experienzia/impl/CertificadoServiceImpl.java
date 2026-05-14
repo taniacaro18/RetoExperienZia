@@ -120,6 +120,13 @@ public class CertificadoServiceImpl implements CertificadoService {
             dto.setNombreEvento(ev.getNombre());
             dto.setFechaEvento(ev.getFecha());
             dto.setDuracionHoras(ev.getDuracionHoras());
+            if (ev.getUbicacion() != null && !ev.getUbicacion().isBlank()) {
+                dto.setCiudadExpedicion(ev.getUbicacion().trim());
+            }
+            if (ev.getOrganizadorId() != null) {
+                usuarioRepository.findById(ev.getOrganizadorId())
+                        .ifPresent(org -> dto.setNombreOrganizador(org.getNombre()));
+            }
         }
         return dto;
     }

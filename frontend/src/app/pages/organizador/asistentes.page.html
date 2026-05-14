@@ -135,7 +135,6 @@
               <th>Documento</th>
               <th>Estado</th>
               <th>Inscripción</th>
-              <th class="!text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -171,16 +170,6 @@
                 </td>
                 <td class="text-surface-700 !text-xs">
                   {{ a.fechaInscripcion ? (a.fechaInscripcion | date: 'dd/MM/yyyy') : '—' }}
-                </td>
-                <td>
-                  <div class="flex items-center justify-end gap-2 flex-wrap">
-                    <button type="button"
-                            (click)="reenviarCredenciales(a)"
-                            class="ez-btn-secondary ez-btn-sm">
-                      <i class="pi pi-send text-[10px]"></i>
-                      Reenviar
-                    </button>
-                  </div>
                 </td>
               </tr>
             }

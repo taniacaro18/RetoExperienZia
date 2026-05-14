@@ -29,6 +29,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -77,6 +78,7 @@ public class InscripcionServiceImpl implements InscripcionService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public InscripcionDTO inscribirOrganizadorEnSuEvento(Long eventoId) {
         Evento evento = eventoRepository.findById(eventoId)
                 .orElseThrow(() -> new CustomException("El evento no existe.", HttpStatus.NOT_FOUND));

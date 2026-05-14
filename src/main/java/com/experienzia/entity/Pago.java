@@ -60,6 +60,13 @@ public class Pago {
     @Column(nullable = false)
     private double monto;
 
+    /**
+     * Si no es null, el pago en PENDIENTE es un complemento: {@link #monto} es solo el incremento
+     * y este campo guarda el monto ya aprobado previamente (se suman al aprobar el complemento).
+     */
+    @Column(name = "saldo_aprobado_previo")
+    private Double saldoAprobadoPrevio;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoPago estado;

@@ -24,7 +24,6 @@
         <article
           class="bg-white rounded-xl border border-surface-200 shadow-card overflow-hidden hover:shadow-lg hover:border-brand-300 transition-all"
         >
-          <!-- Banner -->
           <div class="h-32 bg-brand-gradient text-white p-5 flex flex-col justify-between">
             <div class="text-[10px] tracking-widest uppercase opacity-90">Certificado</div>
             <div class="text-xs font-mono opacity-90 truncate">{{ c.codigoUnico || c.codigo }}</div>
@@ -68,37 +67,45 @@
   }
 </div>
 
-<!-- Diálogo de detalle del certificado -->
 <p-dialog
   [visible]="seleccionado() !== null"
   (visibleChange)="!$event && cerrar()"
   [modal]="true"
   [closable]="true"
-  header="Certificado de Asistencia"
-  [style]="{ width: '600px' }"
+  header="Certificado de asistencia"
+  [styleClass]="'cert-dialog'"
+  [contentStyle]="{ overflow: 'visible' }"
 >
   @if (seleccionado(); as c) {
-    <!-- Vista previa del certificado -->
-    <div class="rounded-xl overflow-hidden border-2 border-brand-200 p-8 text-center bg-gradient-to-br from-brand-50 to-white">
-      <img src="/logo.png" alt="ExperienZia" class="h-12 w-auto mx-auto mb-3 object-contain" />
-      <div class="text-[11px] tracking-widest uppercase text-brand-700 mb-1">
-        Certificado de Asistencia
+    <div class="cert-shell">
+      <div class="cert-shell__wm" aria-hidden="true">
+        <span class="cert-shell__wm-star">★</span>
+        <span class="cert-shell__wm-brand">ExperienZia</span>
       </div>
-      <div class="text-2xl font-extrabold text-brand-gradient mb-5 font-display">ExperienZia</div>
-      <div class="text-sm text-surface-500">Se certifica que</div>
-      <div class="text-2xl font-bold text-surface-900 my-3">{{ c.nombreAsistente ?? '—' }}</div>
-      <div class="text-sm text-surface-700 leading-relaxed">
-        Asistió y participó en
-        <span class="font-semibold text-brand-700">{{ c.nombreEvento }}</span>
-        @if (c.fechaEvento) {
-          , realizado el <strong>{{ c.fechaEvento | date: 'dd MMM yyyy' }}</strong>
-        }
-        @if (c.duracionHoras) {
-          , con una duración de <strong>{{ c.duracionHoras }} horas</strong>
-        }.
+
+      <div class="cert-shell__body">
+        <h2 class="cert-shell__title">Certificado de asistencia</h2>
+        <p class="cert-shell__p">Este Documento Certifica Que:</p>
+        <p class="cert-shell__name">{{ c.nombreAsistente ?? '—' }}</p>
+        <p class="cert-shell__p">Ha participado satisfactoriamente en el evento:</p>
+        <p class="cert-shell__event">{{ c.nombreEvento ?? '—' }}</p>
+        <p class="cert-shell__p">{{ fraseLineaRealizado(c) }}</p>
+        <p class="cert-shell__p">
+          Por lo cual, se expide el presente certificado en la ciudad de {{ ciudadExpedicion(c) }},
+          {{ fraseExpedicion(c) }}.
+        </p>
       </div>
-      <div class="text-[10px] font-mono text-surface-500 mt-6">
-        Código: {{ c.codigoUnico || c.codigo }}
+
+      <div class="cert-shell__footer">
+        <div>
+          <div class="cert-shell__org">{{ nombreOrganizador(c) }}</div>
+          <div class="cert-shell__line">___________________________</div>
+          <div class="cert-shell__firma-label">Firma Organizador</div>
+        </div>
+        <div class="cert-shell__footer-right">
+          <div class="cert-shell__serial">Serial: {{ serialCertificado(c) }}</div>
+          <div class="cert-shell__validar">Validar autenticidad en: {{ urlValidacionMostrar }}</div>
+        </div>
       </div>
     </div>
 
@@ -111,7 +118,7 @@
         (onClick)="copiarCodigo(c)"
       ></p-button>
       <p-button
-        label="Descargar / Imprimir"
+        label="Descargar PDF"
         icon="pi pi-download"
         styleClass="!bg-brand-600 !border-brand-600 hover:!bg-brand-700"
         (onClick)="descargarPDF()"

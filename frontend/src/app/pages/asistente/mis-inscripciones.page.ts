@@ -1,9 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
-import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -12,6 +9,8 @@ import { InscripcionApi } from '../../core/api/inscripcion.api';
 import { EventoApi } from '../../core/api/evento.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { Evento, Inscripcion } from '../../core/models/domain.models';
+import { AforoBarComponent } from '../../shared/aforo-bar/aforo-bar.component';
+import { eventoVentanaYaCerro } from '../../shared/evento-catalogo.helpers';
 import { forkJoin } from 'rxjs';
 import * as QRCode from 'qrcode';
 
@@ -27,14 +26,13 @@ interface InscripcionConEvento {
     CommonModule,
     DatePipe,
     RouterLink,
-    ButtonModule,
-    TagModule,
-    CardModule,
     DialogModule,
     ProgressSpinnerModule,
-    ConfirmDialogModule
+    ConfirmDialogModule,
+    AforoBarComponent
   ],
-  templateUrl: './mis-inscripciones.page.html'
+  templateUrl: './mis-inscripciones.page.html',
+  styleUrl: './mis-inscripciones.page.scss'
 })
 export class MisInscripcionesPage {
   private readonly inscripcionesApi = inject(InscripcionApi);
@@ -48,16 +46,24 @@ export class MisInscripcionesPage {
   readonly items = signal<InscripcionConEvento[]>([]);
   readonly qrAbierto = signal<InscripcionConEvento | null>(null);
   readonly qrDataUrl = signal<string | null>(null);
-  /** Thumbnails QR pre-generados por inscripción (clave = inscripcionId). */
-  readonly qrThumbs = signal<Record<number, string>>({});
 
-  readonly proximas = computed(() => this.items().filter(i =>
-    i.evento && new Date(i.evento.fecha).getTime() >= Date.now() && i.inscripcion.estado !== 'CANCELADO'
-  ));
+  readonly proximas = computed(() =>
+    this.items().filter(
+      (i) =>
+        i.evento &&
+        i.inscripcion.estado !== 'CANCELADO' &&
+        !eventoVentanaYaCerro(i.evento)
+    )
+  );
 
-  readonly pasadas = computed(() => this.items().filter(i =>
-    !i.evento || new Date(i.evento.fecha).getTime() < Date.now() || i.inscripcion.estado === 'ASISTIO'
-  ));
+  readonly pasadas = computed(() =>
+    this.items().filter(
+      (i) =>
+        !i.evento ||
+        i.inscripcion.estado === 'CANCELADO' ||
+        (i.evento != null && eventoVentanaYaCerro(i.evento))
+    )
+  );
 
   ngOnInit() {
     this.cargar();
@@ -81,15 +87,36 @@ export class MisInscripcionesPage {
               inscripcion,
               evento: eventos[i] ?? null
             }));
-            // Ordenar por fecha de evento desc.
-            combinados.sort((a, b) => {
+            const prioridadEstado = (est: Inscripcion['estado']): number => {
+              if (est === 'CANCELADO') return 0;
+              if (est === 'INSCRITO') return 2;
+              if (est === 'ASISTIO') return 1;
+              return 0;
+            };
+            const dedupePorEvento = (rows: InscripcionConEvento[]): InscripcionConEvento[] => {
+              const porEvento = new Map<number, InscripcionConEvento>();
+              for (const row of rows) {
+                const eid = row.inscripcion.eventoId;
+                const prev = porEvento.get(eid);
+                if (!prev) {
+                  porEvento.set(eid, row);
+                  continue;
+                }
+                const pr = prioridadEstado(row.inscripcion.estado);
+                const pp = prioridadEstado(prev.inscripcion.estado);
+                if (pr > pp) porEvento.set(eid, row);
+                else if (pr === pp && row.inscripcion.id > prev.inscripcion.id) porEvento.set(eid, row);
+              }
+              return [...porEvento.values()];
+            };
+            const sinDuplicados = dedupePorEvento(combinados);
+            sinDuplicados.sort((a, b) => {
               const fa = a.evento ? new Date(a.evento.fecha).getTime() : 0;
               const fb = b.evento ? new Date(b.evento.fecha).getTime() : 0;
               return fb - fa;
             });
-            this.items.set(combinados);
+            this.items.set(sinDuplicados);
             this.cargando.set(false);
-            void this.precomputarThumbsQR(combinados);
           },
           error: () => this.cargando.set(false)
         });
@@ -98,27 +125,9 @@ export class MisInscripcionesPage {
     });
   }
 
-  /** Genera thumbnails QR para todas las inscripciones (no canceladas). */
-  private async precomputarThumbsQR(lista: InscripcionConEvento[]) {
-    const map: Record<number, string> = {};
-    for (const item of lista) {
-      const codigo = item.inscripcion.codigoQR;
-      if (!codigo || item.inscripcion.estado === 'CANCELADO') continue;
-      try {
-        map[item.inscripcion.id] = await QRCode.toDataURL(codigo, {
-          width: 168,
-          margin: 1,
-          color: { dark: '#6D28D9', light: '#FFFFFF' }
-        });
-      } catch {
-        // Si alguno falla seguimos con los demás.
-      }
-    }
-    this.qrThumbs.set(map);
-  }
-
-  thumbQR(id: number): string | undefined {
-    return this.qrThumbs()[id];
+  inicialEvento(item: InscripcionConEvento): string {
+    const n = (item.evento?.nombre ?? '?').trim();
+    return n ? n.charAt(0).toUpperCase() : '?';
   }
 
   async verQR(item: InscripcionConEvento) {
@@ -174,15 +183,6 @@ export class MisInscripcionesPage {
         });
       }
     });
-  }
-
-  estadoSeverity(estado: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
-    switch (estado) {
-      case 'ASISTIO': return 'success';
-      case 'INSCRITO': return 'info';
-      case 'CANCELADO': return 'danger';
-      default: return 'secondary';
-    }
   }
 
   descargarQR() {

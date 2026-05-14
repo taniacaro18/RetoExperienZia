@@ -24,9 +24,19 @@ public class EventoDTO {
     private Integer aforoActual;
     private Double costo;
     private Long organizadorId;
+    /** Nombre del usuario organizador (contacto para asistentes inscritos). */
+    private String organizadorNombre;
+    /** Correo del organizador (solo cuando el API no es catálogo público anonimizado). */
+    private String organizadorEmail;
     private String imagen;
     private String categoria;
     private Integer duracionHoras;
     private String motivoRechazo;
     private String motivoCancelacion;
+    /** Qué pidió cambiar el organizador (solo cuando el evento queda PENDIENTE por edición). */
+    private String resumenSolicitudEdicion;
+    /** Estado previo cuando el evento está en revisión / suplemento / cancelación pendiente. */
+    private EstadoEvento estadoPrevioRevision;
+    /** Mensaje de negocio para el organizador (no persistido; solo respuesta API). */
+    private String alertaNegocio;
 }

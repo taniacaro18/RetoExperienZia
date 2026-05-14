@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Servicio de pagos. El pago lo realiza siempre el ORGANIZADOR del evento
@@ -92,11 +93,24 @@ public class PagoServiceImpl implements PagoService {
                     HttpStatus.FORBIDDEN);
         }
 
-        // Flujo correcto: solo se acepta comprobante cuando el evento ya fue
-        // aprobado preliminarmente por el admin (PASO 2).
-        if (evento.getEstado() != com.experienzia.entity.EstadoEvento.APROBADO) {
+        Optional<Pago> pagoOpt = pagoRepository.findByEventoId(eventoId);
+
+        // Flujo correcto: comprobante cuando el evento ya fue aprobado por admin (APROBADO)
+        // o cuando hay suplemento de pago por horas adicionales (PENDIENTE_SUPLEMENTO).
+        // Caso defensivo: estado ACTIVO pero fila de pago en complemento pendiente (delta + saldo).
+        boolean complementoPendienteEnActivo =
+                evento.getEstado() == com.experienzia.entity.EstadoEvento.ACTIVO
+                        && pagoOpt.isPresent()
+                        && pagoOpt.get().getEstado() == EstadoPago.PENDIENTE
+                        && pagoOpt.get().getSaldoAprobadoPrevio() != null
+                        && pagoOpt.get().getSaldoAprobadoPrevio() > 0;
+
+        if (evento.getEstado() != com.experienzia.entity.EstadoEvento.APROBADO
+                && evento.getEstado() != com.experienzia.entity.EstadoEvento.PENDIENTE_SUPLEMENTO
+                && !complementoPendienteEnActivo) {
             throw new CustomException(
-                    "Solo se puede subir el comprobante cuando el evento está APROBADO por el administrador. "
+                    "Solo se puede subir el comprobante cuando el evento está APROBADO por el administrador "
+                            + "o en estado PENDIENTE_SUPLEMENTO (pago adicional por más horas). "
                             + "Estado actual: " + evento.getEstado() + ".",
                     HttpStatus.BAD_REQUEST);
         }
@@ -107,13 +121,31 @@ public class PagoServiceImpl implements PagoService {
                     HttpStatus.BAD_REQUEST);
         }
 
-        Optional<Pago> existente = pagoRepository.findByEventoId(eventoId);
+        Optional<Pago> existente = pagoOpt;
         if (existente.isPresent()) {
             EstadoPago est = existente.get().getEstado();
-            if (est == EstadoPago.APROBADO || est == EstadoPago.PENDIENTE) {
+            if (est == EstadoPago.APROBADO) {
                 throw new CustomException(
-                        "Ya existe un pago activo (PENDIENTE o APROBADO) para este evento.",
+                        "Ya existe un pago aprobado para este evento.",
                         HttpStatus.CONFLICT);
+            }
+            if (est == EstadoPago.PENDIENTE || est == EstadoPago.RECHAZADO) {
+                Pago ex = existente.get();
+                String viejo = ex.getComprobanteUrl();
+                if (viejo != null && !viejo.isBlank()) {
+                    fileStorageService.borrarComprobantePublico(viejo);
+                }
+                String comprobanteUrl = fileStorageService.guardarComprobante(archivo);
+                ex.setComprobanteUrl(comprobanteUrl);
+                ex.setEstado(EstadoPago.PENDIENTE);
+                ex.setMotivoRechazo(null);
+                ex.setFecha(LocalDateTime.now());
+                if (ex.getSaldoAprobadoPrevio() == null) {
+                    ex.setMonto(evento.getCosto());
+                }
+                Pago guardado = pagoRepository.save(ex);
+                auditoriaService.registrar(organizadorId, "PAGO_REGISTRADO", "Pago", guardado.getId(), direccionIp);
+                return toDto(guardado);
             }
         }
 
@@ -136,6 +168,7 @@ public class PagoServiceImpl implements PagoService {
 
     @Override
     public PagoDTO aprobar(Long pagoId, Long aprobadorId, String direccionIp) {
+        assertAdministradorPuedeGestionarPagos(aprobadorId);
         Pago pago = pagoRepository.findById(pagoId)
                 .orElseThrow(() -> new CustomException("El pago no existe.", HttpStatus.NOT_FOUND));
         if (pago.getEstado() != EstadoPago.PENDIENTE) {
@@ -145,6 +178,20 @@ public class PagoServiceImpl implements PagoService {
         pago.setMotivoRechazo(null);
         pago.setAprobadorId(aprobadorId);
         pago.setFechaResolucion(LocalDateTime.now());
+
+        /** Comprobante de complemento (delta sobre monto ya aprobado); el evento puede seguir ACTIVO u otro estado. */
+        AtomicBoolean teniaSaldoComplemento = new AtomicBoolean(false);
+        eventoRepository.findById(pago.getEventoId()).ifPresent(ev -> {
+            double total = ev.getCosto();
+            if (pago.getSaldoAprobadoPrevio() != null) {
+                teniaSaldoComplemento.set(true);
+                pago.setMonto(pago.getSaldoAprobadoPrevio() + pago.getMonto());
+                pago.setSaldoAprobadoPrevio(null);
+            } else if (Math.abs(pago.getMonto() - total) > 0.02) {
+                pago.setMonto(total);
+            }
+        });
+
         Pago guardado = pagoRepository.save(pago);
 
         // Notificar al organizador, activar el evento y auto-inscribirlo como
@@ -153,10 +200,20 @@ public class PagoServiceImpl implements PagoService {
                 "Tu pago de la tarifa fue aprobado. Tu evento ha sido activado.",
                 TipoNotificacion.INFO);
         try {
-            eventoService.activarPorPago(guardado.getEventoId());
+            Evento ev = eventoRepository.findById(guardado.getEventoId()).orElse(null);
+            if (ev == null) {
+                // no-op
+            } else if (ev.getEstado() == com.experienzia.entity.EstadoEvento.PENDIENTE_SUPLEMENTO) {
+                eventoService.activarTrasSuplementoPago(guardado.getEventoId());
+            } else if (ev.getEstado() == com.experienzia.entity.EstadoEvento.APROBADO) {
+                eventoService.activarPorPago(guardado.getEventoId());
+            } else if (teniaSaldoComplemento.get()) {
+                // Complemento aprobado: no llamar activarPorPago (exige APROBADO); evita marcar la TX rollback-only.
+                eventoService.resolverComplementoPagoSobreEventoActivo(guardado.getEventoId());
+            }
             inscripcionService.inscribirOrganizadorEnSuEvento(guardado.getEventoId());
-        } catch (CustomException ignored) {
-            // El evento puede no estar APROBADO; lo dejamos como está.
+        } catch (RuntimeException ex) {
+            // El pago ya quedó APROBADO; no revertir si activación o inscripción del organizador falla por estado/cupo.
         }
 
         auditoriaService.registrar(aprobadorId, "PAGO_APROBADO", "Pago", guardado.getId(), direccionIp);
@@ -168,15 +225,32 @@ public class PagoServiceImpl implements PagoService {
         if (motivo == null || motivo.isBlank()) {
             throw new CustomException("El motivo de rechazo es obligatorio.", HttpStatus.BAD_REQUEST);
         }
+        assertAdministradorPuedeGestionarPagos(aprobadorId);
         Pago pago = pagoRepository.findById(pagoId)
                 .orElseThrow(() -> new CustomException("El pago no existe.", HttpStatus.NOT_FOUND));
         if (pago.getEstado() != EstadoPago.PENDIENTE) {
             throw new CustomException("Solo se pueden rechazar pagos PENDIENTES.", HttpStatus.BAD_REQUEST);
         }
+        if (pago.getSaldoAprobadoPrevio() != null) {
+            // Rechazo del comprobante del suplemento: el organizador debe subir otro; el pago sigue PENDIENTE.
+            pago.setComprobanteUrl(null);
+            pago.setMotivoRechazo(motivo.trim());
+            pago.setAprobadorId(aprobadorId);
+            pago.setFechaResolucion(LocalDateTime.now());
+            Pago guardadoSup = pagoRepository.save(pago);
+            notificacionService.crear(guardadoSup.getOrganizadorId(),
+                    "El comprobante del pago adicional fue rechazado. Motivo: " + motivo.trim()
+                            + ". Sube un nuevo comprobante por la diferencia pendiente.",
+                    TipoNotificacion.ALERTA);
+            auditoriaService.registrar(aprobadorId, "PAGO_RECHAZADO", "Pago", guardadoSup.getId(), direccionIp);
+            return toDto(guardadoSup);
+        }
+
         pago.setEstado(EstadoPago.RECHAZADO);
         pago.setMotivoRechazo(motivo.trim());
         pago.setAprobadorId(aprobadorId);
         pago.setFechaResolucion(LocalDateTime.now());
+
         Pago guardado = pagoRepository.save(pago);
 
         notificacionService.crear(guardado.getOrganizadorId(),
@@ -218,6 +292,28 @@ public class PagoServiceImpl implements PagoService {
             dto.setNombreOrganizador(u.getNombre());
             dto.setEmailOrganizador(u.getEmail());
         });
+        dto.setSaldoAprobadoPrevio(pago.getSaldoAprobadoPrevio());
         return dto;
+    }
+
+    private void assertAdministradorPuedeGestionarPagos(Long aprobadorId) {
+        if (aprobadorId == null) {
+            throw new CustomException(
+                    "Debes indicar el identificador del administrador que aprueba o rechaza el pago (aprobadorId).",
+                    HttpStatus.BAD_REQUEST);
+        }
+        Usuario u = usuarioRepository
+                .findById(aprobadorId)
+                .orElseThrow(() -> new CustomException("El usuario aprobador no existe.", HttpStatus.NOT_FOUND));
+        if (u.getRol() != Rol.ADMIN) {
+            throw new CustomException(
+                    "Solo un usuario con rol ADMINISTRADOR puede aprobar o rechazar pagos de eventos.",
+                    HttpStatus.FORBIDDEN);
+        }
+        if (u.getEstado() != com.experienzia.entity.Estado.ACTIVO) {
+            throw new CustomException(
+                    "La cuenta del administrador no está activa; no puede gestionar pagos.",
+                    HttpStatus.FORBIDDEN);
+        }
     }
 }

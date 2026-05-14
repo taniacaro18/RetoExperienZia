@@ -1,0 +1,119 @@
+/* Plantilla certificado de asistencia (alineada con PDF oficial) */
+
+.cert-dialog {
+  width: min(920px, 94vw) !important;
+  max-width: 94vw;
+}
+
+.cert-shell {
+  position: relative;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  color: #000;
+  background: #a78bfa;
+  border-radius: 4px;
+  min-height: 380px;
+  padding: 2.25rem 2.5rem 1.75rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.cert-shell__wm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: #fff;
+  opacity: 0.14;
+  user-select: none;
+}
+
+.cert-shell__wm-star {
+  font-size: 5.5rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.cert-shell__wm-brand {
+  font-size: 2.35rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-top: 0.35rem;
+}
+
+.cert-shell__body {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.cert-shell__title {
+  margin: 0 0 1.1rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cert-shell__p {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.cert-shell__name {
+  margin: 0.35rem 0 0.85rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.cert-shell__event {
+  margin: 0.25rem 0 0.85rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.cert-shell__footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem;
+  margin-top: 1.75rem;
+  padding-top: 0.25rem;
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+.cert-shell__footer-right {
+  text-align: right;
+}
+
+.cert-shell__org {
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+}
+
+.cert-shell__line {
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin: 0.1rem 0 0.2rem;
+}
+
+.cert-shell__firma-label {
+  font-weight: 400;
+}
+
+.cert-shell__serial {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.cert-shell__validar {
+  font-weight: 700;
+}

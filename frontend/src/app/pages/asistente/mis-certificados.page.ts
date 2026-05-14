@@ -9,6 +9,7 @@ import { MessageService } from 'primeng/api';
 import { CertificadoApi } from '../../core/api/certificado.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { Certificado } from '../../core/models/domain.models';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-mis-certificados-page',
@@ -22,7 +23,8 @@ import { Certificado } from '../../core/models/domain.models';
     DialogModule,
     ProgressSpinnerModule
   ],
-  templateUrl: './mis-certificados.page.html'
+  templateUrl: './mis-certificados.page.html',
+  styleUrl: './mis-certificados.page.scss'
 })
 export class MisCertificadosPage {
   private readonly api = inject(CertificadoApi);
@@ -34,6 +36,9 @@ export class MisCertificadosPage {
   readonly seleccionado = signal<Certificado | null>(null);
 
   readonly hayCertificados = computed(() => this.certificados().length > 0);
+
+  /** Igual que el PDF del backend (serial legible en el pie). */
+  readonly urlValidacionMostrar = 'experienzia.com/validar';
 
   ngOnInit() {
     const u = this.auth.usuario();
@@ -58,85 +63,88 @@ export class MisCertificadosPage {
   copiarCodigo(c: Certificado) {
     const codigo = c.codigoUnico || c.codigo || '';
     navigator.clipboard?.writeText(codigo).then(
-      () => this.messages.add({
-        severity: 'success',
-        summary: 'Copiado',
-        detail: 'Código del certificado copiado al portapapeles.',
-        life: 2500
-      }),
-      () => this.messages.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudo copiar al portapapeles.'
-      })
+      () =>
+        this.messages.add({
+          severity: 'success',
+          summary: 'Copiado',
+          detail: 'Código del certificado copiado al portapapeles.',
+          life: 2500
+        }),
+      () =>
+        this.messages.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo copiar al portapapeles.'
+        })
     );
   }
 
+  /** Abre el PDF oficial generado en servidor (misma plantilla que validación). */
   descargarPDF() {
     const c = this.seleccionado();
     if (!c) return;
-    // Versión imprimible mínima (canvas → blob). El backend no genera PDF aún.
-    const ventana = window.open('', '_blank');
+    const codigo = (c.codigoUnico || c.codigo || '').trim();
+    if (!codigo) {
+      this.messages.add({
+        severity: 'warn',
+        summary: 'Sin código',
+        detail: 'Este certificado no tiene código para descargar el PDF.'
+      });
+      return;
+    }
+    const url = `${environment.apiUrl}/api/certificados/pdf/${encodeURIComponent(codigo)}`;
+    const ventana = window.open(url, '_blank');
     if (!ventana) {
       this.messages.add({
         severity: 'warn',
         summary: 'Bloqueado',
         detail: 'Habilita las ventanas emergentes para descargar el certificado.'
       });
-      return;
     }
-    ventana.document.write(this.htmlImprimible(c));
-    ventana.document.close();
-    ventana.focus();
-    setTimeout(() => ventana.print(), 400);
   }
 
-  private htmlImprimible(c: Certificado): string {
-    const fechaEvento = c.fechaEvento ? new Date(c.fechaEvento).toLocaleDateString('es-CO', {
-      year: 'numeric', month: 'long', day: '2-digit'
-    }) : '';
-    const fechaGen = new Date(c.fechaGeneracion).toLocaleDateString('es-CO', {
-      year: 'numeric', month: 'long', day: '2-digit'
-    });
-    return `<!doctype html>
-<html><head><meta charset="utf-8"><title>Certificado ${c.codigoUnico || c.codigo || ''}</title>
-<style>
-  @page { size: A4 landscape; margin: 0; }
-  body { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 60px;
-         background: linear-gradient(135deg, #F5F3FF 0%, #FFFFFF 60%); color: #111827;
-         min-height: 100vh; box-sizing: border-box; }
-  .marco { border: 14px solid; border-image: linear-gradient(135deg, #8B5CF6, #6D28D9) 1;
-           padding: 50px; height: calc(100vh - 120px); display: flex; flex-direction: column;
-           justify-content: center; align-items: center; text-align: center; background: white; }
-  .titulo { font-size: 14px; letter-spacing: 6px; color: #6D28D9; text-transform: uppercase; margin-bottom: 8px; }
-  .marca { font-size: 38px; font-weight: 800; background: linear-gradient(135deg, #8B5CF6, #6D28D9);
-           -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 30px; }
-  .otorga { font-size: 16px; color: #6B7280; }
-  .nombre { font-size: 44px; font-weight: 700; margin: 16px 0 24px 0; color: #111827; }
-  .desc { font-size: 18px; color: #374151; max-width: 720px; line-height: 1.5; }
-  .evento { font-weight: 600; color: #6D28D9; }
-  .footer { margin-top: 40px; display: flex; gap: 80px; align-items: center; }
-  .firma { border-top: 2px solid #111827; padding-top: 8px; font-size: 12px; color: #6B7280; min-width: 220px; }
-  .codigo { font-family: monospace; font-size: 11px; color: #6B7280; margin-top: 30px; }
-</style></head>
-<body>
-  <div class="marco">
-    <div class="titulo">Certificado de Asistencia</div>
-    <div class="marca">ExperienZia</div>
-    <div class="otorga">Se certifica que</div>
-    <div class="nombre">${c.nombreAsistente ?? '—'}</div>
-    <div class="desc">
-      Asistió y participó en
-      <span class="evento">${c.nombreEvento ?? 'el evento'}</span>${fechaEvento ? `, realizado el <strong>${fechaEvento}</strong>` : ''}
-      ${c.duracionHoras ? `, con una duración de <strong>${c.duracionHoras} horas</strong>` : ''}.
-    </div>
-    <div class="footer">
-      <div class="firma">Coordinación ExperienZia</div>
-      <div class="firma">Fecha de emisión: ${fechaGen}</div>
-    </div>
-    <div class="codigo">Código de validación: ${c.codigoUnico || c.codigo || ''}</div>
-  </div>
-  <script>setTimeout(()=>window.print(), 200);</script>
-</body></html>`;
+  ciudadExpedicion(c: Certificado): string {
+    const s = (c.ciudadExpedicion ?? '').trim();
+    return s || 'Bogotá';
+  }
+
+  nombreOrganizador(c: Certificado): string {
+    const s = (c.nombreOrganizador ?? '').trim();
+    return s || 'Organizador';
+  }
+
+  fechaEventoTitulada(c: Certificado): string {
+    if (!c.fechaEvento) return '—';
+    const d = new Date(c.fechaEvento);
+    const mes = d.toLocaleString('es-CO', { month: 'long' });
+    const mesCap = mes.charAt(0).toUpperCase() + mes.slice(1);
+    return `${d.getDate()} de ${mesCap} de ${d.getFullYear()}`;
+  }
+
+  fraseLineaRealizado(c: Certificado): string {
+    const fecha = this.fechaEventoTitulada(c);
+    let s = `Realizado el día ${fecha}`;
+    const h = c.duracionHoras;
+    if (h != null && h > 0) {
+      s += `, con una duración total de ${h} ${h === 1 ? 'hora' : 'horas'}.`;
+    } else {
+      s += '.';
+    }
+    return s;
+  }
+
+  fraseExpedicion(c: Certificado): string {
+    const d = new Date(c.fechaGeneracion);
+    const mes = d.toLocaleString('es-CO', { month: 'long' });
+    const mesCap = mes.charAt(0).toUpperCase() + mes.slice(1);
+    return `a los ${d.getDate()} días del mes de ${mesCap} de ${d.getFullYear()}`;
+  }
+
+  serialCertificado(c: Certificado): string {
+    const y = new Date(c.fechaGeneracion).getFullYear();
+    let alnum = (c.codigoUnico || c.codigo || '').replace(/-/g, '').toUpperCase();
+    if (alnum.length > 6) alnum = alnum.slice(0, 6);
+    while (alnum.length < 6) alnum += '0';
+    return `EXP-${y}-${alnum}`;
   }
 }

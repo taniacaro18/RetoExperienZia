@@ -123,6 +123,9 @@ export class AdminDashboardPage {
   readonly segmentosEstadoFiltrados = computed(() => {
     const cols: Record<string, string> = {
       PENDIENTE: '#ca8a04',
+      PENDIENTE_REVISION: '#2563eb',
+      PENDIENTE_SUPLEMENTO: '#ea580c',
+      PENDIENTE_CANCELACION: '#be185d',
       ACTIVO: '#7C49AE',
       APROBADO: '#0891b2',
       FINALIZADO: '#10B981',
@@ -168,9 +171,16 @@ export class AdminDashboardPage {
       next: (lista) => {
         this.todosEventos.set(lista);
         const pend = lista
-          .filter((e) => e.estado === 'PENDIENTE')
+          .filter((e) =>
+            [
+              'PENDIENTE',
+              'PENDIENTE_REVISION',
+              'PENDIENTE_SUPLEMENTO',
+              'PENDIENTE_CANCELACION'
+            ].includes(e.estado)
+          )
           .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
-          .slice(0, 5);
+          .slice(0, 8);
         this.eventosPendientes.set(pend);
       }
     });

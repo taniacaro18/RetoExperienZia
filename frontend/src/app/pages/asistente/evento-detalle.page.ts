@@ -1,11 +1,10 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { distinctUntilChanged, filter, map } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
-import { CardModule } from 'primeng/card';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { DividerModule } from 'primeng/divider';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { EventoApi } from '../../core/api/evento.api';
@@ -14,6 +13,8 @@ import { Evento, Inscripcion } from '../../core/models/domain.models';
 import { AuthStore } from '../../core/auth/auth.store';
 import { eventoVentanaYaCerro } from '../../shared/evento-catalogo.helpers';
 import { eventoEstadoLabel } from '../../shared/estado.helpers';
+import { AforoBarComponent } from '../../shared/aforo-bar/aforo-bar.component';
+import { destinoRetornoEventoDetalle } from '../../core/navigation/retorno-evento-detalle';
 
 @Component({
   selector: 'app-evento-detalle-page',
@@ -23,17 +24,17 @@ import { eventoEstadoLabel } from '../../shared/estado.helpers';
     DatePipe,
     RouterLink,
     ButtonModule,
-    TagModule,
-    CardModule,
     ProgressSpinnerModule,
-    DividerModule,
-    ConfirmDialogModule
+    ConfirmDialogModule,
+    AforoBarComponent
   ],
-  templateUrl: './evento-detalle.page.html'
+  templateUrl: './evento-detalle.page.html',
+  styleUrl: './evento-detalle.page.scss'
 })
-export class EventoDetallePage {
+export class EventoDetallePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly eventosApi = inject(EventoApi);
   private readonly inscripcionesApi = inject(InscripcionApi);
   private readonly auth = inject(AuthStore);
@@ -44,6 +45,8 @@ export class EventoDetallePage {
   readonly evento = signal<Evento | null>(null);
   readonly miInscripcion = signal<Inscripcion | null>(null);
   readonly procesando = signal(false);
+  /** Clave `retorno` del query (solo valores admitidos en `destinoRetornoEventoDetalle`). */
+  readonly retornoKey = signal<string | null>(null);
 
   readonly cuposDisponibles = computed(() => {
     const e = this.evento();
@@ -75,9 +78,12 @@ export class EventoDetallePage {
   });
 
   readonly textoVolver = computed(() => {
+    const porQuery = destinoRetornoEventoDetalle(this.retornoKey());
+    if (porQuery) return porQuery.label;
     const r = this.auth.rol();
     if (r === 'ORGANIZADOR') return 'Volver a mis eventos';
     if (r === 'STAFF') return 'Volver a mis asignaciones';
+    if (r === 'ADMIN') return 'Volver a administración de eventos';
     return 'Volver al catálogo';
   });
 
@@ -89,18 +95,46 @@ export class EventoDetallePage {
     return e.estado;
   });
 
+  /** Cupos libres y evento activo en ventana → chip «Disponible». */
+  readonly mostrarChipDisponible = computed(() => {
+    const e = this.evento();
+    if (!e || e.estado !== 'ACTIVO') return false;
+    if (eventoVentanaYaCerro(e)) return false;
+    return this.cuposDisponibles() > 0;
+  });
+
   readonly eventoEstadoLabelFn = eventoEstadoLabel;
 
   ngOnInit() {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (!id) return;
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((qp) => {
+      const raw = qp.get('retorno');
+      this.retornoKey.set(raw && destinoRetornoEventoDetalle(raw) ? raw : null);
+    });
+
+    this.route.paramMap
+      .pipe(
+        map((pm) => Number(pm.get('id'))),
+        filter((id) => Number.isFinite(id) && id > 0),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((id) => this.cargarEvento(id));
+  }
+
+  private cargarEvento(id: number) {
+    this.cargando.set(true);
+    this.evento.set(null);
+    this.miInscripcion.set(null);
     this.eventosApi.obtener(id).subscribe({
       next: (e) => {
         this.evento.set(e);
         this.cargando.set(false);
         this.cargarMiInscripcion(id);
       },
-      error: () => this.cargando.set(false)
+      error: () => {
+        this.cargando.set(false);
+        this.evento.set(null);
+      }
     });
   }
 
@@ -178,13 +212,30 @@ export class EventoDetallePage {
   }
 
   volver() {
+    const porQuery = destinoRetornoEventoDetalle(this.retornoKey());
+    if (porQuery) {
+      void this.router.navigateByUrl(porQuery.path);
+      return;
+    }
     const r = this.auth.rol();
     if (r === 'ORGANIZADOR') {
-      this.router.navigate(['/organizador/eventos']);
+      void this.router.navigate(['/organizador/eventos']);
     } else if (r === 'STAFF') {
-      this.router.navigate(['/staff/eventos']);
+      void this.router.navigate(['/staff/eventos']);
+    } else if (r === 'ADMIN') {
+      void this.router.navigate(['/admin/eventos']);
     } else {
-      this.router.navigate(['/eventos']);
+      void this.router.navigate(['/eventos']);
     }
+  }
+
+  ventanaCerrada(): boolean {
+    const e = this.evento();
+    return e ? eventoVentanaYaCerro(e) : true;
+  }
+
+  inicialTitulo(e: Evento): string {
+    const n = (e.nombre ?? '?').trim();
+    return n ? n.charAt(0).toUpperCase() : '?';
   }
 }

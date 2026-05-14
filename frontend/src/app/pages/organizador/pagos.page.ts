@@ -57,6 +57,22 @@ export class OrgPagosPage {
   readonly mostrarComprobante = signal(false);
   readonly pagoVisible = signal<Pago | null>(null);
 
+  /** Monto que debe reflejar el archivo (tarifa completa o solo incremento si hay complemento). */
+  readonly montoModalSubida = computed(() => {
+    const ev = this.eventoSeleccionado();
+    if (!ev) return 0;
+    const p = this.pagos().find((x) => x.eventoId === ev.id);
+    if (
+      p?.estado === 'PENDIENTE' &&
+      p.saldoAprobadoPrevio != null &&
+      p.saldoAprobadoPrevio > 0 &&
+      (p.monto ?? 0) > 0
+    ) {
+      return p.monto ?? 0;
+    }
+    return ev.costo ?? 0;
+  });
+
   readonly estadoSeverity = pagoEstadoSeverity;
 
   ngOnInit() {
@@ -88,7 +104,12 @@ export class OrgPagosPage {
     const pagos = this.pagos();
     return this.eventos()
       .filter((e) => {
-        if (e.estado !== 'APROBADO' && e.estado !== 'ACTIVO' && e.estado !== 'FINALIZADO') {
+        if (
+          e.estado !== 'APROBADO' &&
+          e.estado !== 'ACTIVO' &&
+          e.estado !== 'FINALIZADO' &&
+          e.estado !== 'PENDIENTE_SUPLEMENTO'
+        ) {
           return false;
         }
         const tieneTarifa = (e.costo ?? 0) > 0;
@@ -111,9 +132,9 @@ export class OrgPagosPage {
       });
   });
 
-  /** Eventos PENDIENTES de aprobación admin (no aparecen en la lista pero se muestra hint). */
+  /** Eventos aún no listos para el flujo de comprobante (alta o cambios en revisión admin). */
   readonly pendientesAdmin = computed(() =>
-    this.eventos().filter((e) => e.estado === 'PENDIENTE').length
+    this.eventos().filter((e) => e.estado === 'PENDIENTE' || e.estado === 'PENDIENTE_REVISION').length
   );
 
   readonly conteo = computed(() => {
@@ -122,7 +143,12 @@ export class OrgPagosPage {
       total: filas.length,
       pagados: filas.filter((f) => f.estadoPago === 'APROBADO').length,
       pendientes: filas.filter((f) => f.estadoPago === 'PENDIENTE').length,
-      faltan: filas.filter((f) => f.estadoPago === 'NO_PAGADO' || f.estadoPago === 'RECHAZADO').length
+      faltan: filas.filter(
+        (f) =>
+          f.estadoPago === 'NO_PAGADO' ||
+          f.estadoPago === 'RECHAZADO' ||
+          (f.estadoPago === 'PENDIENTE' && f.pago != null && f.pago.saldoAprobadoPrevio != null)
+      ).length
     };
   });
 
@@ -172,10 +198,11 @@ export class OrgPagosPage {
       next: (p) => {
         this.subiendo.set(null);
         this.toast.add({
-          severity: 'success',
+          severity: 'info',
           summary: 'Comprobante enviado',
-          detail: 'Tu pago quedó en estado PENDIENTE. El admin lo revisará pronto.',
-          life: 4000
+          detail:
+            'Tu pago queda pendiente de aprobación por el administrador. Cuando lo apruebe, tu evento pasará a ACTIVO.',
+          life: 6000
         });
         const actuales = this.pagos().filter((x) => x.eventoId !== p.eventoId);
         this.pagos.set([p, ...actuales]);
@@ -240,7 +267,7 @@ export class OrgPagosPage {
     switch (estado) {
       case 'NO_PAGADO': return 'Sin pagar';
       case 'RECHAZADO': return 'Rechazado';
-      case 'PENDIENTE': return 'Pendiente';
+      case 'PENDIENTE': return 'Pago pendiente de aprobación';
       case 'APROBADO': return 'Aprobado';
     }
   }

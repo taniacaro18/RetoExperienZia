@@ -40,8 +40,17 @@ public class Evento {
     private TipoEvento tipoEvento;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 32)
     private EstadoEvento estado;
+
+    /**
+     * Cuando el evento entra en {@link EstadoEvento#PENDIENTE_REVISION},
+     * {@link EstadoEvento#PENDIENTE_SUPLEMENTO} o {@link EstadoEvento#PENDIENTE_CANCELACION},
+     * guarda el estado anterior para restaurarlo al aprobar/rechazar según reglas.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_previo_revision", length = 32)
+    private EstadoEvento estadoPrevioRevision;
 
     @Column(nullable = false)
     private int aforoMaximo;
@@ -79,4 +88,11 @@ public class Evento {
 
     @Column(name = "motivo_cancelacion", length = 2000)
     private String motivoCancelacion;
+
+    /**
+     * Texto breve para el administrador: qué cambió en la última edición que requirió re-aprobación.
+     * Se limpia al aprobar el evento.
+     */
+    @Column(name = "resumen_solicitud_edicion", length = 2000)
+    private String resumenSolicitudEdicion;
 }
