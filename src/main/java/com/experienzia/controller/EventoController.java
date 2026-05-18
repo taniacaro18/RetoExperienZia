@@ -1,6 +1,7 @@
 package com.experienzia.controller;
 
 import com.experienzia.dto.CancelarEventoDTO;
+import com.experienzia.dto.DisponibilidadSalonDTO;
 import com.experienzia.dto.EventoDTO;
 import com.experienzia.dto.EventoNovedadDTO;
 import com.experienzia.dto.RechazarEventoDTO;
@@ -12,10 +13,12 @@ import com.experienzia.service.NotificacionService;
 import com.experienzia.spec.EventoSpecification.EventoSearchCriteria;
 import com.experienzia.util.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -42,7 +45,7 @@ public class EventoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id:\\d+}")
     public ResponseEntity<EventoDTO> editar(@PathVariable Long id, @RequestBody EventoDTO dto,
                                             HttpServletRequest request) {
         EventoDTO actualizado = eventoService.editar(id, dto);
@@ -71,16 +74,24 @@ public class EventoController {
         return ResponseEntity.ok(actualizado);
     }
 
-    @PostMapping("/{id}/aprobar")
+    @PostMapping("/{id:\\d+}/aprobar")
     public ResponseEntity<EventoDTO> aprobar(@PathVariable Long id,
                                              @RequestParam(required = false) Long adminId,
                                              HttpServletRequest request) {
         EventoDTO aprobado = eventoService.aprobar(id);
-        notificacionService.crear(
-                aprobado.getOrganizadorId(),
-                "Tu solicitud del evento \"" + aprobado.getNombre()
-                        + "\" fue aprobada. Completa el pago cuando aplique para activarlo en el sistema.",
-                TipoNotificacion.INFO);
+        String detalleAprobacion;
+        if (aprobado.getEstado() == com.experienzia.entity.EstadoEvento.PENDIENTE_SUPLEMENTO) {
+            detalleAprobacion = "El administrador aprobó la ampliación de horas de \""
+                    + aprobado.getNombre()
+                    + "\". Sube en Pagos el comprobante solo por el incremento pendiente.";
+        } else if (aprobado.getEstado() == com.experienzia.entity.EstadoEvento.APROBADO) {
+            detalleAprobacion = "Tu solicitud del evento \"" + aprobado.getNombre()
+                    + "\" fue aprobada. Sube el comprobante de pago en Pagos para activarlo.";
+        } else {
+            detalleAprobacion = "Tu solicitud del evento \"" + aprobado.getNombre()
+                    + "\" fue aprobada por el administrador.";
+        }
+        notificacionService.crear(aprobado.getOrganizadorId(), detalleAprobacion, TipoNotificacion.INFO);
         auditoriaService.registrar(adminId, "EVENTO_APROBADO", "Evento", aprobado.getId(),
                 ClientIpResolver.resolve(request));
         return ResponseEntity.ok(aprobado);
@@ -103,7 +114,7 @@ public class EventoController {
         return ResponseEntity.ok(rechazado);
     }
 
-    @PostMapping("/{id}/cancelar")
+    @PostMapping("/{id:\\d+}/cancelar")
     public ResponseEntity<EventoDTO> cancelar(@PathVariable Long id, @RequestBody CancelarEventoDTO body,
                                               HttpServletRequest request) {
         if (body == null || body.getOrganizadorId() == null) {
@@ -115,12 +126,12 @@ public class EventoController {
         return ResponseEntity.ok(cancelado);
     }
 
-    @GetMapping("/{id}/novedades")
+    @GetMapping("/{id:\\d+}/novedades")
     public ResponseEntity<List<EventoNovedadDTO>> novedades(@PathVariable Long id) {
         return ResponseEntity.ok(eventoService.listarNovedades(id));
     }
 
-    @PostMapping("/{id}/cancelacion/aprobar")
+    @PostMapping("/{id:\\d+}/cancelacion/aprobar")
     public ResponseEntity<EventoDTO> aprobarCancelacion(@PathVariable Long id,
                                                         @RequestParam(required = false) Long adminId,
                                                         HttpServletRequest request) {
@@ -130,7 +141,7 @@ public class EventoController {
         return ResponseEntity.ok(dto);
     }
 
-    @PostMapping("/{id}/cancelacion/rechazar")
+    @PostMapping("/{id:\\d+}/cancelacion/rechazar")
     public ResponseEntity<EventoDTO> rechazarCancelacion(@PathVariable Long id,
                                                          @RequestBody(required = false) RechazarEventoDTO body,
                                                          @RequestParam(required = false) Long adminId,
@@ -142,14 +153,29 @@ public class EventoController {
         return ResponseEntity.ok(dto);
     }
 
+    /** Calendario de ocupación del salón (organizador y admin). Ruta fija antes de /{id}. */
+    @GetMapping("/salon/disponibilidad")
+    public ResponseEntity<DisponibilidadSalonDTO> disponibilidadSalon(
+            @RequestParam(required = false) String ubicacion,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime desde,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime hasta,
+            @RequestParam(required = false) Long excluirEventoId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+                    LocalDateTime propuestaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+                    LocalDateTime propuestaFin) {
+        return ResponseEntity.ok(eventoService.consultarDisponibilidadSalon(
+                ubicacion, desde, hasta, excluirEventoId, propuestaInicio, propuestaFin));
+    }
+
+    @GetMapping("/{id:\\d+}")
+    public ResponseEntity<EventoDTO> obtener(@PathVariable Long id) {
+        return ResponseEntity.ok(eventoService.obtenerPorId(id));
+    }
+
     @GetMapping
     public ResponseEntity<List<EventoDTO>> listarTodos() {
         return ResponseEntity.ok(eventoService.listarTodos());
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<EventoDTO> obtener(@PathVariable Long id) {
-        return ResponseEntity.ok(eventoService.obtenerPorId(id));
     }
 
     @GetMapping("/catalogo/publicos")
@@ -157,7 +183,7 @@ public class EventoController {
         return ResponseEntity.ok(eventoService.listarCatalogoPublicoActivo());
     }
 
-    @GetMapping("/catalogo/publicos/{id}")
+    @GetMapping("/catalogo/publicos/{id:\\d+}")
     public ResponseEntity<EventoDTO> obtenerPublico(@PathVariable Long id) {
         return ResponseEntity.ok(eventoService.obtenerParaCatalogoPublico(id));
     }

@@ -10,6 +10,7 @@ import { MessageService } from 'primeng/api';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { AuthService } from '../../core/auth/auth.service';
 import { Rol } from '../../core/models/domain.models';
+import { LogoComponent } from '../../shared/logo/logo.component';
 import { RecuperarModal } from './recuperar.page';
 
 @Component({
@@ -24,7 +25,8 @@ import { RecuperarModal } from './recuperar.page';
     PasswordModule,
     CardModule,
     ProgressSpinnerModule,
-    RecuperarModal
+    RecuperarModal,
+    LogoComponent
   ],
   templateUrl: './login.page.html',
   styleUrl: './login.page.scss'

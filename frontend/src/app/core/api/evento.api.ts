@@ -2,7 +2,16 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { EstadoEvento, Evento, EventoNovedad, TipoEvento } from '../models/domain.models';
+import { DisponibilidadSalon, EstadoEvento, Evento, EventoNovedad, TipoEvento } from '../models/domain.models';
+
+export interface ConsultaDisponibilidadSalonParams {
+  ubicacion?: string;
+  desde: string;
+  hasta: string;
+  excluirEventoId?: number;
+  propuestaInicio?: string;
+  propuestaFin?: string;
+}
 
 export interface EventoSearchCriteria {
   nombre?: string;
@@ -80,6 +89,19 @@ export class EventoApi {
 
   listarNovedades(id: number): Observable<EventoNovedad[]> {
     return this.http.get<EventoNovedad[]>(this.base + '/' + id + '/novedades');
+  }
+
+  consultarDisponibilidadSalon(params: ConsultaDisponibilidadSalonParams): Observable<DisponibilidadSalon> {
+    let httpParams = new HttpParams()
+      .set('desde', params.desde)
+      .set('hasta', params.hasta);
+    if (params.ubicacion) httpParams = httpParams.set('ubicacion', params.ubicacion);
+    if (params.excluirEventoId != null) {
+      httpParams = httpParams.set('excluirEventoId', String(params.excluirEventoId));
+    }
+    if (params.propuestaInicio) httpParams = httpParams.set('propuestaInicio', params.propuestaInicio);
+    if (params.propuestaFin) httpParams = httpParams.set('propuestaFin', params.propuestaFin);
+    return this.http.get<DisponibilidadSalon>(this.base + '/salon/disponibilidad', { params: httpParams });
   }
 
   aprobarCancelacion(id: number, adminId?: number): Observable<Evento> {

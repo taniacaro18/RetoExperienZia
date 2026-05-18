@@ -6,10 +6,15 @@
       </h1>
       <p class="text-surface-500 text-sm mt-1">Aprueba, rechaza y supervisa todos los eventos de la plataforma.</p>
     </div>
-    <a routerLink="/admin/dashboard"
-       class="ez-btn-secondary">
-      <i class="pi pi-arrow-left"></i> Dashboard
-    </a>
+    <div class="flex flex-wrap items-center gap-2">
+      <button type="button" class="ez-btn-primary" (click)="abrirDisponibilidadSalon()">
+        <i class="pi pi-calendar text-[10px]"></i>
+        Disponibilidad del salón
+      </button>
+      <a routerLink="/admin/dashboard" class="ez-btn-secondary">
+        <i class="pi pi-arrow-left"></i> Dashboard
+      </a>
+    </div>
   </div>
 
   <!-- Stats -->
@@ -153,6 +158,15 @@
                       <i class="pi pi-list text-[10px]"></i>
                       Detalle
                     </button>
+                    <button
+                      type="button"
+                      (click)="abrirDisponibilidadSalon(e)"
+                      class="ez-btn-ghost ez-btn-sm !text-brand-700"
+                      title="Ver ocupación del salón en la fecha de este evento"
+                    >
+                      <i class="pi pi-calendar text-[10px]"></i>
+                      Salón
+                    </button>
                     @if (e.estado === 'PENDIENTE' || e.estado === 'PENDIENTE_REVISION') {
                       <button (click)="aprobar(e)"
                               [disabled]="procesando() === e.id"
@@ -257,6 +271,17 @@
         <span class="text-xs text-surface-500">ID #{{ ev.id }}</span>
       </div>
 
+      @if (ev.estado === 'PENDIENTE_REVISION' && tieneSuplementoHorasPendiente()) {
+        <div class="rounded-lg border border-violet-300 bg-violet-50 p-3 text-sm text-violet-950">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-violet-800 mb-1">Pago adicional por horas</div>
+          <p class="m-0 leading-snug">
+            <strong>Paso 1:</strong> aprueba los cambios del evento (botón Aprobar).
+            <strong>Paso 2:</strong> el organizador sube el comprobante solo por el incremento en Pagos.
+            <strong>Paso 3:</strong> validas y apruebas ese pago en el panel de Pagos.
+          </p>
+        </div>
+      }
+
       @if (ev.resumenSolicitudEdicion?.trim()) {
         <div class="rounded-lg border border-amber-200 bg-amber-50/90 p-3 text-sm text-amber-950">
           <div class="text-[10px] font-bold uppercase tracking-wider text-amber-800 mb-1">Cambios solicitados (edición)</div>
@@ -351,14 +376,74 @@
           <div class="text-surface-900 font-semibold">{{ ev.costo | currency: 'COP':'symbol-narrow':'1.0-0' }}</div>
         </div>
         <div>
-          <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-0.5">Aforo</div>
+          <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-0.5">Aforo (este evento)</div>
           <div class="text-surface-900">{{ ev.aforoActual }} / {{ ev.aforoMaximo }}</div>
+          <p class="text-[10px] text-surface-500 m-0 mt-0.5">Máx. 600 por evento</p>
         </div>
         <div class="sm:col-span-2">
           <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-0.5">Ubicación</div>
           <div class="text-surface-900">{{ ev.ubicacion || '—' }}</div>
+          <button
+            type="button"
+            class="ez-btn-ghost ez-btn-sm mt-2 !text-brand-700"
+            (click)="abrirDisponibilidadSalon(ev)"
+          >
+            <i class="pi pi-calendar text-[10px]"></i>
+            Ver disponibilidad del salón
+          </button>
         </div>
       </div>
+
+      @if (ev.costo > 0) {
+        <div class="rounded-xl border border-brand-200 bg-brand-50/60 p-3 space-y-2">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-brand-800">Pago y comprobante</div>
+          @if (cargandoPago()) {
+            <p class="text-xs text-surface-500 m-0">Cargando información de pago…</p>
+          } @else if (!pagoEvento()) {
+            <p class="text-xs text-amber-800 m-0">
+              <i class="pi pi-info-circle"></i>
+              Aún no hay registro de pago para este evento.
+            </p>
+          } @else {
+            @if (pagoEvento(); as p) {
+              <div class="flex flex-wrap items-center gap-2 text-sm">
+                <span class="font-semibold text-surface-900">Estado: {{ p.estado }}</span>
+                @if (p.monto != null) {
+                  <span class="text-surface-600">· Monto: {{ p.monto | currency: 'COP':'symbol-narrow':'1.0-0' }}</span>
+                }
+              </div>
+              @if (p.saldoAprobadoPrevio != null && p.saldoAprobadoPrevio > 0) {
+                <p class="text-[11px] text-violet-900 m-0 leading-snug">
+                  Complemento por cambio de horas: ya aprobado
+                  {{ p.saldoAprobadoPrevio | currency: 'COP':'symbol-narrow':'1.0-0' }}.
+                  Revisa que el comprobante corresponda solo al incremento.
+                </p>
+              }
+              @if (p.estado === 'PENDIENTE' && !p.comprobanteUrl) {
+                <p class="text-xs text-amber-800 m-0 bg-amber-50 border border-amber-200 rounded-md p-2">
+                  El organizador aún no subió comprobante
+                  @if (p.saldoAprobadoPrevio) { del suplemento }.
+                </p>
+              }
+              @if (p.comprobanteUrl) {
+                <button
+                  type="button"
+                  class="ez-btn-secondary ez-btn-sm w-full justify-center"
+                  (click)="mostrarComprobantePago.set(true)"
+                >
+                  <i class="pi pi-eye text-[10px]"></i>
+                  Ver comprobante de pago
+                </button>
+              }
+              @if (p.estado === 'PENDIENTE') {
+                <a routerLink="/admin/pagos" class="text-xs text-brand-700 underline font-semibold">
+                  Validar pago en el panel de pagos
+                </a>
+              }
+            }
+          }
+        </div>
+      }
 
       <div>
         <div class="text-[10px] font-bold uppercase tracking-wider text-surface-500 mb-1">Descripción</div>
@@ -484,6 +569,43 @@
           }
           Confirmar rechazo
         </button>
+      </div>
+    </div>
+  }
+</p-dialog>
+
+<app-salon-disponibilidad-dialog
+  [visible]="mostrarDisponibilidadSalon()"
+  (visibleChange)="onSalonVisibleChange($event)"
+  [ubicacion]="salonContext().ubicacion"
+  [excluirEventoId]="salonContext().excluirId"
+  [fechaEvento]="salonContext().fecha"
+  [horaInicio]="salonContext().inicio"
+  [horaFin]="salonContext().fin"
+/>
+
+<p-dialog
+  [visible]="mostrarComprobantePago()"
+  (visibleChange)="mostrarComprobantePago.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '720px', maxWidth: '95vw' }"
+  header="Comprobante de pago"
+>
+  @if (pagoEvento(); as p) {
+    <div class="space-y-3">
+      @if (esImagenComprobante(p)) {
+        <img [src]="urlComprobante(p)" class="w-full max-h-[70vh] object-contain rounded-xl bg-surface-100" alt="Comprobante" />
+      } @else if (esPdfComprobante(p)) {
+        <iframe [src]="urlComprobanteSegura(p)" class="w-full h-[70vh] rounded-xl border"></iframe>
+      } @else {
+        <p class="text-sm text-surface-600">Archivo: {{ p.comprobanteUrl }}</p>
+      }
+      <div class="flex justify-end">
+        <a [href]="urlComprobante(p)" target="_blank" class="ez-btn-primary">
+          <i class="pi pi-external-link"></i> Abrir en pestaña
+        </a>
       </div>
     </div>
   }

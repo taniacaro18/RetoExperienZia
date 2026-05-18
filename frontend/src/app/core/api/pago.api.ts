@@ -1,7 +1,8 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, catchError, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { SKIP_GLOBAL_TOAST } from '../interceptors/error.interceptor';
 import { Pago } from '../models/domain.models';
 
 @Injectable({ providedIn: 'root' })
@@ -46,5 +47,16 @@ export class PagoApi {
 
   listarPorOrganizador(organizadorId: number): Observable<Pago[]> {
     return this.http.get<Pago[]>(this.base + '/organizador/' + organizadorId);
+  }
+
+  /** null si el evento aún no tiene fila de pago (404 esperado). */
+  obtenerPorEvento(eventoId: number): Observable<Pago | null> {
+    return this.http
+      .get<Pago>(this.base + '/evento/' + eventoId, {
+        headers: new HttpHeaders().set(SKIP_GLOBAL_TOAST, '1')
+      })
+      .pipe(
+        catchError((err) => (err.status === 404 ? of(null) : throwError(() => err)))
+      );
   }
 }

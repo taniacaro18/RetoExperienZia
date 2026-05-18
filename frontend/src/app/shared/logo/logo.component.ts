@@ -1,29 +1,49 @@
-import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
+export type LogoSize = 'sm' | 'md' | 'lg' | 'sidebar';
 
 /**
- * Logo oficial de ExperienZia.
- * - mode="full": logo + nombre.
- * - mode="icon": solo la estrella.
- * - size en px (alto del logo).
+ * Logo oficial ExperienZia (icono + texto con degradado).
+ * Sin caja blanca: pensado para fondos violeta del shell y páginas públicas.
  */
 @Component({
   selector: 'app-logo',
   standalone: true,
-  imports: [CommonModule],
+  imports: [RouterLink],
   template: `
-    <a [class]="containerClass" [attr.aria-label]="'ExperienZia'">
-      <img
-        src="/logo.png"
-        alt="ExperienZia"
-        [style.height.px]="size"
-        class="object-contain select-none"
-        draggable="false"
-      />
-    </a>
+    @if (link) {
+      <a
+        [routerLink]="link"
+        (click)="onNavigate?.()"
+        class="ez-logo"
+        [class.ez-logo--sm]="size === 'sm'"
+        [class.ez-logo--md]="size === 'md'"
+        [class.ez-logo--lg]="size === 'lg'"
+        [class.ez-logo--sidebar]="size === 'sidebar'"
+        [attr.aria-label]="ariaLabel"
+      >
+        <img src="/logo.png" alt="" draggable="false" />
+      </a>
+    } @else {
+      <span
+        class="ez-logo"
+        [class.ez-logo--sm]="size === 'sm'"
+        [class.ez-logo--md]="size === 'md'"
+        [class.ez-logo--lg]="size === 'lg'"
+        [class.ez-logo--sidebar]="size === 'sidebar'"
+        role="img"
+        [attr.aria-label]="ariaLabel"
+      >
+        <img src="/logo.png" alt="" draggable="false" />
+      </span>
+    }
   `
 })
 export class LogoComponent {
-  @Input() size = 40;
-  @Input() containerClass = 'inline-flex items-center';
+  @Input() size: LogoSize = 'md';
+  @Input() link: string | null = null;
+  @Input() ariaLabel = 'ExperienZia — inicio';
+  /** Opcional: p. ej. cerrar drawer móvil al pulsar el logo. */
+  @Input() onNavigate?: () => void;
 }

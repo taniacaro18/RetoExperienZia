@@ -13,6 +13,7 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { SelectModule } from 'primeng/select';
+import { LogoComponent } from '../../shared/logo/logo.component';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../core/auth/auth.service';
 
@@ -66,7 +67,8 @@ function contrasenaFuerte(): ValidatorFn {
     ButtonModule,
     InputTextModule,
     PasswordModule,
-    SelectModule
+    SelectModule,
+    LogoComponent
   ],
   templateUrl: './registro.page.html',
   styleUrl: './registro.page.scss'

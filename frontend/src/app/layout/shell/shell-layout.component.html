@@ -1,19 +1,19 @@
 <div class="flex min-h-0 flex-1 flex-col bg-white w-full min-w-0">
-  <!-- ============== HEADER ============== -->
   <header
     class="app-shell-header h-14 sm:h-16 shrink-0 px-3 sm:px-4 lg:px-6 lg:pl-[calc(14rem+1rem)] text-white flex items-center justify-between gap-2 sm:gap-4 min-w-0 relative z-30 border-b border-white/10"
   >
     <div class="flex items-center gap-2 shrink-0">
       <button
+        type="button"
         class="lg:hidden p-2 rounded-md hover:bg-white/15 text-white"
         (click)="toggleSidebar()"
         aria-label="Abrir menú"
       >
         <i class="pi pi-bars"></i>
       </button>
+      <app-logo class="lg:hidden" size="sm" link="/inicio" [onNavigate]="cerrarSidebarMobile" />
     </div>
 
-    <!-- Buscador central (sólo cuando el rol tiene listados que filtrar) -->
     @if (mostrarBuscador()) {
       <div class="hidden md:flex flex-1 min-w-0 max-w-xl mx-1 sm:mx-2">
         <div class="relative w-full flex items-center bg-white rounded-full pr-1">
@@ -38,10 +38,8 @@
       <div class="flex-1 min-w-0"></div>
     }
 
-    <!-- Acciones derecha -->
     <div class="flex items-center gap-1 sm:gap-2 shrink-0">
       @if (store.usuario(); as u) {
-        <!-- Campanita de notificaciones -->
         <a
           routerLink="/notificaciones"
           class="relative h-9 w-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white flex items-center justify-center transition"
@@ -81,9 +79,7 @@
     </div>
   </header>
 
-  <!-- ============== CUERPO ============== -->
   <div class="flex flex-1 min-h-0 w-full min-w-0 flex-row bg-white">
-    <!-- Sidebar encima del header (desktop) y bajo el header (móvil). Sin translate en desktop = estable. -->
     <aside
       [class.-translate-x-full]="!pantallaGrande() && !sidebarAbierto()"
       [class.translate-x-0]="!pantallaGrande() && sidebarAbierto()"
@@ -93,17 +89,11 @@
              lg:top-0 lg:transform-none lg:transition-none"
     >
       <div class="app-shell-sidebar-brand relative z-[1] px-2 sm:px-3 pt-3 sm:pt-4 pb-2 sm:pb-3 flex flex-col items-center">
-        <a
-          routerLink="/inicio"
-          class="flex flex-col items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg"
-          (click)="cerrarSidebarMobile()"
-        >
-          <img
-            src="/logo.png"
-            alt="ExperienZia"
-            class="drop-shadow-md"
-          />
-        </a>
+        <app-logo
+          size="sidebar"
+          link="/inicio"
+          [onNavigate]="cerrarSidebarMobile"
+        />
       </div>
 
       <nav class="relative z-[1] flex-1 px-2 sm:px-3 pt-0.5 pb-4 sm:pb-5 overflow-y-auto overflow-x-hidden min-h-0">
@@ -133,7 +123,6 @@
       ></div>
     }
 
-    <!-- Contenido principal -->
     <main
       class="app-shell-main flex-1 min-w-0 min-h-0 w-full overflow-y-auto overflow-x-auto bg-white px-4 py-4 sm:px-5 sm:py-5 lg:py-6 lg:pl-[calc(14rem+1.5rem)] lg:pr-8 xl:pl-[calc(14rem+2rem)] xl:pr-10"
     >
@@ -141,11 +130,13 @@
     </main>
   </div>
 
-  <!-- ============== FOOTER ============== -->
   <footer
-    class="app-shell-footer shrink-0 relative z-20 px-4 sm:px-6 py-2 sm:py-2.5 lg:pl-[calc(14rem+1.5rem)] lg:pr-8 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between min-w-0 text-white/85 text-[10px] sm:text-[11px] border-t border-white/10"
+    class="app-shell-footer shrink-0 relative z-20 px-4 sm:px-6 py-2.5 sm:py-3 lg:pl-[calc(14rem+1.5rem)] lg:pr-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between min-w-0 text-white/85 text-[10px] sm:text-[11px] border-t border-white/10"
   >
-    <span class="break-words sm:truncate sm:min-w-0 sm:max-w-[70%]">© {{ anio }} ExperienZia · Plataforma de eventos</span>
-    <span class="hidden shrink-0 md:inline">v1.0</span>
+    <div class="flex items-center gap-3 min-w-0 flex-1">
+      <app-logo size="sm" link="/inicio" />
+      <span class="break-words sm:truncate min-w-0">© {{ anio }} ExperienZia · Plataforma de eventos</span>
+    </div>
+    <span class="hidden shrink-0 md:inline opacity-80">v1.0</span>
   </footer>
 </div>

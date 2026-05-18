@@ -9,9 +9,18 @@ import { TextareaModule } from 'primeng/textarea';
 import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
 import { AuthStore } from '../../core/auth/auth.store';
+import { DomSanitizer } from '@angular/platform-browser';
 import { EventoApi } from '../../core/api/evento.api';
+import { PagoApi } from '../../core/api/pago.api';
 import { UsuarioApi } from '../../core/api/usuario.api';
-import { EstadoEvento, Evento, EventoNovedad, Usuario } from '../../core/models/domain.models';
+import {
+  esComprobanteImagen,
+  esComprobantePdf,
+  urlComprobantePago,
+  urlComprobanteSeguraPago
+} from '../../core/utils/comprobante.util';
+import { EstadoEvento, Evento, EventoNovedad, Pago, Usuario } from '../../core/models/domain.models';
+import { SalonDisponibilidadDialogComponent } from '../../shared/salon-disponibilidad/salon-disponibilidad-dialog.component';
 import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 import { AforoBarComponent } from '../../shared/aforo-bar/aforo-bar.component';
 import { eventoEstadoLabel, eventoEstadoSeverity } from '../../shared/estado.helpers';
@@ -34,7 +43,8 @@ type FiltroTipoEvento = 'TODOS' | 'PUBLICO' | 'PRIVADO';
     TextareaModule,
     DialogModule,
     StatCardComponent,
-    AforoBarComponent
+    AforoBarComponent,
+    SalonDisponibilidadDialogComponent
   ],
   templateUrl: './eventos.page.html',
   styleUrl: './eventos.page.scss'
@@ -43,8 +53,10 @@ export class AdminEventosPage {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(AuthStore);
   private readonly eventoApi = inject(EventoApi);
+  private readonly pagoApi = inject(PagoApi);
   private readonly usuarioApi = inject(UsuarioApi);
   private readonly messages = inject(MessageService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly cargando = signal(true);
   readonly eventos = signal<Evento[]>([]);
@@ -68,8 +80,25 @@ export class AdminEventosPage {
   readonly cargandoDetalleModal = signal(false);
   readonly novedades = signal<EventoNovedad[]>([]);
   readonly cargandoNovedades = signal(false);
+  readonly pagoEvento = signal<Pago | null>(null);
+  readonly cargandoPago = signal(false);
+  readonly mostrarComprobantePago = signal(false);
+  readonly mostrarDisponibilidadSalon = signal(false);
+  /** Evento usado al abrir el calendario desde la lista o el detalle (null = vista general). */
+  readonly eventoParaSalon = signal<Evento | null>(null);
 
   estadoLabel = eventoEstadoLabel;
+
+  readonly salonContext = computed(() => {
+    const ev = this.eventoParaSalon();
+    return {
+      ubicacion: ev?.ubicacion?.trim() || 'Salón principal',
+      excluirId: ev?.id ?? null,
+      fecha: ev ? this.fechaEventoParaSalon(ev) : null,
+      inicio: ev ? this.horaInicioParaSalon(ev) : null,
+      fin: ev ? this.horaFinParaSalon(ev) : null
+    };
+  });
   estadoSeverity = eventoEstadoSeverity;
 
   readonly conteo = computed(() => {
@@ -189,15 +218,27 @@ export class AdminEventosPage {
         this.procesando.set(null);
         this.actualizarEvento(actualizado);
         this.cerrarDetalleSiCorresponde(actualizado.id);
+        const detail =
+          actualizado.estado === 'PENDIENTE_SUPLEMENTO'
+            ? `"${actualizado.nombre}": cambios aprobados. El organizador debe subir el comprobante del incremento; luego aprueba el pago en Pagos.`
+            : `"${actualizado.nombre}" fue aprobado.`;
         this.messages.add({
           severity: 'success',
-          summary: 'Evento aprobado',
-          detail: `"${actualizado.nombre}" fue aprobado.`,
-          life: 3500
+          summary:
+            actualizado.estado === 'PENDIENTE_SUPLEMENTO' ? 'Cambios aprobados' : 'Evento aprobado',
+          detail,
+          life: 4500
         });
       },
       error: () => this.procesando.set(null)
     });
+  }
+
+  /** Novedad AUMENTO_HORAS pendiente → tras aprobar evento queda PENDIENTE_SUPLEMENTO y cobro solo del delta. */
+  tieneSuplementoHorasPendiente(): boolean {
+    return this.novedades().some(
+      (n) => n.tipo === 'AUMENTO_HORAS' && n.estado === 'PENDIENTE'
+    );
   }
 
   abrirDetalle(e: Evento) {
@@ -205,12 +246,19 @@ export class AdminEventosPage {
     this.mostrarModalDetalle.set(true);
     this.cargandoDetalleModal.set(true);
     this.novedades.set([]);
+    this.pagoEvento.set(null);
     this.cargarNovedades(e.id);
+    if (e.costo > 0) {
+      this.cargarPagoEvento(e.id);
+    }
     this.eventoApi.obtener(e.id).subscribe({
       next: (fresh) => {
         this.eventoDetalle.set(fresh);
         this.actualizarEvento(fresh);
         this.cargandoDetalleModal.set(false);
+        if (fresh.costo > 0 && !this.pagoEvento()) {
+          this.cargarPagoEvento(fresh.id);
+        }
       },
       error: () => {
         this.cargandoDetalleModal.set(false);
@@ -229,6 +277,65 @@ export class AdminEventosPage {
     this.eventoDetalle.set(null);
     this.cargandoDetalleModal.set(false);
     this.novedades.set([]);
+    this.pagoEvento.set(null);
+    this.mostrarComprobantePago.set(false);
+  }
+
+  private cargarPagoEvento(eventoId: number) {
+    this.cargandoPago.set(true);
+    this.pagoApi.obtenerPorEvento(eventoId).subscribe({
+      next: (p) => {
+        this.pagoEvento.set(p ?? null);
+        this.cargandoPago.set(false);
+      },
+      error: () => {
+        this.pagoEvento.set(null);
+        this.cargandoPago.set(false);
+      }
+    });
+  }
+
+  urlComprobante(p: Pago): string {
+    return urlComprobantePago(p);
+  }
+
+  urlComprobanteSegura(p: Pago) {
+    return urlComprobanteSeguraPago(p, this.sanitizer);
+  }
+
+  esImagenComprobante(p: Pago): boolean {
+    return esComprobanteImagen(p);
+  }
+
+  esPdfComprobante(p: Pago): boolean {
+    return esComprobantePdf(p);
+  }
+
+  fechaEventoParaSalon(ev: Evento): Date | null {
+    return ev.fecha ? new Date(ev.fecha) : null;
+  }
+
+  horaInicioParaSalon(ev: Evento): Date | null {
+    return ev.fecha ? new Date(ev.fecha) : null;
+  }
+
+  horaFinParaSalon(ev: Evento): Date | null {
+    if (ev.fechaFin) return new Date(ev.fechaFin);
+    if (!ev.fecha) return null;
+    const h = ev.duracionHoras && ev.duracionHoras > 0 ? ev.duracionHoras : 1;
+    return new Date(new Date(ev.fecha).getTime() + h * 3600000);
+  }
+
+  abrirDisponibilidadSalon(evento?: Evento) {
+    this.eventoParaSalon.set(evento ?? null);
+    this.mostrarDisponibilidadSalon.set(true);
+  }
+
+  onSalonVisibleChange(visible: boolean) {
+    this.mostrarDisponibilidadSalon.set(visible);
+    if (!visible) {
+      this.eventoParaSalon.set(null);
+    }
   }
 
   private cargarNovedades(eventoId: number) {
@@ -374,10 +481,13 @@ export class AdminEventosPage {
       return 'Solicitud pendiente de revisión (alta o cambios del organizador). Revisa todos los datos antes de decidir.';
     }
     if (e.estado === 'PENDIENTE_REVISION') {
+      if (this.tieneSuplementoHorasPendiente()) {
+        return 'Ampliación de horas: aprueba primero los cambios del evento. Después el organizador subirá el comprobante solo por el incremento y lo validarás en Pagos.';
+      }
       return 'Cambios pendientes de aprobación. Si apruebas, el evento vuelve al estado previo sin nuevo cobro (salvo que el resumen indique lo contrario).';
     }
     if (e.estado === 'PENDIENTE_SUPLEMENTO') {
-      return 'El organizador amplió horas: debe pagar solo el excedente y subir comprobante. Revisa el pago adicional antes de aprobar.';
+      return 'Cambios de horario ya aprobados: el organizador debe subir el comprobante del incremento. Valídalo y aprueba el pago en la sección Pagos.';
     }
     if (e.estado === 'PENDIENTE_CANCELACION') {
       return 'Solicitud de cancelación: revisa el motivo y el historial de pagos. Si apruebas, el evento queda cancelado (devolución orientativa 70% al organizador).';

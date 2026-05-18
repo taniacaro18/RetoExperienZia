@@ -15,8 +15,10 @@ public class DashboardOrganizadorDTO {
     private long eventosCancelados;
     private long eventosTotales;
     private long totalInscritos;
-    private long aforoMaximoTotal;
-    private long aforoDisponibleTotal;
+    /** Límite de cupos por evento (regla de negocio; no es capacidad global del salón). */
+    private int aforoMaximoPorEvento;
+    /** Suma de inscritos/presentes solo en eventos ACTIVO del organizador. */
+    private long cuposOcupadosEventosActivos;
     private long asistenciasUltimos30Dias;
     private List<PuntoSerieDTO> serieMensualEventos;
     private List<PuntoSerieDTO> serieMensualInscripciones;

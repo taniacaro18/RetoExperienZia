@@ -25,15 +25,19 @@ import com.experienzia.repository.StaffEventoAsignacionRepository;
 import com.experienzia.repository.UsuarioRepository;
 import com.experienzia.service.InscripcionService;
 import com.experienzia.service.NotificacionService;
+import com.experienzia.util.EventoVentanaUtil;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +51,12 @@ import java.util.UUID;
 public class InscripcionServiceImpl implements InscripcionService {
 
     private static final String EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+
+    private static final DateTimeFormatter FMT_VENTANA =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.forLanguageTag("es-CO"));
+
+    @Value("${experienzia.eventos.zona-horaria:America/Bogota}")
+    private String zonaHorariaEventos;
 
     private final InscripcionRepository inscripcionRepository;
     private final EventoRepository eventoRepository;
@@ -741,10 +751,8 @@ public class InscripcionServiceImpl implements InscripcionService {
     }
 
     /**
-     * Valida que el evento esté ACTIVO y que la fecha actual coincida con el día del evento.
-     * - Si tiene fechaFin definida: hoy debe estar entre [fecha, fechaFin] (por día calendario).
-     * - Si no tiene fechaFin: hoy debe coincidir con el día calendario de fecha.
-     * El check-in/check-out solo debe poder registrarse el día del evento.
+     * Check-in/out (QR o manual) solo dentro de la ventana horaria del evento
+     * (desde inicio hasta fin), en la zona horaria configurada del negocio.
      */
     private void validarEventoActivoYEnFecha(Evento evento, String accion) {
         if (evento.getEstado() != EstadoEvento.ACTIVO) {
@@ -755,12 +763,22 @@ public class InscripcionServiceImpl implements InscripcionService {
         if (evento.getFecha() == null) {
             throw new CustomException("El evento no tiene fecha definida.", HttpStatus.BAD_REQUEST);
         }
-        LocalDate hoy = LocalDate.now();
-        LocalDate inicio = evento.getFecha().toLocalDate();
-        LocalDate fin = evento.getFechaFin() != null ? evento.getFechaFin().toLocalDate() : inicio;
-        if (hoy.isBefore(inicio) || hoy.isAfter(fin)) {
+        ZoneId zone = EventoVentanaUtil.zoneId(zonaHorariaEventos);
+        ZonedDateTime ahora = ZonedDateTime.now(zone);
+        ZonedDateTime inicio = EventoVentanaUtil.instanteInicioZoned(evento, zone);
+        ZonedDateTime fin = EventoVentanaUtil.instanteFinZoned(evento, zone);
+        if (ahora.isBefore(inicio)) {
             throw new CustomException(
-                    "Solo se puede " + accion + " durante el día del evento (" + inicio + ").",
+                    "Solo se puede " + accion + " a partir del inicio del evento ("
+                            + inicio.format(FMT_VENTANA)
+                            + "). Aún no ha comenzado la ventana horaria.",
+                    HttpStatus.BAD_REQUEST);
+        }
+        if (ahora.isAfter(fin)) {
+            throw new CustomException(
+                    "No se puede " + accion + ": el evento ya finalizó. La ventana terminó el "
+                            + fin.format(FMT_VENTANA)
+                            + ".",
                     HttpStatus.BAD_REQUEST);
         }
     }

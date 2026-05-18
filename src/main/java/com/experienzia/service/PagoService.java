@@ -4,6 +4,7 @@ import com.experienzia.dto.PagoDTO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PagoService {
 
@@ -22,4 +23,6 @@ public interface PagoService {
     List<PagoDTO> listarTodos();
 
     List<PagoDTO> listarPorOrganizador(Long organizadorId);
+
+    Optional<PagoDTO> obtenerPorEvento(Long eventoId);
 }

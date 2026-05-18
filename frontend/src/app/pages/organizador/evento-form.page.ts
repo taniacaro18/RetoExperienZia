@@ -13,6 +13,7 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { EventoApi } from '../../core/api/evento.api';
 import { Evento } from '../../core/models/domain.models';
 import { eventoVentanaYaCerro } from '../../shared/evento-catalogo.helpers';
+import { SalonDisponibilidadDialogComponent } from '../../shared/salon-disponibilidad/salon-disponibilidad-dialog.component';
 
 const PRECIO_POR_HORA = 100000;
 const AFORO_MAXIMO_PERMITIDO = 600;
@@ -68,7 +69,8 @@ function fechaFutura(control: AbstractControl): ValidationErrors | null {
     SelectModule,
     InputNumberModule,
     DatePickerModule,
-    ProgressSpinnerModule
+    ProgressSpinnerModule,
+    SalonDisponibilidadDialogComponent
   ],
   templateUrl: './evento-form.page.html'
 })
@@ -88,6 +90,7 @@ export class OrgEventoFormPage {
   readonly imagenError = signal(false);
   /** Al editar: costo original del API (para textos de ayuda). */
   readonly costoEventoCargado = signal<number | null>(null);
+  readonly mostrarDisponibilidadSalon = signal(false);
 
   readonly precioPorHora = PRECIO_POR_HORA;
   readonly aforoMaximoPermitido = AFORO_MAXIMO_PERMITIDO;
@@ -158,6 +161,10 @@ export class OrgEventoFormPage {
   });
 
   /** Solo reloj: fin antes que inicio → se guardará el fin al día siguiente. */
+  readonly ubicacionParaSalon = computed(
+    () => this.formulario.controls.ubicacion.value?.trim() || UBICACION_DEFECTO
+  );
+
   readonly cruzaMedianoche = computed(() => {
     const a = this.formulario.controls.horaInicio.value;
     const b = this.formulario.controls.horaFin.value;
@@ -345,12 +352,13 @@ export class OrgEventoFormPage {
                 ? 'info'
                 : 'success';
           } else if (ev.estado === 'PENDIENTE_REVISION') {
-            detail =
-              'Los cambios quedaron pendientes de aprobación del administrador. No se solicita nuevo pago salvo que hayas ampliado horas (revisa Pagos si aplica).';
+            detail = alerta?.includes('excedente')
+              ? alerta
+              : 'Los cambios quedaron pendientes de aprobación del administrador. No se solicita nuevo pago salvo que hayas ampliado horas (revisa Pagos si aplica).';
             severity = 'info';
           } else if (ev.estado === 'PENDIENTE_SUPLEMENTO') {
             detail =
-              'Ampliaste la duración: debes pagar solo el excedente y subir el comprobante en la sección Pagos.';
+              'El administrador aprobó la ampliación de horas. Sube en Pagos el comprobante solo por el incremento pendiente.';
             severity = 'warn';
           } else if (ev.estado === 'PENDIENTE_CANCELACION') {
             detail =

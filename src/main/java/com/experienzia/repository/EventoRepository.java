@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,4 +23,14 @@ public interface EventoRepository extends JpaRepository<Evento, Long>, JpaSpecif
 
     @Query("SELECT DISTINCT e FROM Evento e LEFT JOIN FETCH e.organizador WHERE e.id = :id")
     Optional<Evento> findByIdWithOrganizador(@Param("id") Long id);
+
+    /** Eventos que reservan una ubicación (misma sala, comparación sin distinguir mayúsculas). */
+    @Query("""
+            SELECT e FROM Evento e
+            WHERE e.estado IN :estados
+            AND LOWER(TRIM(COALESCE(e.ubicacion, ''))) = LOWER(TRIM(:ubicacion))
+            """)
+    List<Evento> findByUbicacionNormalizadaYEstadoIn(
+            @Param("ubicacion") String ubicacion,
+            @Param("estados") Collection<EstadoEvento> estados);
 }

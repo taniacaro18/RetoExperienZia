@@ -53,7 +53,8 @@ public class Pago {
     @EqualsAndHashCode.Exclude
     private Usuario organizador;
 
-    @Column(name = "comprobante_url", length = 500)
+    /** Null cuando el organizador aún no subió comprobante o tras cambio de tarifa / suplemento. */
+    @Column(name = "comprobante_url", length = 500, nullable = true)
     private String comprobanteUrl;
 
     /** Monto del pago en COP (precioPorHora * duracionHoras del evento). */

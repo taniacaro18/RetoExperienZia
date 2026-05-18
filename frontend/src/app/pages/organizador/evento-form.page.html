@@ -96,6 +96,14 @@
                 <i class="pi pi-info-circle text-[10px]"></i>
                 Si lo dejas vacío, se asignará "{{ ubicacionDefecto }}".
               </p>
+              <button
+                type="button"
+                class="ez-btn-ghost ez-btn-sm mt-2 !text-brand-700"
+                (click)="mostrarDisponibilidadSalon.set(true)"
+              >
+                <i class="pi pi-calendar text-[10px]"></i>
+                Ver disponibilidad del salón
+              </button>
             </div>
 
             <div class="ez-field !mb-0">
@@ -277,4 +285,14 @@
       </div>
     </form>
   }
+
+  <app-salon-disponibilidad-dialog
+    [visible]="mostrarDisponibilidadSalon()"
+    (visibleChange)="mostrarDisponibilidadSalon.set($event)"
+    [ubicacion]="ubicacionParaSalon()"
+    [excluirEventoId]="eventoId()"
+    [fechaEvento]="formulario.controls.fecha.value"
+    [horaInicio]="formulario.controls.horaInicio.value"
+    [horaFin]="formulario.controls.horaFin.value"
+  />
 </div>

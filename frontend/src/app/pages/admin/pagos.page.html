@@ -104,6 +104,14 @@
             </div>
           }
 
+          @if (p.estado === 'PENDIENTE' && !p.comprobanteUrl) {
+            <div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Sin comprobante adjunto. Espera a que el organizador suba el archivo
+              @if (p.saldoAprobadoPrevio) { del suplemento por horas adicionales }
+              antes de aprobar.
+            </div>
+          }
+
           @if (p.comprobanteUrl) {
             <button type="button"
                     (click)="verComprobante(p)"
@@ -142,7 +150,8 @@
           @if (p.estado === 'PENDIENTE') {
             <div class="flex gap-2 pt-2">
               <button (click)="aprobar(p)"
-                      [disabled]="procesando() === p.id"
+                      [disabled]="procesando() === p.id || !puedeAprobar(p)"
+                      [title]="!p.comprobanteUrl ? 'Falta el comprobante del organizador' : ''"
                       class="ez-btn-success flex-1">
                 @if (procesando() === p.id) {
                   <i class="pi pi-spin pi-spinner text-[10px]"></i>

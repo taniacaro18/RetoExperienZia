@@ -7,12 +7,21 @@ import { EventoApi } from '../../core/api/evento.api';
 import { Evento } from '../../core/models/domain.models';
 import { eventoEstadoLabel, eventoEstadoSeverity } from '../../shared/estado.helpers';
 import { eventoSigueVigenteEnCatalogoPublico } from '../../shared/evento-catalogo.helpers';
+import { LogoComponent } from '../../shared/logo/logo.component';
 import { VerificarCertificadoModal } from './verificar-certificado.page';
 
 @Component({
   selector: 'app-detalle-evento-publico-page',
   standalone: true,
-  imports: [CommonModule, DatePipe, RouterLink, TagModule, ProgressSpinnerModule, VerificarCertificadoModal],
+  imports: [
+    CommonModule,
+    DatePipe,
+    RouterLink,
+    TagModule,
+    ProgressSpinnerModule,
+    VerificarCertificadoModal,
+    LogoComponent
+  ],
   templateUrl: './detalle-evento-publico.page.html',
   styleUrl: './detalle-evento-publico.page.scss'
 })

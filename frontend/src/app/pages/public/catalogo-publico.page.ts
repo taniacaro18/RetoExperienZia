@@ -7,6 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { EventoApi } from '../../core/api/evento.api';
 import { Evento } from '../../core/models/domain.models';
 import { eventoSigueVigenteEnCatalogoPublico } from '../../shared/evento-catalogo.helpers';
+import { LogoComponent } from '../../shared/logo/logo.component';
 import { VerificarCertificadoModal } from './verificar-certificado.page';
 
 @Component({
@@ -19,7 +20,8 @@ import { VerificarCertificadoModal } from './verificar-certificado.page';
     RouterLink,
     ProgressSpinnerModule,
     InputTextModule,
-    VerificarCertificadoModal
+    VerificarCertificadoModal,
+    LogoComponent
   ],
   templateUrl: './catalogo-publico.page.html',
   styleUrl: './catalogo-publico.page.scss'

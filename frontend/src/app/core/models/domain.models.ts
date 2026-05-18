@@ -229,6 +229,24 @@ export interface PuntoSerie {
   valor: number;
 }
 
+export interface FranjaOcupacionSalon {
+  eventoId: number;
+  nombreEvento: string;
+  estado: EstadoEvento;
+  inicio: string;
+  fin: string;
+  nombreOrganizador?: string;
+}
+
+export interface DisponibilidadSalon {
+  ubicacion: string;
+  desde: string;
+  hasta: string;
+  propuestaDisponible?: boolean | null;
+  mensajePropuesta?: string;
+  ocupaciones: FranjaOcupacionSalon[];
+}
+
 export interface DashboardOrganizador {
   organizadorId: number;
   eventosActivos: number;
@@ -236,8 +254,9 @@ export interface DashboardOrganizador {
   eventosCancelados: number;
   eventosTotales: number;
   totalInscritos: number;
-  aforoMaximoTotal: number;
-  aforoDisponibleTotal: number;
+  /** Límite por evento (no capacidad global del salón). */
+  aforoMaximoPorEvento: number;
+  cuposOcupadosEventosActivos: number;
   asistenciasUltimos30Dias: number;
   serieMensualEventos: PuntoSerie[];
   serieMensualInscripciones: PuntoSerie[];

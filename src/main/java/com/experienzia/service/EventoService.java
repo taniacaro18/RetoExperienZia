@@ -1,9 +1,11 @@
 package com.experienzia.service;
 
+import com.experienzia.dto.DisponibilidadSalonDTO;
 import com.experienzia.dto.EventoDTO;
 import com.experienzia.dto.EventoNovedadDTO;
 import com.experienzia.spec.EventoSpecification.EventoSearchCriteria;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface EventoService {
@@ -39,4 +41,15 @@ public interface EventoService {
 
     /** Marca FINALIZADOS los eventos ACTIVO cuya fecha/hora de fin ya pasó. */
     void marcarEventosActivosFinalizados();
+
+    /**
+     * Ocupación del salón en un rango (calendario). Opcionalmente valida una franja propuesta.
+     */
+    DisponibilidadSalonDTO consultarDisponibilidadSalon(
+            String ubicacion,
+            LocalDateTime desde,
+            LocalDateTime hasta,
+            Long excluirEventoId,
+            LocalDateTime propuestaInicio,
+            LocalDateTime propuestaFin);
 }

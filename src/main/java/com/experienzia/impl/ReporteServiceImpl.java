@@ -13,7 +13,6 @@ import com.experienzia.dto.ReporteEventoDTO;
 import com.experienzia.dto.ResumenDTO;
 import com.experienzia.entity.Auditoria;
 import com.experienzia.entity.Estado;
-import com.experienzia.entity.EstadoEvento;
 import com.experienzia.entity.EstadoInscripcion;
 import com.experienzia.entity.Evento;
 import com.experienzia.entity.FuncionStaff;
@@ -273,18 +272,18 @@ public class ReporteServiceImpl implements ReporteService {
         }
 
         List<Evento> eventos = eventoRepository.findByOrganizadorId(organizadorId);
-        long activos = 0, pendientes = 0, cancelados = 0, aforoMax = 0, aforoActual = 0;
+        long activos = 0, pendientes = 0, cancelados = 0, cuposActivos = 0;
         for (Evento e : eventos) {
             switch (e.getEstado()) {
-                case ACTIVO -> activos++;
+                case ACTIVO -> {
+                    activos++;
+                    cuposActivos += e.getAforoActual();
+                }
                 case PENDIENTE -> pendientes++;
                 case CANCELADO -> cancelados++;
                 default -> { /* no-op */ }
             }
-            aforoMax += e.getAforoMaximo();
-            aforoActual += e.getAforoActual();
         }
-        long aforoDisponible = Math.max(0L, aforoMax - aforoActual);
 
         long totalInscritos = 0L;
         long asistencias30 = 0L;
@@ -316,8 +315,8 @@ public class ReporteServiceImpl implements ReporteService {
         dto.setEventosCancelados(cancelados);
         dto.setEventosTotales(eventos.size());
         dto.setTotalInscritos(totalInscritos);
-        dto.setAforoMaximoTotal(aforoMax);
-        dto.setAforoDisponibleTotal(aforoDisponible);
+        dto.setAforoMaximoPorEvento(600);
+        dto.setCuposOcupadosEventosActivos(cuposActivos);
         dto.setAsistenciasUltimos30Dias(asistencias30);
         dto.setSerieMensualEventos(toSerie(eventosPorMes));
         dto.setSerieMensualInscripciones(toSerie(inscripcionesPorMes));

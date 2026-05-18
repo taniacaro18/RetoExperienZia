@@ -30,9 +30,9 @@
         icon="pi-users"
       ></app-stat-card>
       <app-stat-card
-        label="Aforo Disponible"
-        [value]="stats()?.aforoDisponibleTotal ?? 0"
-        [sublabel]="'de ' + (stats()?.aforoMaximoTotal ?? 0) + ' totales'"
+        label="Cupos en eventos activos"
+        [value]="stats()?.cuposOcupadosEventosActivos ?? 0"
+        [sublabel]="'Máx. ' + (stats()?.aforoMaximoPorEvento ?? 600) + ' por evento'"
         icon="pi-chart-pie"
       ></app-stat-card>
       <app-stat-card

@@ -39,7 +39,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
@@ -377,14 +376,14 @@ public class ExportServiceImpl implements ExportService {
     }
 
     private static String fechaDiaMesAnioTitulado(java.time.LocalDateTime dt) {
-        Locale es = new Locale("es", "CO");
+        Locale es = Locale.forLanguageTag("es-CO");
         String mes = dt.getMonth().getDisplayName(TextStyle.FULL, es);
         mes = mes.substring(0, 1).toUpperCase(Locale.ROOT) + mes.substring(1);
         return dt.getDayOfMonth() + " de " + mes + " de " + dt.getYear();
     }
 
     private static String fraseExpedicionTitulada(LocalDateTime fg) {
-        Locale es = new Locale("es", "CO");
+        Locale es = Locale.forLanguageTag("es-CO");
         String mes = fg.getMonth().getDisplayName(TextStyle.FULL, es);
         mes = mes.substring(0, 1).toUpperCase(Locale.ROOT) + mes.substring(1);
         return "a los " + fg.getDayOfMonth() + " días del mes de " + mes + " de " + fg.getYear();

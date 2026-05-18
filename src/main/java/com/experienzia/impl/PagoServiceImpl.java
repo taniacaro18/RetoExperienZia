@@ -174,6 +174,12 @@ public class PagoServiceImpl implements PagoService {
         if (pago.getEstado() != EstadoPago.PENDIENTE) {
             throw new CustomException("Solo se pueden aprobar pagos PENDIENTES.", HttpStatus.BAD_REQUEST);
         }
+        if (pago.getComprobanteUrl() == null || pago.getComprobanteUrl().isBlank()) {
+            throw new CustomException(
+                    "No hay comprobante adjunto. El organizador debe subir el archivo del pago "
+                            + "(o del complemento por horas adicionales) antes de que puedas aprobar.",
+                    HttpStatus.BAD_REQUEST);
+        }
         pago.setEstado(EstadoPago.APROBADO);
         pago.setMotivoRechazo(null);
         pago.setAprobadorId(aprobadorId);
@@ -233,6 +239,10 @@ public class PagoServiceImpl implements PagoService {
         }
         if (pago.getSaldoAprobadoPrevio() != null) {
             // Rechazo del comprobante del suplemento: el organizador debe subir otro; el pago sigue PENDIENTE.
+            String viejo = pago.getComprobanteUrl();
+            if (viejo != null && !viejo.isBlank()) {
+                fileStorageService.borrarComprobantePublico(viejo);
+            }
             pago.setComprobanteUrl(null);
             pago.setMotivoRechazo(motivo.trim());
             pago.setAprobadorId(aprobadorId);
@@ -278,6 +288,15 @@ public class PagoServiceImpl implements PagoService {
     @Transactional(readOnly = true)
     public List<PagoDTO> listarPorOrganizador(Long organizadorId) {
         return pagoRepository.findByOrganizadorId(organizadorId).stream().map(this::toDto).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<PagoDTO> obtenerPorEvento(Long eventoId) {
+        if (eventoId == null) {
+            return Optional.empty();
+        }
+        return pagoRepository.findByEventoId(eventoId).map(this::toDto);
     }
 
     private PagoDTO toDto(Pago pago) {

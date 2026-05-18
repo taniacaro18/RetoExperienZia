@@ -13,6 +13,7 @@ import com.experienzia.util.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Controlador de pagos. Solo el ORGANIZADOR registra pagos para sus eventos;
@@ -70,5 +71,12 @@ public class PagoController {
     @GetMapping("/organizador/{organizadorId}")
     public ResponseEntity<List<PagoDTO>> listarPorOrganizador(@PathVariable Long organizadorId) {
         return ResponseEntity.ok(pagoService.listarPorOrganizador(organizadorId));
+    }
+
+    /** Pago asociado a un evento (comprobante, complemento, estado). */
+    @GetMapping("/evento/{eventoId}")
+    public ResponseEntity<PagoDTO> obtenerPorEvento(@PathVariable Long eventoId) {
+        Optional<PagoDTO> dto = pagoService.obtenerPorEvento(eventoId);
+        return dto.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

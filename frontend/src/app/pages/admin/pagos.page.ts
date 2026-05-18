@@ -13,7 +13,12 @@ import { PagoApi } from '../../core/api/pago.api';
 import { EstadoPago, Pago } from '../../core/models/domain.models';
 import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 import { pagoEstadoSeverity } from '../../shared/estado.helpers';
-import { environment } from '../../../environments/environment';
+import {
+  esComprobanteImagen,
+  esComprobantePdf,
+  urlComprobantePago,
+  urlComprobanteSeguraPago
+} from '../../core/utils/comprobante.util';
 
 type FiltroEstado = 'TODOS' | EstadoPago;
 
@@ -88,24 +93,23 @@ export class AdminPagosPage {
   }
 
   urlComprobante(p: Pago): string {
-    if (!p.comprobanteUrl) return '';
-    if (p.comprobanteUrl.startsWith('http')) return p.comprobanteUrl;
-    if (p.comprobanteUrl.startsWith('/')) return environment.apiUrl + p.comprobanteUrl;
-    return environment.apiUrl + '/' + p.comprobanteUrl;
+    return urlComprobantePago(p);
   }
 
   urlComprobanteSegura(p: Pago): SafeResourceUrl {
-    return this.sanitizer.bypassSecurityTrustResourceUrl(this.urlComprobante(p));
+    return urlComprobanteSeguraPago(p, this.sanitizer);
   }
 
   esImagen(p: Pago): boolean {
-    if (!p.comprobanteUrl) return false;
-    const lower = p.comprobanteUrl.toLowerCase();
-    return /\.(jpe?g|png|gif|webp|bmp)(\?|$)/.test(lower);
+    return esComprobanteImagen(p);
   }
 
   esPdf(p: Pago): boolean {
-    return !!p.comprobanteUrl && p.comprobanteUrl.toLowerCase().includes('.pdf');
+    return esComprobantePdf(p);
+  }
+
+  puedeAprobar(p: Pago): boolean {
+    return p.estado === 'PENDIENTE' && !!p.comprobanteUrl?.trim();
   }
 
   verComprobante(p: Pago) {

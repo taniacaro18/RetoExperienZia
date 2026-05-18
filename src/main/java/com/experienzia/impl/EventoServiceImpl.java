@@ -1,7 +1,9 @@
 package com.experienzia.impl;
 
+import com.experienzia.dto.DisponibilidadSalonDTO;
 import com.experienzia.dto.EventoDTO;
 import com.experienzia.dto.EventoNovedadDTO;
+import com.experienzia.dto.FranjaOcupacionSalonDTO;
 import com.experienzia.entity.EstadoEvento;
 import com.experienzia.entity.EstadoInscripcion;
 import com.experienzia.entity.EstadoNovedadEvento;
@@ -21,10 +23,12 @@ import com.experienzia.repository.InscripcionRepository;
 import com.experienzia.repository.PagoRepository;
 import com.experienzia.repository.UsuarioRepository;
 import com.experienzia.service.EventoService;
+import com.experienzia.service.FileStorageService;
 import com.experienzia.service.InscripcionService;
 import com.experienzia.service.NotificacionService;
 import com.experienzia.spec.EventoSpecification;
 import com.experienzia.spec.EventoSpecification.EventoSearchCriteria;
+import com.experienzia.util.EventoVentanaUtil;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
@@ -41,6 +45,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -57,6 +62,17 @@ public class EventoServiceImpl implements EventoService {
     /** Ubicación por defecto cuando el organizador no la especifica. */
     private static final String UBICACION_POR_DEFECTO = "Salón principal";
 
+    private static final List<EstadoEvento> ESTADOS_RESERVAN_UBICACION = List.of(
+            EstadoEvento.PENDIENTE,
+            EstadoEvento.APROBADO,
+            EstadoEvento.ACTIVO,
+            EstadoEvento.PENDIENTE_REVISION,
+            EstadoEvento.PENDIENTE_SUPLEMENTO,
+            EstadoEvento.PENDIENTE_CANCELACION);
+
+    private static final DateTimeFormatter FMT_VENTANA =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.forLanguageTag("es-CO"));
+
     private static final double PENALIZACION_POR_HORA_REDUCIDA = 0.05;
 
     private final EventoRepository eventoRepository;
@@ -68,6 +84,7 @@ public class EventoServiceImpl implements EventoService {
     private final ModelMapper modelMapper;
     private final UsuarioRepository usuarioRepository;
     private final ObjectMapper objectMapper;
+    private final FileStorageService fileStorageService;
 
     /** Tarifa por hora del evento (configurable). El costo se calcula como precioHora * duracionHoras. */
     @Value("${experienzia.precio-por-hora:100000}")
@@ -88,7 +105,8 @@ public class EventoServiceImpl implements EventoService {
                              InscripcionService inscripcionService,
                              ModelMapper modelMapper,
                              UsuarioRepository usuarioRepository,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper,
+                             FileStorageService fileStorageService) {
         this.eventoRepository = eventoRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.pagoRepository = pagoRepository;
@@ -98,6 +116,7 @@ public class EventoServiceImpl implements EventoService {
         this.modelMapper = modelMapper;
         this.usuarioRepository = usuarioRepository;
         this.objectMapper = objectMapper;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
@@ -112,6 +131,7 @@ public class EventoServiceImpl implements EventoService {
         LocalDateTime inicio = dto.getFecha();
         LocalDateTime finAjustado = ajustarFinCruceMedianoche(inicio, dto.getFechaFin());
         validarFechas(inicio, finAjustado);
+        assertUbicacionDisponible(inicio, finAjustado, dto.getUbicacion(), null);
 
         Evento evento = modelMapper.map(dto, Evento.class);
         evento.setId(null);
@@ -184,6 +204,10 @@ public class EventoServiceImpl implements EventoService {
         boolean cambiaDuracion = nuevaDuracion != viejaDuracion;
         boolean cambiaAgenda = !inicio.equals(viejoInicio) || !finAjustado.equals(viejoFin);
 
+        if (cambiaAgenda || cambiaUbicacion || cambiaDuracion) {
+            assertUbicacionDisponible(inicio, finAjustado, ubicNueva, evento.getId());
+        }
+
         boolean requiereRevisionTipoCat = cambiaTipo || cambiaCategoria;
         boolean soloMetadatosSinTipoCatNiHoras = !requiereRevisionTipoCat && !cambiaDuracion;
         boolean aumentaHoras = nuevaDuracion > viejaDuracion;
@@ -240,13 +264,13 @@ public class EventoServiceImpl implements EventoService {
             Pago p = pOpt.get();
             double montoYaCobradoAprobado = p.getMonto();
             if (costoFinal > montoYaCobradoAprobado + 0.01) {
-                prepararComplementoPago(p, costoFinal);
+                // Fase 1: revisión admin de los cambios (sin tocar el pago aprobado aún).
                 evento.setEstadoPrevioRevision(estadoAntes);
-                evento.setEstado(EstadoEvento.PENDIENTE_SUPLEMENTO);
+                evento.setEstado(EstadoEvento.PENDIENTE_REVISION);
                 evento.setResumenSolicitudEdicion(construirResumenEdicion(
                         viejaDuracion,
                         nuevaDuracion,
-                        p.getSaldoAprobadoPrevio() != null ? p.getSaldoAprobadoPrevio() : montoYaCobradoAprobado,
+                        montoYaCobradoAprobado,
                         costoFinal,
                         cambiaNombre,
                         cambiaDescripcion,
@@ -258,10 +282,12 @@ public class EventoServiceImpl implements EventoService {
                         true,
                         cambiaAgenda));
                 Evento guardado = eventoRepository.save(evento);
-                registrarNovedadAumentoHoras(guardado, dto.getOrganizadorId(), viejaDuracion, nuevaDuracion, p, snapshotAntes);
-                double adicional = costoFinal - (p.getSaldoAprobadoPrevio() != null ? p.getSaldoAprobadoPrevio() : p.getMonto());
-                String msg = "Aumentaste las horas: debes pagar solo el excedente (" + copTexto(adicional)
-                        + " COP) y subir un comprobante por esa diferencia. El evento queda en pendiente de suplemento hasta que el administrador apruebe el pago.";
+                registrarNovedadAumentoHoras(
+                        guardado, dto.getOrganizadorId(), viejaDuracion, nuevaDuracion, p, costoFinal, snapshotAntes);
+                double adicional = costoFinal - montoYaCobradoAprobado;
+                String msg = "Aumentaste las horas: un administrador debe aprobar los cambios primero. Después deberás pagar solo el excedente ("
+                        + copTexto(adicional)
+                        + " COP) y subir un comprobante por esa diferencia.";
                 return conAlerta(guardado, msg);
             }
             // Horas facturadas aumentaron pero el cobro no supera lo ya aprobado (inconsistencia o tarifa ya al día):
@@ -367,14 +393,17 @@ public class EventoServiceImpl implements EventoService {
                 Pago pp = pOpt.get();
                 boolean tuvoCambioTarifa = Math.abs(costoFinal - viejoCosto) > 0.01;
                 pp.setMonto(costoFinal);
+                String msgTarifa = null;
                 if (tuvoCambioTarifa) {
-                    pp.setComprobanteUrl(null);
+                    limpiarComprobantePago(pp);
+                    msgTarifa =
+                            "Cambió la tarifa del evento: debes subir un nuevo comprobante en la sección Pagos antes de que el administrador lo valide.";
                 }
                 pagoRepository.save(pp);
                 evento.setEstado(estadoAntes);
                 evento.setResumenSolicitudEdicion(null);
                 evento.setEstadoPrevioRevision(null);
-                return conAlerta(eventoRepository.save(evento), null);
+                return conAlerta(eventoRepository.save(evento), msgTarifa);
             }
 
             boolean necesitaRevisionEvento = pOpt.isEmpty() || pOpt.get().getEstado() == EstadoPago.RECHAZADO;
@@ -454,6 +483,15 @@ public class EventoServiceImpl implements EventoService {
         return !a.equals(b);
     }
 
+    /** Borra el archivo anterior y deja el pago sin comprobante hasta nueva carga. */
+    private void limpiarComprobantePago(Pago p) {
+        String url = p.getComprobanteUrl();
+        if (url != null && !url.isBlank()) {
+            fileStorageService.borrarComprobantePublico(url);
+        }
+        p.setComprobanteUrl(null);
+    }
+
     private void prepararComplementoPago(Pago p, double nuevoCostoEvento) {
         if (p.getEstado() != EstadoPago.APROBADO) {
             return;
@@ -466,7 +504,7 @@ public class EventoServiceImpl implements EventoService {
         p.setSaldoAprobadoPrevio(montoPrevio);
         p.setMonto(delta);
         p.setEstado(EstadoPago.PENDIENTE);
-        p.setComprobanteUrl(null);
+        limpiarComprobantePago(p);
         p.setMotivoRechazo(null);
         p.setAprobadorId(null);
         p.setFechaResolucion(null);
@@ -621,6 +659,7 @@ public class EventoServiceImpl implements EventoService {
             int horasAntes,
             int horasDespues,
             Pago p,
+            double nuevoCostoEvento,
             java.util.Map<String, Object> snapshotAntes) {
         try {
             ObjectNode root = objectMapper.createObjectNode();
@@ -632,7 +671,7 @@ public class EventoServiceImpl implements EventoService {
             root.put("horasDespues", horasDespues);
             double montoPrevio = p.getSaldoAprobadoPrevio() != null ? p.getSaldoAprobadoPrevio() : p.getMonto();
             root.put("montoPagadoPrevio", montoPrevio);
-            root.put("montoAdicional", p.getMonto());
+            root.put("montoAdicional", Math.max(0, nuevoCostoEvento - montoPrevio));
             EventoNovedad n = new EventoNovedad();
             n.setEventoId(evento.getId());
             n.setUsuarioSolicitanteId(orgId);
@@ -696,6 +735,13 @@ public class EventoServiceImpl implements EventoService {
         } catch (Exception ex) {
             throw new CustomException("No se pudo registrar la novedad del evento.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private boolean tieneRevisionPendienteConSuplementoHoras(Long eventoId) {
+        return eventoNovedadRepository
+                .findFirstByEventoIdAndEstadoAndTipoOrderByFechaSolicitudDesc(
+                        eventoId, EstadoNovedadEvento.PENDIENTE, TipoNovedadEvento.AUMENTO_HORAS)
+                .isPresent();
     }
 
     private void marcarUltimaNovedadResuelta(Long eventoId, EstadoNovedadEvento resolucion, String motivo) {
@@ -778,6 +824,39 @@ public class EventoServiceImpl implements EventoService {
         return (ubicacion == null || ubicacion.isBlank()) ? UBICACION_POR_DEFECTO : ubicacion.trim();
     }
 
+    /**
+     * No permite dos eventos en la misma ubicación con horarios que se solapan
+     * (incluye solicitudes pendientes de aprobación).
+     */
+    private void assertUbicacionDisponible(
+            LocalDateTime inicio, LocalDateTime fin, String ubicacion, Long excluirEventoId) {
+        String ub = ubicacionFinal(ubicacion);
+        List<Evento> existentes =
+                eventoRepository.findByUbicacionNormalizadaYEstadoIn(ub, ESTADOS_RESERVAN_UBICACION);
+        for (Evento otro : existentes) {
+            if (excluirEventoId != null && excluirEventoId.equals(otro.getId())) {
+                continue;
+            }
+            if (EventoVentanaUtil.ventanasSeSolapan(inicio, fin, otro)) {
+                LocalDateTime otroFin = EventoVentanaUtil.instanteFin(otro);
+                throw new CustomException(
+                        String.format(
+                                Locale.ROOT,
+                                "La ubicación «%s» no está disponible entre %s y %s. "
+                                        + "Ya existe el evento «%s» programado de %s a %s (estado %s). "
+                                        + "Elige otra fecha, otro horario u otra ubicación.",
+                                ub,
+                                inicio.format(FMT_VENTANA),
+                                fin.format(FMT_VENTANA),
+                                otro.getNombre(),
+                                otro.getFecha().format(FMT_VENTANA),
+                                otroFin.format(FMT_VENTANA),
+                                otro.getEstado()),
+                        HttpStatus.CONFLICT);
+            }
+        }
+    }
+
     private int calcularDuracionHoras(LocalDateTime inicio, LocalDateTime fin) {
         long minutos = Duration.between(inicio, fin).toMinutes();
         if (minutos <= 0) return 1;
@@ -795,7 +874,27 @@ public class EventoServiceImpl implements EventoService {
     @Override
     public EventoDTO aprobar(Long id) {
         Evento evento = buscarPorId(id);
+        assertUbicacionDisponible(
+                evento.getFecha(),
+                EventoVentanaUtil.instanteFin(evento),
+                evento.getUbicacion(),
+                evento.getId());
         if (evento.getEstado() == EstadoEvento.PENDIENTE_REVISION) {
+            if (tieneRevisionPendienteConSuplementoHoras(evento.getId())) {
+                Pago pago = pagoRepository
+                        .findByEventoId(evento.getId())
+                        .orElseThrow(() -> new CustomException(
+                                "No hay registro de pago para validar el suplemento por horas adicionales.",
+                                HttpStatus.BAD_REQUEST));
+                if (pago.getEstado() != EstadoPago.APROBADO) {
+                    throw new CustomException(
+                            "El suplemento por horas adicionales requiere un pago base ya aprobado.",
+                            HttpStatus.BAD_REQUEST);
+                }
+                prepararComplementoPago(pago, evento.getCosto());
+                evento.setEstado(EstadoEvento.PENDIENTE_SUPLEMENTO);
+                return toDto(eventoRepository.save(evento));
+            }
             marcarUltimaNovedadResuelta(evento.getId(), EstadoNovedadEvento.APROBADO, null);
             EstadoEvento volver =
                     evento.getEstadoPrevioRevision() != null ? evento.getEstadoPrevioRevision() : EstadoEvento.ACTIVO;
@@ -1140,6 +1239,87 @@ public class EventoServiceImpl implements EventoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public DisponibilidadSalonDTO consultarDisponibilidadSalon(
+            String ubicacion,
+            LocalDateTime desde,
+            LocalDateTime hasta,
+            Long excluirEventoId,
+            LocalDateTime propuestaInicio,
+            LocalDateTime propuestaFin) {
+        if (desde == null || hasta == null) {
+            throw new CustomException("Indica el rango de fechas (desde y hasta).", HttpStatus.BAD_REQUEST);
+        }
+        if (hasta.isBefore(desde)) {
+            throw new CustomException("La fecha «hasta» no puede ser anterior a «desde».", HttpStatus.BAD_REQUEST);
+        }
+        String ub = ubicacionFinal(ubicacion);
+        List<Evento> candidatos =
+                eventoRepository.findByUbicacionNormalizadaYEstadoIn(ub, ESTADOS_RESERVAN_UBICACION);
+
+        DisponibilidadSalonDTO resp = new DisponibilidadSalonDTO();
+        resp.setUbicacion(ub);
+        resp.setDesde(desde);
+        resp.setHasta(hasta);
+
+        List<FranjaOcupacionSalonDTO> franjas = new ArrayList<>();
+        for (Evento e : candidatos) {
+            if (excluirEventoId != null && excluirEventoId.equals(e.getId())) {
+                continue;
+            }
+            LocalDateTime ini = e.getFecha();
+            LocalDateTime fin = EventoVentanaUtil.instanteFin(e);
+            if (fin.isBefore(desde) || ini.isAfter(hasta)) {
+                continue;
+            }
+            FranjaOcupacionSalonDTO f = new FranjaOcupacionSalonDTO();
+            f.setEventoId(e.getId());
+            f.setNombreEvento(e.getNombre());
+            f.setEstado(e.getEstado());
+            f.setInicio(ini);
+            f.setFin(fin);
+            if (e.getOrganizadorId() != null) {
+                usuarioRepository.findById(e.getOrganizadorId()).ifPresent(u -> f.setNombreOrganizador(u.getNombre()));
+            }
+            franjas.add(f);
+        }
+        franjas.sort((a, b) -> a.getInicio().compareTo(b.getInicio()));
+        resp.setOcupaciones(franjas);
+
+        if (propuestaInicio != null && propuestaFin != null) {
+            if (!propuestaFin.isAfter(propuestaInicio)) {
+                resp.setPropuestaDisponible(false);
+                resp.setMensajePropuesta("La hora de fin debe ser posterior al inicio.");
+            } else {
+                boolean libre = true;
+                StringBuilder conflicto = new StringBuilder();
+                for (Evento otro : candidatos) {
+                    if (excluirEventoId != null && excluirEventoId.equals(otro.getId())) {
+                        continue;
+                    }
+                    if (EventoVentanaUtil.ventanasSeSolapan(propuestaInicio, propuestaFin, otro)) {
+                        libre = false;
+                        LocalDateTime otroFin = EventoVentanaUtil.instanteFin(otro);
+                        conflicto.append(String.format(
+                                Locale.ROOT,
+                                "«%s» (%s – %s, %s). ",
+                                otro.getNombre(),
+                                otro.getFecha().format(FMT_VENTANA),
+                                otroFin.format(FMT_VENTANA),
+                                otro.getEstado()));
+                    }
+                }
+                resp.setPropuestaDisponible(libre);
+                resp.setMensajePropuesta(
+                        libre
+                                ? "El salón está libre en el horario indicado."
+                                : "No disponible: ya hay evento(s) programado(s): " + conflicto);
+            }
+        }
+        return resp;
+    }
+
+    @Override
     public void marcarEventosActivosFinalizados() {
         for (Evento e : eventoRepository.findByEstado(EstadoEvento.ACTIVO)) {
             if (eventoHaFinalizadoSuVentana(e)) {
@@ -1155,13 +1335,7 @@ public class EventoServiceImpl implements EventoService {
      * Así no quedan eventos ACTIVO para siempre cuando {@code fechaFin} quedó mal guardada.
      */
     private static LocalDateTime instanteFinEvento(Evento e) {
-        LocalDateTime inicio = e.getFecha();
-        LocalDateTime fin = e.getFechaFin();
-        if (fin != null && !fin.isBefore(inicio)) {
-            return fin;
-        }
-        int horas = e.getDuracionHoras() != null && e.getDuracionHoras() > 0 ? e.getDuracionHoras() : 1;
-        return inicio.plusHours(horas);
+        return EventoVentanaUtil.instanteFin(e);
     }
 
     /** Interpreta fecha/hora del evento en la zona configurada y la compara con “ahora” en esa misma zona. */
