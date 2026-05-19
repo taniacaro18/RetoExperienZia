@@ -1,15 +1,16 @@
 package com.experienzia;
 
-import com.experienzia.entity.Estado;
-import com.experienzia.entity.Rol;
-import com.experienzia.entity.Usuario;
-import com.experienzia.repository.UsuarioRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.experienzia.entity.Estado;
+import com.experienzia.entity.Rol;
+import com.experienzia.entity.Usuario;
+import com.experienzia.repository.UsuarioRepository;
 
 @SpringBootApplication
 @EnableScheduling
@@ -48,7 +49,7 @@ public class Application {
 				System.out.println("Administrador creado. Credenciales -> "
 						+ emailAdmin + " / admin123");
 			} else {
-				System.out.println("El administrador por defecto (" + emailAdmin + ") ya existe.");
+				System.out.println("El Administrador  (" + emailAdmin + ") ya existe.");
 			}
 		};
 	}
