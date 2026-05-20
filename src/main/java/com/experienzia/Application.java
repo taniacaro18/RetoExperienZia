@@ -1,13 +1,5 @@
 package com.experienzia;
 
-/**
- * Punto de entrada de la aplicación ExperienZia (backend Spring Boot).
- * <p>
- * Cuando ejecutas este proyecto, Spring arranca el servidor en el puerto configurado
- * (por defecto 8080) y expone las APIs REST que consume el frontend Angular.
- * También crea un usuario administrador la primera vez, para poder entrar sin
- * registrar nada manualmente en la base de datos.
- */
 import com.experienzia.entity.Estado;
 import com.experienzia.entity.Rol;
 import com.experienzia.entity.Usuario;
@@ -19,9 +11,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-// Le dice a Spring que esta clase es la aplicación principal.
+/**
+ * Punto de entrada de la aplicación ExperienZia (backend Spring Boot).
+ * <p>
+ * Cuando ejecutas este proyecto, Spring arranca el servidor en el puerto configurado
+ * (por defecto 8080) y expone las APIs REST que consume el frontend Angular.
+ * También crea un usuario administrador la primera vez, para poder entrar sin
+ * registrar nada manualmente en la base de datos.
+ */
 @SpringBootApplication
-// Permite tareas programadas (por ejemplo, cerrar eventos que ya terminaron).
 @EnableScheduling
 public class Application {
 
