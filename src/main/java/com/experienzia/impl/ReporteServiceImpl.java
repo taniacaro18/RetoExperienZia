@@ -40,6 +40,9 @@ import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
+/**
+ * Implementacion de reportes, estadisticas y dashboards.
+ */
 public class ReporteServiceImpl implements ReporteService {
 
     private static final List<String> ACCIONES_CHECK_IN_QR = List.of("CHECK_IN_QR");
@@ -63,6 +66,7 @@ public class ReporteServiceImpl implements ReporteService {
         this.auditoriaRepository = auditoriaRepository;
     }
 
+    /** Ranking de eventos con mas inscripciones. */
     @Override
     public List<EventoPopularDTO> obtenerEventosPopulares() {
         return inscripcionRepository.findEventosPopulares().stream().map(obj -> {
@@ -75,17 +79,20 @@ public class ReporteServiceImpl implements ReporteService {
         }).toList();
     }
 
+    /** Estadisticas de asistencia de un evento. */
     @Override
     public AsistenciaDTO obtenerAsistenciaPorEvento(Long eventoId) {
         long totalAsistieron = inscripcionRepository.countByEventoIdAndEstado(eventoId, EstadoInscripcion.ASISTIO);
         return new AsistenciaDTO(eventoId, totalAsistieron);
     }
 
+    /** Ids de usuarios inscritos. */
     @Override
     public List<Long> obtenerUsuariosPorEvento(Long eventoId) {
         return inscripcionRepository.findUsuarioIdsByEventoId(eventoId);
     }
 
+    /** Totales generales del sistema. */
     @Override
     public ResumenDTO obtenerResumenGeneral() {
         return new ResumenDTO(
@@ -94,6 +101,7 @@ public class ReporteServiceImpl implements ReporteService {
                 inscripcionRepository.count());
     }
 
+    /** Reporte detallado para el organizador. */
     @Override
     public ReporteEventoDTO obtenerReporteDetalladoEvento(Long eventoId, Long organizadorId) {
         Evento evento = buscarEventoYValidarOrganizador(eventoId, organizadorId);
@@ -156,6 +164,7 @@ public class ReporteServiceImpl implements ReporteService {
         return r;
     }
 
+    /** Reporte avanzado con curvas y desempeno staff. */
     @Override
     public ReporteEventoAvanzadoDTO obtenerReporteAvanzadoEvento(Long eventoId, Long organizadorId) {
         Evento evento = buscarEventoYValidarOrganizador(eventoId, organizadorId);
@@ -260,6 +269,7 @@ public class ReporteServiceImpl implements ReporteService {
         return r;
     }
 
+    /** Metricas del panel del organizador. */
     @Override
     public DashboardOrganizadorDTO obtenerDashboardOrganizador(Long organizadorId) {
         if (organizadorId == null) {
@@ -323,6 +333,7 @@ public class ReporteServiceImpl implements ReporteService {
         return dto;
     }
 
+    /** Metricas del panel del administrador. */
     @Override
     public DashboardAdminDTO obtenerDashboardAdmin() {
         List<Evento> eventos = eventoRepository.findAll();

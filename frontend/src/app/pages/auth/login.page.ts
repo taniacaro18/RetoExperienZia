@@ -13,6 +13,11 @@ import { Rol } from '../../core/models/domain.models';
 import { LogoComponent } from '../../shared/logo/logo.component';
 import { RecuperarModal } from './recuperar.page';
 
+/**
+ * Pantalla: Inicio de sesión.
+ * Rol: cualquier usuario (sin autenticar).
+ * Valida email/contraseña y redirige según el rol (admin, organizador, staff, asistente).
+ */
 @Component({
   selector: 'app-login-page',
   standalone: true,
@@ -37,6 +42,7 @@ export class LoginPage {
   private readonly router = inject(Router);
   private readonly messages = inject(MessageService);
 
+  // true mientras espera respuesta del login
   readonly cargando = signal(false);
   mostrarPassword = false;
   readonly mostrarRecuperar = signal(false);
@@ -48,6 +54,7 @@ export class LoginPage {
     password: ['', [Validators.required, Validators.minLength(4)]]
   });
 
+  // envía credenciales al backend y navega al home del rol
   enviar() {
     if (this.formulario.invalid) {
       this.formulario.markAllAsTouched();

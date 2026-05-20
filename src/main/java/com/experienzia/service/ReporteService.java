@@ -10,10 +10,20 @@ import com.experienzia.dto.ResumenDTO;
 
 import java.util.List;
 
+/**
+ * Contrato para reportes, estadisticas y dashboards.
+ */
 public interface ReporteService {
+
+    /** Ranking de eventos con mas inscripciones. */
     List<EventoPopularDTO> obtenerEventosPopulares();
+    /** Porcentaje de asistencia de un evento. */
     AsistenciaDTO obtenerAsistenciaPorEvento(Long eventoId);
+
+    /** Ids de usuarios inscritos en un evento. */
     List<Long> obtenerUsuariosPorEvento(Long eventoId);
+
+    /** Totales generales del sistema (usuarios, eventos, etc.). */
     ResumenDTO obtenerResumenGeneral();
 
     /** HU-023: reporte detallado de un evento (aforo, asistencia, ocupación, lista). */

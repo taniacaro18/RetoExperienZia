@@ -10,6 +10,11 @@ import { eventoSigueVigenteEnCatalogoPublico } from '../../shared/evento-catalog
 import { LogoComponent } from '../../shared/logo/logo.component';
 import { VerificarCertificadoModal } from './verificar-certificado.page';
 
+/**
+ * Pantalla: Catálogo público de eventos (sin login).
+ * Rol: visitante.
+ * Muestra eventos públicos vigentes y acceso a verificar certificados.
+ */
 @Component({
   selector: 'app-catalogo-publico-page',
   standalone: true,
@@ -36,6 +41,7 @@ export class CatalogoPublicoPage {
   readonly categoria = signal('');
   readonly mostrarVerificar = signal(false);
 
+  // eventos vigentes filtrados por nombre y categoría
   readonly filtrados = computed(() => {
     let list = this.todos().filter(eventoSigueVigenteEnCatalogoPublico);
     const n = this.nombre().trim().toLowerCase();
@@ -50,6 +56,7 @@ export class CatalogoPublicoPage {
   });
 
   ngOnInit() {
+    // carga catálogo público desde el API
     this.cargando.set(true);
     this.eventoApi.catalogoPublicos().subscribe({
       next: (lista) => {

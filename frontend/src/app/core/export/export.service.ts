@@ -1,26 +1,23 @@
+/**
+ * Exporta tablas a Excel/PDF y lee plantillas para carga masiva.
+ */
 import { Injectable } from '@angular/core';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable, { RowInput } from 'jspdf-autotable';
 import type { ReporteEventoAvanzado } from '../api/reporte.api';
 
-/** Alineación con las vistas previas en pantalla (cabeceras KPI distintas). */
+// Vista del reporte: admin ve KPI distintos al organizador.
 export type ReporteVistaPrevia = 'admin' | 'organizador';
 
 export interface ColumnaExport<T> {
-  /** Encabezado humano que se muestra en Excel y PDF. */
-  header: string;
-  /** Función que extrae el valor de una fila. */
-  value: (row: T) => string | number | null | undefined;
+  header: string; // título de la columna en el archivo
+  value: (row: T) => string | number | null | undefined; // cómo sacar el dato de cada fila
 }
 
-/**
- * Servicio centralizado para exportar listados a Excel (.xlsx) y PDF.
- * También sirve para descargar plantillas .xlsx con encabezados y filas de ejemplo.
- */
 @Injectable({ providedIn: 'root' })
 export class ExportService {
-  /** Exporta un listado a un archivo .xlsx. */
+  // Genera un .xlsx con encabezados y filas.
   exportarExcel<T>(filename: string, sheetName: string, columnas: ColumnaExport<T>[], rows: T[]) {
     const headers = columnas.map((c) => c.header);
     const data = rows.map((r) => columnas.map((c) => c.value(r) ?? ''));
@@ -40,10 +37,7 @@ export class ExportService {
     XLSX.writeFile(wb, this.asegurarExt(filename, 'xlsx'));
   }
 
-  /**
-   * Genera una plantilla .xlsx con encabezados obligatorios y, opcionalmente,
-   * filas de ejemplo. Usado para carga masiva (ej. asistentes).
-   */
+  // Plantilla vacía con ejemplo (para subir asistentes por Excel).
   descargarPlantillaExcel(filename: string, sheetName: string,
                           headers: string[], filasEjemplo: (string | number)[][] = []) {
     const ws = XLSX.utils.aoa_to_sheet([headers, ...filasEjemplo]);
@@ -53,10 +47,7 @@ export class ExportService {
     XLSX.writeFile(wb, this.asegurarExt(filename, 'xlsx'));
   }
 
-  /**
-   * Lee un archivo .xlsx (o .csv) y devuelve un array de objetos usando la primera
-   * fila como encabezados. Si llega un .csv lo procesa también.
-   */
+  // Lee Excel o CSV y devuelve filas como objetos (primera fila = nombres de columna).
   async leerExcelOCsv(archivo: File): Promise<Record<string, string>[]> {
     const buffer = await archivo.arrayBuffer();
     const wb = XLSX.read(buffer, { type: 'array' });
@@ -67,7 +58,7 @@ export class ExportService {
     });
   }
 
-  /** Convierte cualquier listado tabular a CSV (texto). Útil cuando el backend solo acepta CSV. */
+  // Arma texto CSV a partir de cabeceras y filas.
   filasACsv(headers: string[], filas: (string | number | null | undefined)[][]): string {
     const escapar = (v: string | number | null | undefined): string => {
       const s = v == null ? '' : String(v);
@@ -79,7 +70,7 @@ export class ExportService {
     return lineas.join('\n');
   }
 
-  /** Exporta a PDF usando jspdf-autotable. */
+  // Genera PDF con tabla (jspdf-autotable).
   exportarPdf<T>(filename: string, titulo: string,
                  columnas: ColumnaExport<T>[], rows: T[],
                  subtitulo?: string) {
@@ -116,9 +107,7 @@ export class ExportService {
     doc.save(this.asegurarExt(filename, 'pdf'));
   }
 
-  /**
-   * Excel: primera hoja replica la vista previa; las siguientes conservan tablas para análisis.
-   */
+  // Excel del reporte avanzado (hoja vista previa + curva + staff).
   exportarReporteAvanzadoExcel(
     filenameBase: string,
     r: ReporteEventoAvanzado,
@@ -158,10 +147,7 @@ export class ExportService {
     XLSX.writeFile(wb, this.asegurarExt(this.slugArchivo(filenameBase), 'xlsx'));
   }
 
-  /**
-   * PDF: misma estructura que la vista previa del rol en la 1.ª página.
-   * Organizador: 2.ª página anexo con curva horaria y staff detallado (como en Excel).
-   */
+  // PDF del reporte avanzado (organizador lleva anexo extra).
   exportarReporteAvanzadoPdf(
     filenameBase: string,
     r: ReporteEventoAvanzado,
@@ -300,7 +286,7 @@ export class ExportService {
     doc.save(this.asegurarExt(this.slugArchivo(filenameBase), 'pdf'));
   }
 
-  /** Segunda página solo para PDF de organizador: curva + staff completo. */
+  // Página 2 del PDF organizador (curva y staff detallado).
   private agregarPaginaAnexoOrganizadorPdf(
     doc: jsPDF,
     r: ReporteEventoAvanzado,

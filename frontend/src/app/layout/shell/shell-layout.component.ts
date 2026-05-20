@@ -1,3 +1,7 @@
+/**
+ * Layout principal cuando el usuario ya inició sesión: sidebar, cabecera y zona de contenido.
+ * Filtra el menú según el rol y gestiona notificaciones y búsqueda rápida.
+ */
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -15,6 +19,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { NotificacionStore } from '../../core/state/notificacion.store';
 import { Rol } from '../../core/models/domain.models';
 
+// Un ítem del menú lateral: texto, icono, ruta y qué roles lo ven.
 interface ItemNavegacion {
   etiqueta: string;
   icono: string;
@@ -48,11 +53,12 @@ export class ShellLayoutComponent implements OnInit, OnDestroy {
   readonly store = inject(AuthStore);
   readonly notif = inject(NotificacionStore);
 
+  // Escucha si la pantalla es grande (sidebar fijo) o móvil (drawer).
   private mqEscritorio?: MediaQueryList;
   private readonly mqListener = () =>
     this.pantallaGrande.set(this.mqEscritorio?.matches ?? false);
 
-  /** Desde 1024px el sidebar va en el flujo (estático); en pantallas pequeñas es drawer fijo. */
+  // Desde 1024px el sidebar va en el flujo; en móvil es drawer que se abre/cierra.
   readonly pantallaGrande = signal(
     typeof window !== 'undefined' && window.innerWidth >= 1024
   );
@@ -62,6 +68,7 @@ export class ShellLayoutComponent implements OnInit, OnDestroy {
   readonly anio = new Date().getFullYear();
 
   ngOnInit() {
+    // Arranca el polling de notificaciones y registra el media query.
     this.notif.iniciarPolling();
     this.mqEscritorio = window.matchMedia('(min-width: 1024px)');
     this.pantallaGrande.set(this.mqEscritorio.matches);
@@ -75,10 +82,12 @@ export class ShellLayoutComponent implements OnInit, OnDestroy {
   toggleSidebar() {
     this.sidebarAbierto.update((v) => !v);
   }
+  // En móvil cerramos el menú al navegar para no tapar la página.
   cerrarSidebarMobile() {
     if (window.innerWidth < 1024) this.sidebarAbierto.set(false);
   }
 
+  // Redirige a la lista de eventos del rol con el texto de búsqueda en queryParams.
   buscar() {
     const q = this.textoBusqueda.trim();
     if (!q) return;
@@ -90,7 +99,7 @@ export class ShellLayoutComponent implements OnInit, OnDestroy {
     this.router.navigate([destino], { queryParams: { q } });
   }
 
-  /** Si el rol no tiene búsqueda asociada, mejor ocultarla. */
+  // Staff no tiene listado con buscador global, así que ocultamos el input.
   readonly mostrarBuscador = computed(() => {
     const rol = this.store.rol();
     return rol === 'ASISTENTE' || rol === 'ADMIN' || rol === 'ORGANIZADOR';
@@ -101,6 +110,7 @@ export class ShellLayoutComponent implements OnInit, OnDestroy {
     this.router.navigate(['/login']);
   }
 
+  // Menú completo; cada entrada dice qué roles pueden verla.
   readonly items: ItemNavegacion[] = [
     { etiqueta: 'Inicio', icono: 'pi-home', ruta: '/inicio', roles: ['ADMIN', 'ORGANIZADOR', 'ASISTENTE', 'STAFF'] },
     { etiqueta: 'Mi perfil', icono: 'pi-user', ruta: '/perfil', roles: ['ADMIN', 'ORGANIZADOR', 'ASISTENTE', 'STAFF'] },
@@ -134,12 +144,14 @@ export class ShellLayoutComponent implements OnInit, OnDestroy {
     { etiqueta: 'Auditoría', icono: 'pi-shield', ruta: '/admin/auditoria', roles: ['ADMIN'] }
   ];
 
+  // Solo los ítems que corresponden al rol logueado.
   readonly itemsVisibles = computed(() => {
     const rol = this.store.rol();
     if (!rol) return [];
     return this.items.filter((i) => i.roles.includes(rol));
   });
 
+  // Menú desplegable del avatar (perfil y cerrar sesión).
   readonly menuPerfil: MenuItem[] = [
     { label: 'Mi perfil', icon: 'pi pi-user', routerLink: '/perfil' },
     { separator: true },
@@ -150,6 +162,7 @@ export class ShellLayoutComponent implements OnInit, OnDestroy {
     }
   ];
 
+  // Iniciales para el avatar cuando no hay foto.
   iniciales(nombre?: string | null): string {
     if (!nombre) return '?';
     const partes = nombre.trim().split(/\s+/);
@@ -158,6 +171,7 @@ export class ShellLayoutComponent implements OnInit, OnDestroy {
     return (a + (partes.length > 1 ? b : '')).toUpperCase();
   }
 
+  // Texto del rol debajo del nombre en el sidebar.
   etiquetaRol(): string {
     const rol = this.store.rol();
     switch (rol) {

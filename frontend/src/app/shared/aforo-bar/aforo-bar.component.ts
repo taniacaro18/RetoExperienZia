@@ -1,3 +1,7 @@
+/**
+ * Barra de progreso que muestra cuántas personas hay respecto al aforo máximo.
+ * El color cambia según el porcentaje (helpers en estado.helpers).
+ */
 import { CommonModule } from '@angular/common';
 import { Component, Input, computed, signal } from '@angular/core';
 import { colorOcupacion, porcentajeOcupacion } from '../estado.helpers';
@@ -19,16 +23,24 @@ import { colorOcupacion, porcentajeOcupacion } from '../estado.helpers';
   `
 })
 export class AforoBarComponent {
+  // Personas actuales (ocupación).
   readonly actual = signal(0);
+  // Capacidad máxima del salón o evento.
   readonly maximo = signal(0);
 
   @Input() set value(v: number) { this.actual.set(v ?? 0); }
   @Input() set max(v: number) { this.maximo.set(v ?? 0); }
+  // Altura de la barra en píxeles.
   @Input() height = 8;
+  // Texto a la izquierda, por defecto "Aforo".
   @Input() leftLabel = 'Aforo';
+  // Si true, no muestra la fila de etiquetas arriba.
   @Input() hideLabel = false;
+  // Clases extra para el contenedor (margen, ancho, etc.).
   @Input() containerClass = '';
 
+  // Porcentaje redondeado entre 0 y 100.
   readonly porcentaje = computed(() => porcentajeOcupacion(this.actual(), this.maximo()));
+  // Clase de color de Tailwind según qué tan llena está la barra.
   readonly color = computed(() => colorOcupacion(this.porcentaje()));
 }

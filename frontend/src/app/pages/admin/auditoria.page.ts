@@ -13,6 +13,11 @@ import { Auditoria, Usuario } from '../../core/models/domain.models';
 import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 import { accionAuditoriaIcono } from '../../shared/estado.helpers';
 
+/**
+ * Pantalla: Registro de auditoría del sistema.
+ * Rol: ADMIN.
+ * Consulta acciones registradas (quién hizo qué) y permite exportar CSV.
+ */
 @Component({
   selector: 'app-admin-auditoria-page',
   standalone: true,
@@ -35,6 +40,7 @@ export class AdminAuditoriaPage {
   private readonly messages = inject(MessageService);
 
   readonly cargando = signal(true);
+  // líneas del log de auditoría
   readonly registros = signal<Auditoria[]>([]);
   readonly usuarios = signal<Map<number, Usuario>>(new Map());
   readonly busqueda = signal('');
@@ -42,12 +48,14 @@ export class AdminAuditoriaPage {
 
   iconoAccion = accionAuditoriaIcono;
 
+  // tipos de entidad distintos (para el filtro)
   readonly entidades = computed(() => {
     const set = new Set<string>();
     for (const r of this.registros()) set.add(r.entidad);
     return Array.from(set).sort();
   });
 
+  // resumen: total, hoy, última semana y cantidad de entidades
   readonly conteo = computed(() => {
     const items = this.registros();
     const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
@@ -60,6 +68,7 @@ export class AdminAuditoriaPage {
     };
   });
 
+  // registros que pasan búsqueda y filtro de entidad
   readonly registrosFiltrados = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
     const fe = this.filtroEntidad();
@@ -79,6 +88,7 @@ export class AdminAuditoriaPage {
     return lista;
   });
 
+  // carga auditoría y mapa de usuarios para mostrar nombres
   ngOnInit() {
     this.cargando.set(true);
     this.auditoriaApi.listarTodo().subscribe({

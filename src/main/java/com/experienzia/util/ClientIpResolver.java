@@ -3,13 +3,14 @@ package com.experienzia.util;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * Obtiene la IP del cliente respetando proxies (X-Forwarded-For, X-Real-IP).
+ * Utilidad para obtener la IP real del cliente detras de un proxy o load balancer.
  */
 public final class ClientIpResolver {
 
     private ClientIpResolver() {
     }
 
+    /** Busca la IP en X-Forwarded-For, X-Real-IP o getRemoteAddr(). */
     public static String resolve(HttpServletRequest request) {
         if (request == null) {
             return null;

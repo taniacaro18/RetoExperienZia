@@ -1,6 +1,10 @@
+/**
+ * Ayuda a saber si un evento sigue "vivo" en el catálogo público.
+ * Usa la fecha de fin o inicio + duración, comparado con la hora del navegador.
+ */
 import { Evento } from '../core/models/domain.models';
 
-/** Marca de tiempo (ms) del fin de ventana del evento: `fechaFin` coherente o inicio + duración. */
+// Devuelve en milisegundos cuándo termina el evento (fechaFin o inicio + duración).
 export function instanteFinEventoMs(e: Evento): number {
   const inicioMs = new Date(e.fecha).getTime();
   if (e.fechaFin) {
@@ -13,12 +17,12 @@ export function instanteFinEventoMs(e: Evento): number {
   return inicioMs + h * 3_600_000;
 }
 
-/** Refuerzo en UI: el catálogo público no debe mostrar eventos cuya ventana ya pasó (según el reloj del navegador). */
+// true si el evento aún no ha pasado su hora de fin (para listarlo en /eventos).
 export function eventoSigueVigenteEnCatalogoPublico(e: Evento): boolean {
   return instanteFinEventoMs(e) > Date.now();
 }
 
-/** true si ya pasó la hora de fin (fechaFin o inicio + duración), según el reloj del navegador. */
+// true si ya pasó la ventana del evento (ya no debería mostrarse como activo).
 export function eventoVentanaYaCerro(e: Evento): boolean {
   return instanteFinEventoMs(e) <= Date.now();
 }

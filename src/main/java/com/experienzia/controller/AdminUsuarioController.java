@@ -15,6 +15,11 @@ import com.experienzia.util.ClientIpResolver;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+/**
+ * Controlador REST de administración de usuarios (solo acciones de admin).
+ * URL base: /api/admin/usuarios
+ * Solo lo usa el rol ADMIN (aprobar organizadores, desactivar, cambiar rol, etc.).
+ */
 @RestController
 @RequestMapping("/api/admin/usuarios")
 public class AdminUsuarioController {
@@ -31,6 +36,7 @@ public class AdminUsuarioController {
         this.auditoriaService = auditoriaService;
     }
 
+    // Aprueba la cuenta de un organizador pendiente. Devuelve UsuarioDTO actualizado.
     @PutMapping("/{id}/aprobar")
     public ResponseEntity<UsuarioDTO> aprobarOrganizador(@PathVariable Long id,
                                                          @RequestParam(required = false) Long adminId,
@@ -44,6 +50,7 @@ public class AdminUsuarioController {
         return ResponseEntity.ok(u);
     }
 
+    // Rechaza la solicitud de organizador. Devuelve UsuarioDTO actualizado.
     @PutMapping("/{id}/rechazar")
     public ResponseEntity<UsuarioDTO> rechazarOrganizador(@PathVariable Long id,
                                                           @RequestParam(required = false) Long adminId,
@@ -57,6 +64,7 @@ public class AdminUsuarioController {
         return ResponseEntity.ok(u);
     }
 
+    // Desactiva cualquier usuario del sistema. Devuelve UsuarioDTO actualizado.
     @PutMapping("/{id}/desactivar")
     public ResponseEntity<UsuarioDTO> desactivar(@PathVariable Long id,
                                                  @RequestParam(required = false) Long adminId,
@@ -70,7 +78,7 @@ public class AdminUsuarioController {
         return ResponseEntity.ok(u);
     }
 
-    /** HU-019: el admin reactiva una cuenta INACTIVO → ACTIVO. */
+    // Reactiva un usuario que estaba inactivo. Devuelve UsuarioDTO actualizado.
     @PutMapping("/{id}/reactivar")
     public ResponseEntity<UsuarioDTO> reactivar(@PathVariable Long id,
                                                 @RequestParam(required = false) Long adminId,
@@ -84,7 +92,7 @@ public class AdminUsuarioController {
         return ResponseEntity.ok(u);
     }
 
-    /** HU-018: cambiar el rol de un usuario. */
+    // Cambia el rol de un usuario (ADMIN, ORGANIZADOR, etc.). Devuelve UsuarioDTO actualizado.
     @PutMapping("/{id}/rol")
     public ResponseEntity<UsuarioDTO> cambiarRol(@PathVariable Long id,
                                                  @RequestBody CambiarRolDTO body,

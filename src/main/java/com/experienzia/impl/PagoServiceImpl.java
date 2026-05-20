@@ -67,6 +67,7 @@ public class PagoServiceImpl implements PagoService {
         this.modelMapper = modelMapper;
     }
 
+    /** El organizador sube el comprobante de pago (tarifa completa o solo el incremento por horas). */
     @Override
     public PagoDTO registrar(Long eventoId, Long organizadorId, MultipartFile archivo, String direccionIp) {
         if (eventoId == null) {
@@ -166,6 +167,7 @@ public class PagoServiceImpl implements PagoService {
         return toDto(guardado);
     }
 
+    /** El admin aprueba el comprobante y activa el evento si corresponde. */
     @Override
     public PagoDTO aprobar(Long pagoId, Long aprobadorId, String direccionIp) {
         assertAdministradorPuedeGestionarPagos(aprobadorId);
@@ -185,7 +187,7 @@ public class PagoServiceImpl implements PagoService {
         pago.setAprobadorId(aprobadorId);
         pago.setFechaResolucion(LocalDateTime.now());
 
-        /** Comprobante de complemento (delta sobre monto ya aprobado); el evento puede seguir ACTIVO u otro estado. */
+        // Si es complemento por horas, al aprobar se suma el monto nuevo al saldo ya pagado.
         AtomicBoolean teniaSaldoComplemento = new AtomicBoolean(false);
         eventoRepository.findById(pago.getEventoId()).ifPresent(ev -> {
             double total = ev.getCosto();
@@ -200,8 +202,7 @@ public class PagoServiceImpl implements PagoService {
 
         Pago guardado = pagoRepository.save(pago);
 
-        // Notificar al organizador, activar el evento y auto-inscribirlo como
-        // asistente principal de su propio evento (PASO 6).
+        // Notificar y activar el evento (o resolver suplemento) segun el estado actual.
         notificacionService.crear(guardado.getOrganizadorId(),
                 "Tu pago de la tarifa fue aprobado. Tu evento ha sido activado.",
                 TipoNotificacion.INFO);
@@ -226,6 +227,7 @@ public class PagoServiceImpl implements PagoService {
         return toDto(guardado);
     }
 
+    /** El admin rechaza el comprobante con un motivo. */
     @Override
     public PagoDTO rechazar(Long pagoId, String motivo, Long aprobadorId, String direccionIp) {
         if (motivo == null || motivo.isBlank()) {
@@ -272,24 +274,28 @@ public class PagoServiceImpl implements PagoService {
         return toDto(guardado);
     }
 
+    /** Lista pagos pendientes de revision. */
     @Override
     @Transactional(readOnly = true)
     public List<PagoDTO> listarPendientes() {
         return pagoRepository.findByEstado(EstadoPago.PENDIENTE).stream().map(this::toDto).toList();
     }
 
+    /** Lista todos los registros. */
     @Override
     @Transactional(readOnly = true)
     public List<PagoDTO> listarTodos() {
         return pagoRepository.findAll().stream().map(this::toDto).toList();
     }
 
+    /** Filtra por organizador. */
     @Override
     @Transactional(readOnly = true)
     public List<PagoDTO> listarPorOrganizador(Long organizadorId) {
         return pagoRepository.findByOrganizadorId(organizadorId).stream().map(this::toDto).toList();
     }
 
+    /** Busca el pago de un evento. */
     @Override
     @Transactional(readOnly = true)
     public Optional<PagoDTO> obtenerPorEvento(Long eventoId) {

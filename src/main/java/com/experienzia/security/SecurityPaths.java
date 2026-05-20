@@ -1,13 +1,15 @@
 package com.experienzia.security;
 
 /**
- * Rutas HTTP públicas (deben coincidir con {@code SecurityFilterChain}).
+ * Lista de rutas HTTP que no necesitan token JWT (login, registro, swagger, etc.).
+ * Debe coincidir con lo configurado en SecurityConfig.
  */
 public final class SecurityPaths {
 
     private SecurityPaths() {
     }
 
+    /** Devuelve true si la URI es publica y no pide autenticacion. */
     public static boolean isPublic(String uri) {
         if (uri == null) {
             return false;

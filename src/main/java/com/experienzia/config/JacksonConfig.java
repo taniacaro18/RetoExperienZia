@@ -6,12 +6,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 /**
- * Spring Boot 4 + webmvc no siempre expone {@link ObjectMapper} como bean;
- * servicios como {@link com.experienzia.impl.EventoServiceImpl} lo necesitan para novedades JSON.
+ * Configura Jackson (JSON) como bean de Spring.
+ * Lo necesitamos para convertir objetos a JSON en servicios como EventoServiceImpl.
  */
 @Configuration
 public class JacksonConfig {
 
+    /** Crea el ObjectMapper principal de la aplicacion. */
     @Bean
     @Primary
     public ObjectMapper objectMapper() {

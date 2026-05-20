@@ -1,7 +1,13 @@
+/**
+ * Funciones auxiliares para pintar estados en la UI:
+ * textos en español, colores de tags PrimeNG y barra de aforo.
+ */
 import { EstadoEvento, EstadoInscripcion, EstadoPago, EstadoUsuario } from '../core/models/domain.models';
 
+// Tipo de color que entiende el componente p-tag de PrimeNG.
 export type Severity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 
+// Traduce el código de estado del evento a texto legible.
 export function eventoEstadoLabel(e: EstadoEvento | string): string {
   switch (e) {
     case 'ACTIVO': return 'Activo';
@@ -17,6 +23,7 @@ export function eventoEstadoLabel(e: EstadoEvento | string): string {
   }
 }
 
+// Color del tag según el estado del evento.
 export function eventoEstadoSeverity(e: EstadoEvento | string): Severity {
   switch (e) {
     case 'ACTIVO': return 'success';
@@ -32,6 +39,7 @@ export function eventoEstadoSeverity(e: EstadoEvento | string): Severity {
   }
 }
 
+// Color del tag para activo / pendiente / inactivo del usuario.
 export function usuarioEstadoSeverity(e: EstadoUsuario | string): Severity {
   switch (e) {
     case 'ACTIVO': return 'success';
@@ -42,6 +50,7 @@ export function usuarioEstadoSeverity(e: EstadoUsuario | string): Severity {
   }
 }
 
+// Color del tag para inscripción (inscrito, asistió, cancelado).
 export function inscripcionEstadoSeverity(e: EstadoInscripcion | string): Severity {
   switch (e) {
     case 'ASISTIO': return 'success';
@@ -51,6 +60,7 @@ export function inscripcionEstadoSeverity(e: EstadoInscripcion | string): Severi
   }
 }
 
+// Color del tag para pagos pendientes, aprobados o rechazados.
 export function pagoEstadoSeverity(e: EstadoPago | string): Severity {
   switch (e) {
     case 'APROBADO': return 'success';
@@ -60,11 +70,13 @@ export function pagoEstadoSeverity(e: EstadoPago | string): Severity {
   }
 }
 
+// Calcula el % de ocupación sin pasar de 100 ni dividir por cero.
 export function porcentajeOcupacion(actual: number, maximo: number): number {
   if (!maximo || maximo <= 0) return 0;
   return Math.min(100, Math.round((actual / maximo) * 100));
 }
 
+// Clase Tailwind de la barra de aforo según el porcentaje.
 export function colorOcupacion(p: number): string {
   if (p >= 90) return 'bg-coral-500';
   if (p >= 70) return 'bg-brand-500';
@@ -72,6 +84,7 @@ export function colorOcupacion(p: number): string {
   return 'bg-accent-500';
 }
 
+// Nombre del rol en español para mostrar en pantalla.
 export function rolLabel(r: string): string {
   switch (r) {
     case 'ADMIN': return 'Administrador';
@@ -82,6 +95,7 @@ export function rolLabel(r: string): string {
   }
 }
 
+// Color del tag según el rol del usuario.
 export function rolSeverity(r: string): Severity {
   switch (r) {
     case 'ADMIN': return 'danger';
@@ -92,6 +106,7 @@ export function rolSeverity(r: string): Severity {
   }
 }
 
+// Icono y fondo para cada fila del historial de auditoría.
 export function accionAuditoriaIcono(accion: string): { icon: string; tone: string } {
   const a = accion.toUpperCase();
   if (a.includes('APROBAD') || a.includes('REACTIVAD')) return { icon: 'pi-check-circle', tone: 'text-emerald-600 bg-emerald-100' };

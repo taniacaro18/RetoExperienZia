@@ -12,13 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Notificaciones in-app para cualquier rol (ADMIN, ORGANIZADOR, ASISTENTE, STAFF).
- * El propio sistema crea avisos internamente cuando:
- *  - se cancela un evento (a sus asistentes)
- *  - se aprueba/rechaza un pago (al organizador)
- *  - se registra check-in/check-out (al asistente)
- *  - se crea una inscripción masiva (a cada nuevo asistente)
- *  - hay actividad de aprobación/rechazo de un organizador (al organizador)
+ * Controlador REST de notificaciones dentro de la app (avisos para el usuario).
+ * URL base: /api/notificaciones
+ * Lo usan todos los roles (ADMIN, ORGANIZADOR, ASISTENTE, STAFF) para ver y marcar como leídas.
  */
 @RestController
 @RequestMapping("/api/notificaciones")
@@ -30,13 +26,13 @@ public class NotificacionController {
         this.notificacionService = notificacionService;
     }
 
-    /** Lista todas las notificaciones de un usuario (más recientes primero). */
+    // Lista las notificaciones de un usuario (las más nuevas primero). Devuelve lista de NotificacionDTO.
     @GetMapping("/{usuarioId}")
     public ResponseEntity<List<NotificacionDTO>> listar(@PathVariable Long usuarioId) {
         return ResponseEntity.ok(notificacionService.listarPorUsuario(usuarioId));
     }
 
-    /** Marca una notificación como leída. */
+    // Marca una notificación como leída. Devuelve la NotificacionDTO actualizada.
     @PutMapping("/{id}/leida")
     public ResponseEntity<NotificacionDTO> marcarLeida(@PathVariable Long id) {
         return ResponseEntity.ok(notificacionService.marcarLeida(id));

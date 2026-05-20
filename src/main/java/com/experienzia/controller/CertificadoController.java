@@ -11,6 +11,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Controlador REST de certificados de asistencia a eventos.
+ * URL base: /api/certificados
+ * Lo usan asistentes (ver los suyos), organizadores (generar masivo) y cualquiera con el código (validar/descargar PDF).
+ */
 @RestController
 @RequestMapping("/api/certificados")
 public class CertificadoController {
@@ -23,25 +28,25 @@ public class CertificadoController {
         this.exportService = exportService;
     }
 
+    // Genera un certificado para una inscripción. Devuelve el certificado creado con código 201.
     @PostMapping("/generar/{inscripcionId}")
     public ResponseEntity<CertificadoDTO> generar(@PathVariable Long inscripcionId) {
         return ResponseEntity.status(HttpStatus.CREATED).body(certificadoService.generar(inscripcionId));
     }
 
+    // Lista los certificados de un usuario. Devuelve una lista de CertificadoDTO.
     @GetMapping("/usuario/{usuarioId}")
     public ResponseEntity<List<CertificadoDTO>> listarPorUsuario(@PathVariable Long usuarioId) {
         return ResponseEntity.ok(certificadoService.listarPorUsuario(usuarioId));
     }
 
+    // Valida un certificado por su código único. Devuelve los datos del certificado si es válido.
     @GetMapping("/validar/{codigo}")
     public ResponseEntity<CertificadoDTO> validar(@PathVariable String codigo) {
         return ResponseEntity.ok(certificadoService.validarPorCodigo(codigo));
     }
 
-    /**
-     * PDF del certificado generado en servidor (OpenPDF). Misma validez que {@link #validar(String)}.
-     * Público: quien tenga el código puede descargarlo (acceso típico desde la web de verificación).
-     */
+    // Descarga el PDF del certificado por código (público, sin login). Devuelve bytes del archivo PDF.
     @GetMapping(value = "/pdf/{codigo}", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> pdfPorCodigo(@PathVariable String codigo) {
         CertificadoDTO dto = certificadoService.validarPorCodigo(codigo);
@@ -53,7 +58,7 @@ public class CertificadoController {
                 .body(pdf);
     }
 
-    /** HU-024: generación masiva de certificados para todos los asistentes confirmados de un evento. */
+    // Genera certificados para todos los asistentes confirmados del evento. Devuelve lista con código 201.
     @PostMapping("/evento/{eventoId}/generar-masivo")
     public ResponseEntity<List<CertificadoDTO>> generarMasivo(@PathVariable Long eventoId,
                                                               @RequestParam(required = false) Long organizadorId) {
@@ -61,6 +66,7 @@ public class CertificadoController {
                 .body(certificadoService.generarMasivoPorEvento(eventoId, organizadorId));
     }
 
+    // Lista los certificados ya emitidos de un evento. Devuelve una lista de CertificadoDTO.
     @GetMapping("/evento/{eventoId}")
     public ResponseEntity<List<CertificadoDTO>> listarPorEvento(@PathVariable Long eventoId) {
         return ResponseEntity.ok(certificadoService.listarPorEvento(eventoId));

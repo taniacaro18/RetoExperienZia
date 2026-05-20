@@ -5,9 +5,13 @@ import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configura ModelMapper para convertir entidades a DTOs y viceversa.
+ */
 @Configuration
 public class ModelMapperConfig {
 
+    /** Bean de ModelMapper con reglas estrictas para evitar mapeos raros. */
     @Bean
     public ModelMapper modelMapper() {
         ModelMapper mapper = new ModelMapper();

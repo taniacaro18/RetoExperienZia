@@ -4,6 +4,11 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../core/auth/auth.service';
 
+/**
+ * Pantalla: Modal de recuperar contraseña (desde login).
+ * Rol: usuario que olvidó su clave.
+ * Pide email + documento y muestra una contraseña temporal.
+ */
 @Component({
   selector: 'app-recuperar-modal',
   standalone: true,
@@ -19,6 +24,7 @@ export class RecuperarModal {
   readonly cerrarModal = output<void>();
 
   readonly cargando = signal(false);
+  // clave temporal que devuelve el backend (si todo coincide)
   readonly passwordTemporal = signal<string | null>(null);
 
   readonly formulario = this.fb.nonNullable.group({
@@ -26,6 +32,7 @@ export class RecuperarModal {
     numeroDocumento: ['', [Validators.required, Validators.minLength(4)]]
   });
 
+  // pide al servidor una contraseña temporal si email y documento coinciden
   enviar() {
     if (this.formulario.invalid) {
       this.formulario.markAllAsTouched();

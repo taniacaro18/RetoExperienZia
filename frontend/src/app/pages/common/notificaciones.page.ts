@@ -9,6 +9,11 @@ import { Notificacion } from '../../core/models/domain.models';
 
 type FiltroNotif = 'TODAS' | 'NO_LEIDAS' | 'LEIDAS';
 
+/**
+ * Pantalla: Centro de notificaciones.
+ * Rol: cualquier usuario autenticado.
+ * Lista avisos del sistema, filtra y marca como leídas.
+ */
 @Component({
   selector: 'app-notificaciones-page',
   standalone: true,
@@ -25,6 +30,7 @@ export class NotificacionesPage {
   readonly notificaciones = signal<Notificacion[]>([]);
   readonly filtro = signal<FiltroNotif>('TODAS');
 
+  // totales para las pestañas Todas / No leídas / Leídas
   readonly conteo = computed(() => {
     const items = this.notificaciones();
     return {
@@ -34,6 +40,7 @@ export class NotificacionesPage {
     };
   });
 
+  // notificaciones que coinciden con el filtro activo
   readonly filtradas = computed(() => {
     const f = this.filtro();
     return this.notificaciones().filter((n) => {
@@ -47,6 +54,7 @@ export class NotificacionesPage {
     this.cargar();
   }
 
+  // trae notificaciones del usuario y actualiza el contador del header
   cargar() {
     const userId = this.store.usuario()?.id;
     if (!userId) {

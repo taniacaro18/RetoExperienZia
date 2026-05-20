@@ -1,12 +1,12 @@
+/**
+ * Interceptor HTTP: muestra toast cuando el backend devuelve error.
+ */
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { MessageService } from 'primeng/api';
 import { catchError, throwError } from 'rxjs';
 
-/**
- * Interceptor global: traduce errores HTTP a toasts y deja pasar la excepción
- * para que cada componente decida si reacciona.
- */
+// Cabecera para que esta petición NO muestre toast global (la página lo maneja).
 export const SKIP_GLOBAL_TOAST = 'X-Skip-Global-Toast';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
@@ -34,6 +34,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   );
 };
 
+// Saca el mensaje del cuerpo del error o uno genérico.
 function extraerMensaje(err: HttpErrorResponse): string {
   if (err.error && typeof err.error === 'object' && 'message' in err.error) {
     return String(err.error.message);

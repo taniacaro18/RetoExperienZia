@@ -26,6 +26,11 @@ import {
   usuarioEstadoSeverity
 } from '../../shared/estado.helpers';
 
+/**
+ * Pantalla: Panel principal (dashboard) del administrador.
+ * Rol: ADMIN.
+ * Resume métricas de la plataforma, colas de pendientes y gráficos de eventos con filtros.
+ */
 @Component({
   selector: 'app-admin-dashboard-page',
   standalone: true,
@@ -48,12 +53,19 @@ export class AdminDashboardPage {
   private readonly usuarioApi = inject(UsuarioApi);
   private readonly pagoApi = inject(PagoApi);
 
+  // true mientras cargan los datos del dashboard
   readonly cargando = signal(true);
+  // números globales que vienen del API de reportes
   readonly stats = signal<DashboardAdmin | null>(null);
+  // todos los eventos para filtrar en los gráficos de abajo
   readonly todosEventos = signal<Evento[]>([]);
+  // organizadores activos (para el selector de filtro)
   readonly organizadoresActivos = signal<Usuario[]>([]);
+  // eventos que aún necesitan revisión del admin
   readonly eventosPendientes = signal<Evento[]>([]);
+  // cuentas de organizador esperando aprobación
   readonly organizadoresPendientes = signal<Usuario[]>([]);
+  // pagos con comprobante pendiente de validar
   readonly pagosPendientes = signal<Pago[]>([]);
 
   /** Alcance filtros vista admin (solo afectan gráficos inferiores) */
@@ -62,17 +74,20 @@ export class AdminDashboardPage {
   readonly fechaDesde = signal('');
   readonly fechaHasta = signal('');
 
+  // escala máxima del gráfico de eventos por mes (evita división por cero)
   readonly maxEventoSerie = computed(() => {
     const items = this.stats()?.serieMensualEventos ?? [];
     const m = Math.max(0, ...items.map((p) => p.valor));
     return m === 0 ? 1 : m;
   });
+  // escala máxima del gráfico de usuarios por mes
   readonly maxUsuarioSerie = computed(() => {
     const items = this.stats()?.serieMensualUsuarios ?? [];
     const m = Math.max(0, ...items.map((p) => p.valor));
     return m === 0 ? 1 : m;
   });
 
+  // lista para el dropdown de filtro por organizador
   readonly opcionesOrganizadoresFiltro = computed(() => [
     { label: 'Todos los organizadores', value: null as number | null },
     ...this.organizadoresActivos().map((o) => ({
@@ -81,6 +96,7 @@ export class AdminDashboardPage {
     }))
   ]);
 
+  // eventos que cumplen org, tipo y rango de fechas elegidos en filtros
   readonly eventosFiltradosVista = computed(() => {
     let list = [...this.todosEventos()];
     const oid = this.filtroOrgId();
@@ -102,6 +118,7 @@ export class AdminDashboardPage {
     return list;
   });
 
+  // cuenta eventos por mes según la lista ya filtrada
   readonly serieMesEventosFiltrados = computed(() => {
     const map = new Map<string, number>();
     for (const e of this.eventosFiltradosVista()) {
@@ -114,12 +131,14 @@ export class AdminDashboardPage {
       .map(([periodo, valor]) => ({ periodo, valor }));
   });
 
+  // tope del eje Y para la serie filtrada de eventos
   readonly maxSerieFiltrada = computed(() => {
     const s = this.serieMesEventosFiltrados();
     const m = Math.max(0, ...s.map((p) => p.valor));
     return m === 0 ? 1 : m;
   });
 
+  // porciones del donut según estado de los eventos filtrados
   readonly segmentosEstadoFiltrados = computed(() => {
     const cols: Record<string, string> = {
       PENDIENTE: '#ca8a04',
@@ -143,6 +162,7 @@ export class AdminDashboardPage {
     }));
   });
 
+  // true si hay algo pendiente en eventos, organizadores o pagos
   readonly tieneAtencion = computed(
     () =>
       this.eventosPendientes().length > 0 ||
@@ -156,6 +176,7 @@ export class AdminDashboardPage {
   rolLabel = rolLabel;
   rolSev = rolSeverity;
 
+  // al entrar pedimos stats, eventos, organizadores y pagos pendientes
   ngOnInit() {
     this.cargando.set(true);
 

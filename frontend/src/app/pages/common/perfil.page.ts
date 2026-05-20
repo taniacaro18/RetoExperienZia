@@ -37,6 +37,11 @@ function nuevaPasswordOpcionalValidator(): ValidatorFn {
   };
 }
 
+/**
+ * Pantalla: Mi perfil.
+ * Rol: cualquier usuario autenticado.
+ * Permite actualizar teléfono y cambiar contraseña (datos de identidad son solo lectura).
+ */
 @Component({
   selector: 'app-perfil-page',
   standalone: true,
@@ -58,6 +63,7 @@ export class PerfilPage {
   readonly store = inject(AuthStore);
   private readonly messages = inject(MessageService);
 
+  // true mientras guarda cambios en el servidor
   readonly cargando = signal(false);
 
   readonly formulario = this.fb.nonNullable.group({
@@ -65,6 +71,7 @@ export class PerfilPage {
     nuevaPassword: ['', [nuevaPasswordOpcionalValidator()]]
   });
 
+  // envía solo teléfono y/o nueva contraseña si cambiaron
   guardar() {
     if (this.formulario.invalid) {
       this.formulario.markAllAsTouched();

@@ -22,6 +22,11 @@ interface BarraSerie {
   pct: number;
 }
 
+/**
+ * Pantalla: Panel del organizador.
+ * Rol: ORGANIZADOR.
+ * KPIs, próximos eventos, gráficos y lista de eventos que requieren atención.
+ */
 @Component({
   selector: 'app-org-dashboard-page',
   standalone: true,
@@ -50,6 +55,7 @@ export class OrgDashboardPage {
   readonly fechaDesde = signal('');
   readonly fechaHasta = signal('');
 
+  // mis eventos filtrados por tipo y fechas del dashboard
   readonly eventosFiltradosDash = computed(() => {
     let list = this.eventos();
     const ft = this.filtroTipoEvento();
@@ -69,6 +75,7 @@ export class OrgDashboardPage {
     return list;
   });
 
+  // hasta 6 eventos activos que aún no terminaron
   readonly proximos = computed(() => {
     const ahora = Date.now();
     return this.eventosFiltradosDash()
@@ -77,6 +84,7 @@ export class OrgDashboardPage {
       .slice(0, 6);
   });
 
+  // barras de inscripciones por mes (con % para altura)
   readonly serieInscripciones = computed<BarraSerie[]>(() => {
     const serie = this.stats()?.serieMensualInscripciones ?? [];
     if (serie.length === 0) return [];
@@ -88,6 +96,7 @@ export class OrgDashboardPage {
     }));
   });
 
+  // barras de eventos creados por mes
   readonly serieEventos = computed<BarraSerie[]>(() => {
     const serie = this.stats()?.serieMensualEventos ?? [];
     if (serie.length === 0) return [];
@@ -99,6 +108,7 @@ export class OrgDashboardPage {
     }));
   });
 
+  // eventos en estados que el organizador debe revisar o corregir
   readonly necesitaAtencion = computed(() => {
     return this.eventosFiltradosDash().filter(
       (e) =>

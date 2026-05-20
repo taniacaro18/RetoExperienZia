@@ -1,21 +1,27 @@
 package com.experienzia.entity;
 
+/**
+ * Enum de estados de un evento (columna "estado" en la tabla eventos).
+ * Indica en qué paso del ciclo de vida está cada evento en ExperienZia:
+ * desde que el organizador lo crea hasta que termina o se cancela.
+ */
 public enum EstadoEvento {
-    /** Solicitud inicial de evento nuevo (sin pago aún o flujo clásico). */
+    // Evento nuevo que aún no fue aprobado por el admin
     PENDIENTE,
+    // El admin aceptó el evento pero puede faltar activarlo con el pago
     APROBADO,
+    // El admin no permitió publicar el evento
     RECHAZADO,
+    // El evento está publicado y los asistentes pueden inscribirse
     ACTIVO,
-    /** El evento ya ocurrió (ventana de inicio–fin cerrada). */
+    // El evento ya pasó y terminó su fecha
     FINALIZADO,
+    // El evento ya no se realizará
     CANCELADO,
-    /**
-     * Edición de un evento ya activo/aprobado que no implica suplemento de pago por horas
-     * (o reducción de horas con penalización): requiere aprobación administrativa.
-     */
+    // El organizador editó algo y el admin debe revisar de nuevo
     PENDIENTE_REVISION,
-    /** Aumento de horas con pago ya aprobado: debe pagarse solo el excedente y aprobarse el comprobante. */
+    // Aumentó las horas y debe pagar un extra antes de seguir activo
     PENDIENTE_SUPLEMENTO,
-    /** Solicitud de cancelación por el organizador; el admin aprueba o rechaza. */
+    // El organizador pidió cancelar y el admin debe decidir
     PENDIENTE_CANCELACION
 }

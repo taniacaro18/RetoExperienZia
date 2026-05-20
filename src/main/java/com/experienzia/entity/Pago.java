@@ -10,9 +10,11 @@ import lombok.ToString;
 import java.time.LocalDateTime;
 
 /**
- * Pago de la tarifa de la plataforma para activar un evento.
- * Lo realiza siempre el ORGANIZADOR (no el asistente). El monto se calcula
- * automáticamente como precioPorHora * duracionHoras del evento.
+ * Representa la tabla "pagos" en la base de datos.
+ * Guarda el pago que hace el organizador a la plataforma ExperienZia para activar un evento
+ * (no es el pago del asistente al organizador).
+ * Sirve para que el administrador revise el comprobante, apruebe o rechace,
+ * y el evento pueda publicarse o seguir con cambios de horas.
  */
 @Entity
 @Table(name = "pagos")
@@ -21,14 +23,16 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Pago {
 
+    // Identificador único del registro de pago
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Número del evento que se está pagando
     @Column(name = "evento_id", nullable = false)
     private Long eventoId;
 
-    /** FK al evento que se está pagando. */
+    // Llave foránea hacia la tabla eventos: el evento al que pertenece este pago
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "evento_id",
             referencedColumnName = "id",
@@ -39,10 +43,11 @@ public class Pago {
     @EqualsAndHashCode.Exclude
     private Evento evento;
 
+    // Número del usuario organizador que realizó el pago
     @Column(name = "organizador_id", nullable = false)
     private Long organizadorId;
 
-    /** FK al organizador que pagó (debe ser dueño del evento). */
+    // Llave foránea hacia la tabla usuarios: el organizador que pagó
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizador_id",
             referencedColumnName = "id",
@@ -53,35 +58,36 @@ public class Pago {
     @EqualsAndHashCode.Exclude
     private Usuario organizador;
 
-    /** Null cuando el organizador aún no subió comprobante o tras cambio de tarifa / suplemento. */
+    // Enlace al archivo del comprobante de pago; puede estar vacío si aún no lo subió
     @Column(name = "comprobante_url", length = 500, nullable = true)
     private String comprobanteUrl;
 
-    /** Monto del pago en COP (precioPorHora * duracionHoras del evento). */
+    // Valor en pesos del pago (por ejemplo precio por hora multiplicado por duración)
     @Column(nullable = false)
     private double monto;
 
-    /**
-     * Si no es null, el pago en PENDIENTE es un complemento: {@link #monto} es solo el incremento
-     * y este campo guarda el monto ya aprobado previamente (se suman al aprobar el complemento).
-     */
+    // Si el pago es un complemento, aquí va el monto que ya estaba aprobado antes
     @Column(name = "saldo_aprobado_previo")
     private Double saldoAprobadoPrevio;
 
+    // Si el pago está pendiente, aprobado o rechazado por el admin
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoPago estado;
 
+    // Fecha en que se registró el pago
     @Column(nullable = false)
     private LocalDateTime fecha;
 
+    // Texto que explica por qué el admin rechazó el comprobante (si aplica)
     @Column(name = "motivo_rechazo", length = 2000)
     private String motivoRechazo;
 
+    // Número del usuario administrador que aprobó o rechazó
     @Column(name = "aprobador_id")
     private Long aprobadorId;
 
-    /** FK al admin que aprobó/rechazó (solo para BD/ERD). */
+    // Llave foránea hacia la tabla usuarios: el admin que resolvió el pago
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "aprobador_id",
             referencedColumnName = "id",
@@ -92,6 +98,7 @@ public class Pago {
     @EqualsAndHashCode.Exclude
     private Usuario aprobador;
 
+    // Fecha en que el admin aprobó o rechazó el pago
     @Column(name = "fecha_resolucion")
     private LocalDateTime fechaResolucion;
 }

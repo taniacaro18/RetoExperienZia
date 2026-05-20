@@ -1,6 +1,11 @@
+/**
+ * Gráfico circular (donut) hecho con SVG para mostrar proporciones.
+ * Ejemplo: cuántos asistentes por estado, con leyenda al lado.
+ */
 import { CommonModule } from '@angular/common';
 import { Component, Input, computed, signal } from '@angular/core';
 
+// Cada trozo del donut: nombre, cantidad y color en hexadecimal.
 interface DonutSegmento { label: string; valor: number; color: string; }
 
 @Component({
@@ -48,20 +53,29 @@ interface DonutSegmento { label: string; valor: number; color: string; }
   `
 })
 export class DonutComponent {
+  // Tamaño del SVG en píxeles.
   readonly size = 128;
+  // Grosor del anillo del donut.
   readonly grosor = 14;
+  // Centro horizontal y vertical del círculo.
   readonly cx = this.size / 2;
   readonly cy = this.size / 2;
+  // Radio del trazo (deja espacio para el grosor).
   readonly radio = (this.size - this.grosor) / 2;
+  // Longitud total del perímetro; sirve para calcular cada segmento.
   readonly circunferencia = 2 * Math.PI * this.radio;
 
+  // Texto pequeño debajo del porcentaje en el centro.
   @Input() leyendaCentro = '';
 
+  // Lista interna de segmentos; se actualiza cuando llega data por @Input.
   private readonly datos = signal<DonutSegmento[]>([]);
   @Input() set data(v: DonutSegmento[]) { this.datos.set(v ?? []); }
 
+  // Suma todos los valores para saber el total del gráfico.
   readonly totalSig = computed(() => this.datos().reduce((a, b) => a + b.valor, 0));
 
+  // Convierte cada segmento en stroke-dasharray para pintarlo en el SVG.
   readonly segmentos = computed(() => {
     const total = this.totalSig();
     if (total === 0) return [];
@@ -79,6 +93,7 @@ export class DonutComponent {
     });
   });
 
+  // Porcentaje del primer segmento (el que más destaca en el centro).
   readonly porcentajePrincipal = computed(() => {
     const total = this.totalSig();
     if (total === 0 || this.datos().length === 0) return 0;

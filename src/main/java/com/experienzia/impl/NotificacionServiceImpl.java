@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Crea y lista notificaciones internas para los usuarios.
+ */
 @Service
 @Transactional
 public class NotificacionServiceImpl implements NotificacionService {
@@ -26,6 +29,7 @@ public class NotificacionServiceImpl implements NotificacionService {
         this.modelMapper = modelMapper;
     }
 
+    /** Crea una notificacion nueva. */
     @Override
     public NotificacionDTO crear(Long usuarioId, String mensaje, TipoNotificacion tipo) {
         Notificacion notificacion = new Notificacion();
@@ -37,6 +41,7 @@ public class NotificacionServiceImpl implements NotificacionService {
         return modelMapper.map(notificacionRepository.save(notificacion), NotificacionDTO.class);
     }
 
+    /** Lista las notificaciones (avisos) de un usuario. */
     @Override
     @Transactional(readOnly = true)
     public List<NotificacionDTO> listarPorUsuario(Long usuarioId) {
@@ -45,6 +50,7 @@ public class NotificacionServiceImpl implements NotificacionService {
                 .toList();
     }
 
+    /** Marca notificacion como leida. */
     @Override
     public NotificacionDTO marcarLeida(Long id) {
         Notificacion notificacion = notificacionRepository.findById(id)

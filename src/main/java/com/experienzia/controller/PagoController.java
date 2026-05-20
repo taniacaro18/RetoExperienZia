@@ -16,8 +16,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Controlador de pagos. Solo el ORGANIZADOR registra pagos para sus eventos;
- * el ADMIN aprueba/rechaza. Asistentes y staff no interactúan con este recurso.
+ * Controlador REST de pagos de tarifas de eventos (comprobantes).
+ * URL base: /api/pagos
+ * Lo usa el ORGANIZADOR (subir comprobante) y el ADMIN (aprobar o rechazar pagos).
  */
 @RestController
 @RequestMapping("/api/pagos")
@@ -29,7 +30,7 @@ public class PagoController {
         this.pagoService = pagoService;
     }
 
-    /** Registra el pago de la tarifa de un evento. */
+    // Registra el pago de un evento subiendo el comprobante. Devuelve PagoDTO con código 201.
     @PostMapping
     public ResponseEntity<PagoDTO> registrar(@RequestParam Long eventoId,
                                              @RequestParam Long organizadorId,
@@ -39,6 +40,7 @@ public class PagoController {
                 .body(pagoService.registrar(eventoId, organizadorId, archivo, ClientIpResolver.resolve(request)));
     }
 
+    // Aprueba un pago pendiente (acción del admin). Devuelve el PagoDTO actualizado.
     @PutMapping("/{id}/aprobar")
     public ResponseEntity<PagoDTO> aprobar(@PathVariable Long id,
                                            @RequestParam(required = false) Long aprobadorId,
@@ -46,6 +48,7 @@ public class PagoController {
         return ResponseEntity.ok(pagoService.aprobar(id, aprobadorId, ClientIpResolver.resolve(request)));
     }
 
+    // Rechaza un pago con un motivo. Devuelve el PagoDTO actualizado.
     @PutMapping("/{id}/rechazar")
     public ResponseEntity<PagoDTO> rechazar(@PathVariable Long id,
                                            @RequestBody RechazarPagoDTO body,
@@ -56,24 +59,25 @@ public class PagoController {
                 ClientIpResolver.resolve(request)));
     }
 
+    // Lista pagos que aún no fueron aprobados ni rechazados. Devuelve lista de PagoDTO.
     @GetMapping("/pendientes")
     public ResponseEntity<List<PagoDTO>> listarPendientes() {
         return ResponseEntity.ok(pagoService.listarPendientes());
     }
 
-    /** HU-021: historial completo con quién aprobó/rechazó y la fecha de la decisión. */
+    // Historial completo de todos los pagos. Devuelve lista de PagoDTO.
     @GetMapping
     public ResponseEntity<List<PagoDTO>> listarTodos() {
         return ResponseEntity.ok(pagoService.listarTodos());
     }
 
-    /** Historial de pagos de un organizador específico. */
+    // Lista los pagos de un organizador. Devuelve lista de PagoDTO.
     @GetMapping("/organizador/{organizadorId}")
     public ResponseEntity<List<PagoDTO>> listarPorOrganizador(@PathVariable Long organizadorId) {
         return ResponseEntity.ok(pagoService.listarPorOrganizador(organizadorId));
     }
 
-    /** Pago asociado a un evento (comprobante, complemento, estado). */
+    // Obtiene el pago de un evento si existe. Devuelve PagoDTO o 404 si no hay pago.
     @GetMapping("/evento/{eventoId}")
     public ResponseEntity<PagoDTO> obtenerPorEvento(@PathVariable Long eventoId) {
         Optional<PagoDTO> dto = pagoService.obtenerPorEvento(eventoId);

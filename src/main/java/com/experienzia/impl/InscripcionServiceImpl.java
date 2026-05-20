@@ -46,6 +46,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Implementacion de inscripciones, check-in/out y gestion de staff en eventos.
+ */
 @Service
 @Transactional
 public class InscripcionServiceImpl implements InscripcionService {
@@ -82,11 +85,13 @@ public class InscripcionServiceImpl implements InscripcionService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /** Inscribe a un usuario en un evento si hay cupo disponible. */
     @Override
     public InscripcionDTO inscribir(Long usuarioId, Long eventoId) {
         return inscribirInterno(usuarioId, eventoId, true);
     }
 
+    /** Inscribe al organizador en su propio evento cuando se activa. */
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public InscripcionDTO inscribirOrganizadorEnSuEvento(Long eventoId) {
@@ -208,6 +213,7 @@ public class InscripcionServiceImpl implements InscripcionService {
         return UUID.randomUUID().toString().replace("-", "");
     }
 
+    /** Cancela una inscripcion existente. */
     @Override
     public InscripcionDTO cancelar(Long inscripcionId) {
         Inscripcion ins = buscarInscripcion(inscripcionId);
@@ -228,6 +234,9 @@ public class InscripcionServiceImpl implements InscripcionService {
         return toDto(inscripcionRepository.save(ins));
     }
 
+    /** --- Check-in y check-out (manual y por QR) --- */
+
+    /** Registra entrada manual de un asistente. */
     @Override
     public InscripcionDTO checkIn(Long inscripcionId, Long staffUsuarioId) {
         Inscripcion ins = buscarInscripcion(inscripcionId);
@@ -267,6 +276,7 @@ public class InscripcionServiceImpl implements InscripcionService {
         return dto;
     }
 
+    /** Registra entrada escaneando codigo QR. */
     @Override
     public InscripcionDTO checkInPorQR(String codigoQR, Long staffUsuarioId, Long eventoId) {
         if (codigoQR == null || codigoQR.isBlank()) {
@@ -280,6 +290,7 @@ public class InscripcionServiceImpl implements InscripcionService {
         return checkIn(ins.getId(), staffUsuarioId);
     }
 
+    /** Registra salida manual de un asistente. */
     @Override
     public InscripcionDTO checkOut(Long inscripcionId, Long staffUsuarioId) {
         Inscripcion ins = buscarInscripcion(inscripcionId);
@@ -308,6 +319,7 @@ public class InscripcionServiceImpl implements InscripcionService {
         return dto;
     }
 
+    /** Registra salida escaneando codigo QR. */
     @Override
     public InscripcionDTO checkOutPorQR(String codigoQR, Long staffUsuarioId, Long eventoId) {
         if (codigoQR == null || codigoQR.isBlank()) {
@@ -321,18 +333,21 @@ public class InscripcionServiceImpl implements InscripcionService {
         return checkOut(ins.getId(), staffUsuarioId);
     }
 
+    /** Todas las inscripciones de un evento (asistentes apuntados). */
     @Override
     @Transactional(readOnly = true)
     public List<InscripcionDTO> listarPorEvento(Long eventoId) {
         return inscripcionRepository.findByEventoId(eventoId).stream().map(this::toDto).toList();
     }
 
+    /** Inscripciones de un usuario (eventos a los que se apunto). */
     @Override
     @Transactional(readOnly = true)
     public List<InscripcionDTO> listarPorUsuario(Long usuarioId) {
         return inscripcionRepository.findByUsuarioId(usuarioId).stream().map(this::toDto).toList();
     }
 
+    /** Lista asistentes para el panel del staff. */
     @Override
     @Transactional(readOnly = true)
     public List<AsistenteEventoDTO> listarAsistentesParaStaff(Long eventoId, Long staffUsuarioId, String busqueda) {
@@ -342,6 +357,7 @@ public class InscripcionServiceImpl implements InscripcionService {
         return obtenerAsistentes(evento, busqueda);
     }
 
+    /** Lista asistentes validando que sea el organizador. */
     @Override
     @Transactional(readOnly = true)
     public List<AsistenteEventoDTO> listarAsistentesParaOrganizador(Long eventoId, Long organizadorId, String busqueda) {
@@ -367,6 +383,7 @@ public class InscripcionServiceImpl implements InscripcionService {
         return resultado;
     }
 
+    /** Cuenta cuantas personas estan dentro del evento ahora. */
     @Override
     @Transactional(readOnly = true)
     public AforoEnVivoDTO consultarAforoEnVivo(Long eventoId) {
@@ -393,6 +410,9 @@ public class InscripcionServiceImpl implements InscripcionService {
         return dto;
     }
 
+    /** --- Carga masiva de asistentes (manual o CSV) --- */
+
+    /** Carga asistentes desde una lista manual. */
     @Override
     public ResultadoCargaAsistentesDTO cargarAsistentesManual(Long eventoId, Long organizadorId, List<FilaAsistenteCargaDTO> filas) {
         if (filas == null || filas.isEmpty()) {
@@ -429,11 +449,15 @@ public class InscripcionServiceImpl implements InscripcionService {
         return res;
     }
 
+    /** Carga asistentes desde texto CSV. */
     @Override
     public ResultadoCargaAsistentesDTO cargarAsistentesCsv(Long eventoId, Long organizadorId, String contenidoCsv) {
         return cargarAsistentesManual(eventoId, organizadorId, parseCsv(contenidoCsv));
     }
 
+    /** --- Gestion de staff asignado al evento --- */
+
+    /** Asigna un staff a un evento con una funcion. */
     @Override
     public void asignarStaff(Long eventoId, Long organizadorId, Long staffUsuarioId, FuncionStaff funcion) {
         Evento evento = validarOrganizadorDeEvento(eventoId, organizadorId);
@@ -460,6 +484,7 @@ public class InscripcionServiceImpl implements InscripcionService {
                 TipoNotificacion.INFO);
     }
 
+    /** Cambia la funcion de un staff en el evento. */
     @Override
     public StaffAsignadoDTO cambiarFuncionStaff(Long eventoId, Long organizadorId, Long staffUsuarioId, FuncionStaff funcion) {
         Evento evento = validarOrganizadorDeEvento(eventoId, organizadorId);
@@ -476,6 +501,7 @@ public class InscripcionServiceImpl implements InscripcionService {
         return toStaffAsignadoDto(guardada, staff);
     }
 
+    /** Quita un staff del evento. */
     @Override
     public void desasignarStaff(Long eventoId, Long organizadorId, Long staffUsuarioId) {
         Evento evento = validarOrganizadorDeEvento(eventoId, organizadorId);
@@ -488,6 +514,7 @@ public class InscripcionServiceImpl implements InscripcionService {
                 TipoNotificacion.ALERTA);
     }
 
+    /** Ids del staff asignado (compatibilidad). */
     @Override
     @Transactional(readOnly = true)
     public List<Long> listarStaffIdsPorEvento(Long eventoId) {
@@ -496,6 +523,7 @@ public class InscripcionServiceImpl implements InscripcionService {
                 .toList();
     }
 
+    /** Staff asignado con detalle de funcion. */
     @Override
     @Transactional(readOnly = true)
     public List<StaffAsignadoDTO> listarStaffPorEvento(Long eventoId) {
@@ -507,6 +535,7 @@ public class InscripcionServiceImpl implements InscripcionService {
                 .toList();
     }
 
+    /** Eventos donde trabaja un staff. */
     @Override
     @Transactional(readOnly = true)
     public List<EventoStaffDTO> listarEventosDelStaff(Long staffUsuarioId) {

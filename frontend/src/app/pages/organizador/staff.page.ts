@@ -26,6 +26,11 @@ interface StaffConAsignacion {
 
 type FiltroEstado = 'TODOS' | 'ACTIVO' | 'INACTIVO';
 
+/**
+ * Pantalla: Equipo staff del organizador.
+ * Rol: ORGANIZADOR.
+ * Crea cuentas staff, asigna funciones por evento y activa/desactiva.
+ */
 @Component({
   selector: 'app-org-staff-page',
   standalone: true,
@@ -96,6 +101,7 @@ export class OrgStaffPage {
     };
   });
 
+  // staff que pasa búsqueda y filtro de estado
   readonly staffsFiltrados = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
     const f = this.filtroEstado();

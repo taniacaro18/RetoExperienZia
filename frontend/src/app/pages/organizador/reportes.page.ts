@@ -15,6 +15,11 @@ import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 import { DonutComponent } from '../../shared/donut/donut.component';
 import { ExportService } from '../../core/export/export.service';
 
+/**
+ * Pantalla: Reportes por evento (organizador).
+ * Rol: ORGANIZADOR.
+ * Reporte avanzado de asistencia, check-in y staff; exporta Excel/PDF.
+ */
 @Component({
   selector: 'app-org-reportes-page',
   standalone: true,
@@ -50,6 +55,7 @@ export class OrgReportesPage {
   readonly fechaDesde = signal('');
   readonly fechaHasta = signal('');
 
+  // eventos activos/finalizados para el selector
   readonly opciones = computed(() => {
     let list = this.eventos().filter((e) => e.estado === 'ACTIVO' || e.estado === 'FINALIZADO');
     const ft = this.filtroTipoEvento();
@@ -86,6 +92,7 @@ export class OrgReportesPage {
     return Math.max(1, ...r.desempenoStaff.map((s) => s.checkInsRegistrados + s.checkOutsRegistrados));
   });
 
+  // gráfico asistieron vs faltaron
   readonly donutAsistencia = computed(() => {
     const r = this.reporte();
     if (!r) return [];

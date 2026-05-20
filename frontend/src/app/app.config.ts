@@ -1,3 +1,6 @@
+/**
+ * Configuración global de Angular: router, HTTP, PrimeNG e interceptores.
+ */
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
@@ -18,9 +21,12 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
+    // Rutas de la app y params como @Input en componentes.
     provideRouter(routes, withComponentInputBinding()),
+    // Cliente HTTP con token y manejo de errores.
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     provideAnimationsAsync(),
+    // Tema morado de ExperienZia para PrimeNG.
     providePrimeNG({
       theme: {
         preset: ExperienziaPreset,
@@ -35,6 +41,7 @@ export const appConfig: ApplicationConfig = {
       },
       ripple: true
     }),
+    // Servicios para toasts y confirmaciones de PrimeNG.
     MessageService,
     ConfirmationService
   ]

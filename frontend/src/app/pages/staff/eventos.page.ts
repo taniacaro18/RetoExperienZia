@@ -13,6 +13,11 @@ import { eventoEstadoLabel, eventoEstadoSeverity } from '../../shared/estado.hel
 
 type FiltroEstado = 'TODOS' | 'PROXIMOS' | 'HOY' | 'PASADOS';
 
+/**
+ * Pantalla: Mis eventos asignados (staff).
+ * Rol: STAFF.
+ * Lista eventos donde trabajo, con filtros por fecha y búsqueda.
+ */
 @Component({
   selector: 'app-staff-eventos-page',
   standalone: true,
@@ -37,6 +42,7 @@ export class StaffEventosPage {
   readonly busqueda = signal('');
   readonly filtro = signal<FiltroEstado>('TODOS');
 
+  // eventos visibles según filtro temporal y texto
   readonly eventosFiltrados = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
     const f = this.filtro();
@@ -68,6 +74,7 @@ export class StaffEventosPage {
     return lista;
   });
 
+  // números para las pestañas de filtro
   readonly conteo = computed(() => {
     const ahora = new Date();
     const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
@@ -87,6 +94,7 @@ export class StaffEventosPage {
   estadoLabel = eventoEstadoLabel;
   estadoSeverity = eventoEstadoSeverity;
 
+  // pide al API los eventos donde estoy asignado como staff
   ngOnInit() {
     const id = this.store.usuario()?.id;
     if (!id) return;

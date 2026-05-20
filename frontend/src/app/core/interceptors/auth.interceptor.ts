@@ -1,8 +1,10 @@
+/**
+ * Interceptor HTTP: pone el token Bearer en cada petición al API si hay sesión.
+ */
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthStore } from '../auth/auth.store';
 
-/** Añade Authorization: Bearer … a las llamadas API cuando hay sesión. */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const store = inject(AuthStore);
   const token = store.accessToken();

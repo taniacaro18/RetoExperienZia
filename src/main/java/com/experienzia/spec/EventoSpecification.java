@@ -8,8 +8,14 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 
+/**
+ * Filtros dinámicos para buscar eventos en la base de datos.
+ * En lugar de escribir muchas consultas SQL a mano, armamos condiciones
+ * (nombre, categoría, fechas, etc.) y Spring Data las combina.
+ */
 public class EventoSpecification {
 
+    /** Datos que vienen del frontend cuando el admin u organizador filtra la lista. */
     @Data
     public static class EventoSearchCriteria {
         private String nombre;
@@ -21,6 +27,7 @@ public class EventoSpecification {
         private Long organizadorId;
     }
 
+    // Filtra por nombre (contiene el texto, sin importar mayúsculas).
     public static Specification<Evento> hasNombre(String nombre) {
         return (root, query, cb) -> nombre == null || nombre.isBlank()
                 ? null

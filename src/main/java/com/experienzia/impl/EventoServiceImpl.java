@@ -52,6 +52,10 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Implementacion del servicio de eventos.
+ * Aqui esta la logica mas compleja: crear, editar, aprobar, cancelar, disponibilidad de salon, etc.
+ */
 @Service
 @Transactional
 public class EventoServiceImpl implements EventoService {
@@ -119,6 +123,7 @@ public class EventoServiceImpl implements EventoService {
         this.fileStorageService = fileStorageService;
     }
 
+    /** Crea un evento nuevo validando aforo, fechas y que el salon este libre. */
     @Override
     public EventoDTO crear(EventoDTO dto) {
         if (dto.getOrganizadorId() == null) {
@@ -148,6 +153,7 @@ public class EventoServiceImpl implements EventoService {
         return toDto(eventoRepository.save(evento));
     }
 
+    /** Edita un evento; segun que cambie puede quedar en revision, suplemento o cancelacion pendiente. */
     @Override
     public EventoDTO editar(Long id, EventoDTO dto) {
         marcarEventosActivosFinalizados();
@@ -208,6 +214,7 @@ public class EventoServiceImpl implements EventoService {
             assertUbicacionDisponible(inicio, finAjustado, ubicNueva, evento.getId());
         }
 
+        /** --- Detectar que tipo de cambio hizo el organizador --- */
         boolean requiereRevisionTipoCat = cambiaTipo || cambiaCategoria;
         boolean soloMetadatosSinTipoCatNiHoras = !requiereRevisionTipoCat && !cambiaDuracion;
         boolean aumentaHoras = nuevaDuracion > viejaDuracion;
@@ -235,6 +242,7 @@ public class EventoServiceImpl implements EventoService {
         Optional<Pago> pOpt = pagoRepository.findByEventoId(evento.getId());
         boolean pagoAprobado = pOpt.isPresent() && pOpt.get().getEstado() == EstadoPago.APROBADO;
 
+        /** --- Evento gratis (costo 0): se guarda directo sin flujo de pago --- */
         if (costoFinal <= 0.0) {
             evento.setResumenSolicitudEdicion(null);
             evento.setEstadoPrevioRevision(null);
@@ -260,6 +268,7 @@ public class EventoServiceImpl implements EventoService {
         boolean gestionadoActivoOaprobado =
                 estadoAntes == EstadoEvento.ACTIVO || estadoAntes == EstadoEvento.APROBADO;
 
+        /** --- Caso: aumento de horas con pago ya aprobado (pide revision + suplemento) --- */
         if (gestionadoActivoOaprobado && aumentaHoras && pagoAprobado) {
             Pago p = pOpt.get();
             double montoYaCobradoAprobado = p.getMonto();
@@ -321,6 +330,7 @@ public class EventoServiceImpl implements EventoService {
                             + "Los cambios quedaron a revisión administrativa para validar tarifa y estado del pago.");
         }
 
+        /** --- Caso: disminucion de horas (penalizacion del 5% por hora) --- */
         if (gestionadoActivoOaprobado && disminuyeHoras) {
             int horasRed = viejaDuracion - nuevaDuracion;
             double baseMonto = pagoAprobado ? pOpt.get().getMonto() : viejoCosto;
@@ -350,6 +360,7 @@ public class EventoServiceImpl implements EventoService {
             return conAlerta(guardado, msg);
         }
 
+        /** --- Caso: cambio de metadatos o tipo/categoria (revision admin sin nuevo pago) --- */
         if (gestionadoActivoOaprobado
                 && ((soloMetadatosSinTipoCatNiHoras
                                 && (cambiaNombre
@@ -387,6 +398,7 @@ public class EventoServiceImpl implements EventoService {
             return conAlerta(guardado, msg);
         }
 
+        /** --- Caso: cambio de duracion con distintos estados de pago --- */
         if (cambiaDuracion && (estadoAntes == EstadoEvento.APROBADO || estadoAntes == EstadoEvento.ACTIVO)) {
             if (pOpt.isPresent() && pOpt.get().getEstado() == EstadoPago.PENDIENTE
                     && pOpt.get().getSaldoAprobadoPrevio() == null) {
@@ -825,8 +837,8 @@ public class EventoServiceImpl implements EventoService {
     }
 
     /**
-     * No permite dos eventos en la misma ubicación con horarios que se solapan
-     * (incluye solicitudes pendientes de aprobación).
+     * Verifica que no haya otro evento en el mismo salon con horarios que se crucen.
+     * Si hay conflicto lanza excepcion CONFLICT.
      */
     private void assertUbicacionDisponible(
             LocalDateTime inicio, LocalDateTime fin, String ubicacion, Long excluirEventoId) {
@@ -871,6 +883,7 @@ public class EventoServiceImpl implements EventoService {
         return precioPorHora * duracionHoras;
     }
 
+    /** El admin aprueba un evento nuevo o una edicion pendiente de revision. */
     @Override
     public EventoDTO aprobar(Long id) {
         Evento evento = buscarPorId(id);
@@ -917,6 +930,7 @@ public class EventoServiceImpl implements EventoService {
         return toDto(guardado);
     }
 
+    /** El admin rechaza; si era edicion puede revertir los datos anteriores. */
     @Override
     public EventoDTO rechazar(Long id, String motivo) {
         Evento evento = buscarPorId(id);
@@ -946,6 +960,7 @@ public class EventoServiceImpl implements EventoService {
         return toDto(eventoRepository.save(evento));
     }
 
+    /** El organizador solicita cancelar; segun el estado puede ser directo o pendiente de admin. */
     @Override
     public EventoDTO cancelar(Long id, Long organizadorId, String motivo) {
         Evento evento = buscarPorId(id);
@@ -966,6 +981,7 @@ public class EventoServiceImpl implements EventoService {
         }
 
         if (evento.getEstado() == EstadoEvento.PENDIENTE) {
+            /** Cancelacion directa si el evento aun no estaba activo. */
             evento.setEstado(EstadoEvento.CANCELADO);
             evento.setMotivoCancelacion(motivo.trim());
             evento.setEstadoPrevioRevision(null);
@@ -978,6 +994,7 @@ public class EventoServiceImpl implements EventoService {
                 || evento.getEstado() == EstadoEvento.APROBADO
                 || evento.getEstado() == EstadoEvento.PENDIENTE_REVISION
                 || evento.getEstado() == EstadoEvento.PENDIENTE_SUPLEMENTO) {
+            /** Cancelacion con revision admin (reembolso parcial del 70%). */
             double valorPagado = pagoRepository.findByEventoId(id)
                     .filter((p) -> p.getEstado() == EstadoPago.APROBADO)
                     .map(Pago::getMonto)
@@ -1000,6 +1017,7 @@ public class EventoServiceImpl implements EventoService {
         return toDto(guardado);
     }
 
+    /** Admin confirma la cancelacion solicitada por el organizador. */
     @Override
     public EventoDTO aprobarCancelacion(Long id) {
         Evento evento = buscarPorId(id);
@@ -1024,6 +1042,7 @@ public class EventoServiceImpl implements EventoService {
         return toDto(guardado);
     }
 
+    /** Admin rechaza la cancelacion y el evento vuelve a su estado anterior. */
     @Override
     public EventoDTO rechazarCancelacion(Long id, String motivo) {
         if (motivo == null || motivo.isBlank()) {
@@ -1064,8 +1083,9 @@ public class EventoServiceImpl implements EventoService {
         }
     }
 
-    @Override
+    /** Pasa el evento a ACTIVO cuando el pago inicial fue aprobado. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Override
     public EventoDTO activarPorPago(Long id) {
         Evento evento = buscarPorId(id);
         if (evento.getEstado() != EstadoEvento.APROBADO) {
@@ -1075,8 +1095,9 @@ public class EventoServiceImpl implements EventoService {
         return toDto(eventoRepository.save(evento));
     }
 
-    @Override
+    /** Reactiva el evento despues de aprobar el pago del suplemento por horas extra. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Override
     public EventoDTO activarTrasSuplementoPago(Long eventoId) {
         Evento evento = buscarPorId(eventoId);
         if (evento.getEstado() != EstadoEvento.PENDIENTE_SUPLEMENTO) {
@@ -1092,8 +1113,9 @@ public class EventoServiceImpl implements EventoService {
         return toDto(eventoRepository.save(evento));
     }
 
-    @Override
+    /** Marca resuelta la novedad de suplemento cuando el evento sigue ACTIVO. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Override
     public void resolverComplementoPagoSobreEventoActivo(Long eventoId) {
         Evento evento = buscarPorId(eventoId);
         if (evento.getEstado() != EstadoEvento.ACTIVO) {
@@ -1136,6 +1158,7 @@ public class EventoServiceImpl implements EventoService {
                 });
     }
 
+    /** Lista las novedades (solicitudes de cambio) de un evento. */
     @Override
     public List<EventoNovedadDTO> listarNovedades(Long eventoId) {
         return eventoNovedadRepository.findByEventoIdOrderByFechaSolicitudDesc(eventoId).stream()
@@ -1157,6 +1180,7 @@ public class EventoServiceImpl implements EventoService {
         return d;
     }
 
+    /** Busca un evento por id; si ya paso su hora lo marca FINALIZADO. */
     @Override
     public EventoDTO obtenerPorId(Long id) {
         marcarEventosActivosFinalizados();
@@ -1168,12 +1192,14 @@ public class EventoServiceImpl implements EventoService {
         return toDto(evento);
     }
 
+    /** Lista todos los eventos (panel admin). */
     @Override
     public List<EventoDTO> listarTodos() {
         marcarEventosActivosFinalizados();
         return eventoRepository.findAll().stream().map(this::toDto).toList();
     }
 
+    /** Catalogo publico: solo eventos PUBLICO + ACTIVO que no hayan terminado. */
     @Override
     public List<EventoDTO> listarCatalogoPublicoActivo() {
         marcarEventosActivosFinalizados();
@@ -1184,6 +1210,7 @@ public class EventoServiceImpl implements EventoService {
                 .toList();
     }
 
+    /** Detalle de un evento para el catalogo publico (sin datos sensibles). */
     @Override
     public EventoDTO obtenerParaCatalogoPublico(Long id) {
         marcarEventosActivosFinalizados();
@@ -1199,12 +1226,14 @@ public class EventoServiceImpl implements EventoService {
         return toCatalogoPublicoDto(e);
     }
 
+    /** Eventos creados por un organizador. */
     @Override
     public List<EventoDTO> listarPorOrganizador(Long organizadorId) {
         marcarEventosActivosFinalizados();
         return eventoRepository.findByOrganizadorId(organizadorId).stream().map(this::toDto).toList();
     }
 
+    /** Busqueda avanzada con filtros dinamicos (Specification). */
     @Override
     public List<EventoDTO> buscar(EventoSearchCriteria c) {
         marcarEventosActivosFinalizados();
@@ -1218,6 +1247,7 @@ public class EventoServiceImpl implements EventoService {
         return eventoRepository.findAll(spec).stream().map(this::toDto).toList();
     }
 
+    /** Suma 1 al contador de inscritos del evento. */
     @Override
     public void aumentarAforo(Long eventoId) {
         Evento evento = buscarPorId(eventoId);
@@ -1228,6 +1258,7 @@ public class EventoServiceImpl implements EventoService {
         eventoRepository.save(evento);
     }
 
+    /** Resta 1 al contador cuando alguien cancela inscripcion. */
     @Override
     public void disminuirAforo(Long eventoId) {
         Evento evento = buscarPorId(eventoId);
@@ -1238,8 +1269,9 @@ public class EventoServiceImpl implements EventoService {
         eventoRepository.save(evento);
     }
 
-    @Override
+    /** Consulta que eventos ocupan un salon en un rango de fechas (calendario). */
     @Transactional(readOnly = true)
+    @Override
     public DisponibilidadSalonDTO consultarDisponibilidadSalon(
             String ubicacion,
             LocalDateTime desde,
@@ -1287,6 +1319,7 @@ public class EventoServiceImpl implements EventoService {
         resp.setOcupaciones(franjas);
 
         if (propuestaInicio != null && propuestaFin != null) {
+            /** --- Validar si un horario propuesto choca con eventos existentes --- */
             if (!propuestaFin.isAfter(propuestaInicio)) {
                 resp.setPropuestaDisponible(false);
                 resp.setMensajePropuesta("La hora de fin debe ser posterior al inicio.");
@@ -1319,6 +1352,7 @@ public class EventoServiceImpl implements EventoService {
         return resp;
     }
 
+    /** Tarea de mantenimiento: ACTIVO -> FINALIZADO si ya paso la hora de fin. */
     @Override
     public void marcarEventosActivosFinalizados() {
         for (Evento e : eventoRepository.findByEstado(EstadoEvento.ACTIVO)) {

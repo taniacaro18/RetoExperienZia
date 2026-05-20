@@ -11,6 +11,11 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { Certificado } from '../../core/models/domain.models';
 import { environment } from '../../../environments/environment';
 
+/**
+ * Pantalla: Mis certificados.
+ * Rol: ASISTENTE.
+ * Lista certificados obtenidos, vista previa y descarga del PDF oficial.
+ */
 @Component({
   selector: 'app-mis-certificados-page',
   standalone: true,
@@ -35,12 +40,14 @@ export class MisCertificadosPage {
   readonly certificados = signal<Certificado[]>([]);
   readonly seleccionado = signal<Certificado | null>(null);
 
+  // true si el asistente tiene al menos un certificado
   readonly hayCertificados = computed(() => this.certificados().length > 0);
 
   /** Igual que el PDF del backend (serial legible en el pie). */
   readonly urlValidacionMostrar = 'experienzia.com/validar';
 
   ngOnInit() {
+    // carga certificados del usuario logueado
     const u = this.auth.usuario();
     if (!u) return;
     this.api.listarPorUsuario(u.id).subscribe({

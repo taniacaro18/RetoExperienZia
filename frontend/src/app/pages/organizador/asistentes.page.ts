@@ -20,6 +20,11 @@ import { ExportService } from '../../core/export/export.service';
 interface OpcionEvento { label: string; value: number; }
 type FiltroEstado = 'TODOS' | EstadoInscripcion;
 
+/**
+ * Pantalla: Asistentes de mis eventos.
+ * Rol: ORGANIZADOR.
+ * Lista inscritos, carga manual o CSV e exportación.
+ */
 @Component({
   selector: 'app-org-asistentes-page',
   standalone: true,
@@ -70,6 +75,7 @@ export class OrgAsistentesPage {
     errores: string[];
   } | null>(null);
 
+  // solo eventos ACTIVO en el selector
   readonly opcionesEventos = computed<OpcionEvento[]>(() =>
     this.eventos()
       .filter((e) => e.estado === 'ACTIVO')
@@ -84,6 +90,7 @@ export class OrgAsistentesPage {
     { label: 'Pasaporte', value: 'PA' }
   ];
 
+  // contadores de la tabla de asistentes
   readonly stats = computed(() => {
     const items = this.asistentes();
     return {
@@ -94,6 +101,7 @@ export class OrgAsistentesPage {
     };
   });
 
+  // lista según filtro INSCRITO / ASISTIO / etc.
   readonly asistentesFiltrados = computed(() => {
     const f = this.filtroEstado();
     if (f === 'TODOS') return this.asistentes();
@@ -121,6 +129,7 @@ export class OrgAsistentesPage {
   estadoSeverity = inscripcionEstadoSeverity;
 
   ngOnInit() {
+    // lista eventos del organizador y opcional ?evento= en URL
     const orgId = this.store.usuario()?.id;
     if (!orgId) return;
     const eventoIdQP = Number(this.route.snapshot.queryParamMap.get('evento')) || null;

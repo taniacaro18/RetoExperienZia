@@ -58,6 +58,11 @@ function fechaFutura(control: AbstractControl): ValidationErrors | null {
   return f.getTime() < hoy.getTime() ? { fechaPasada: true } : null;
 }
 
+/**
+ * Pantalla: Crear o editar evento.
+ * Rol: ORGANIZADOR.
+ * Formulario con costo por horas, salón y envío al admin para aprobación.
+ */
 @Component({
   selector: 'app-org-evento-form-page',
   standalone: true,
@@ -125,10 +130,12 @@ export class OrgEventoFormPage {
     imagen: ['', [Validators.maxLength(500)]]
   });
 
+  // título de la pantalla según modo crear/editar
   readonly tituloFigma = computed(() =>
     this.editando() ? 'Editar Evento' : 'Crear Evento'
   );
 
+  // URL de preview si el campo imagen es http válido
   readonly imagenUrl = computed(() => {
     const v = this.formulario.controls.imagen.value;
     if (!v || this.imagenError()) return null;
@@ -291,6 +298,7 @@ export class OrgEventoFormPage {
     return problemas;
   }
 
+  // crea o actualiza el evento en el backend (va a revisión del admin)
   enviar() {
     // Calculamos cada problema concreto del formulario para que el toast
     // enumere QUÉ falta en vez de un genérico "Revisa los campos obligatorios".

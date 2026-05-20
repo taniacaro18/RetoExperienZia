@@ -6,12 +6,13 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
-/** Cálculo de inicio/fin de evento y solapamiento de ventanas horarias. */
+/** Utilidades para calcular inicio/fin de eventos y detectar solapamiento de horarios. */
 public final class EventoVentanaUtil {
 
     private EventoVentanaUtil() {
     }
 
+    /** Convierte el string de zona horaria a ZoneId (por defecto America/Bogota). */
     public static ZoneId zoneId(String zonaConfig) {
         String z = zonaConfig != null ? zonaConfig.trim() : "America/Bogota";
         try {
@@ -32,10 +33,12 @@ public final class EventoVentanaUtil {
         return inicio.plusHours(horas);
     }
 
+    /** Convierte el fin del evento a ZonedDateTime en la zona indicada. */
     public static ZonedDateTime instanteFinZoned(Evento e, ZoneId zone) {
         return instanteFin(e).atZone(zone);
     }
 
+    /** Convierte el inicio del evento a ZonedDateTime. */
     public static ZonedDateTime instanteInicioZoned(Evento e, ZoneId zone) {
         return e.getFecha().atZone(zone);
     }
@@ -47,6 +50,7 @@ public final class EventoVentanaUtil {
         return inicio1.isBefore(fin2) && inicio2.isBefore(fin1);
     }
 
+    /** true si el evento ya termino segun la hora actual en esa zona. */
     public static boolean eventoYaFinalizo(Evento e, ZoneId zone) {
         return !instanteFinZoned(e, zone).isAfter(ZonedDateTime.now(zone));
     }

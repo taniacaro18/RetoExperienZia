@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Guarda y consulta registros de auditoria del sistema.
+ */
 @Service
 @Transactional
 public class AuditoriaServiceImpl implements AuditoriaService {
@@ -23,6 +26,7 @@ public class AuditoriaServiceImpl implements AuditoriaService {
         this.modelMapper = modelMapper;
     }
 
+    /** Guarda una fila de auditoria (quien hizo que accion y desde que IP). */
     @Override
     public AuditoriaDTO registrar(Long usuarioId, String accion, String entidad, Long entidadId, String direccionIp) {
         if (accion == null || accion.trim().isEmpty()) {
@@ -41,6 +45,7 @@ public class AuditoriaServiceImpl implements AuditoriaService {
         return modelMapper.map(auditoriaRepository.save(auditoria), AuditoriaDTO.class);
     }
 
+    /** Lista todos los registros de auditoria. */
     @Override
     @Transactional(readOnly = true)
     public List<AuditoriaDTO> listarTodo() {
@@ -49,6 +54,7 @@ public class AuditoriaServiceImpl implements AuditoriaService {
                 .toList();
     }
 
+    /** Historial de acciones registradas por un usuario. */
     @Override
     @Transactional(readOnly = true)
     public List<AuditoriaDTO> listarPorUsuario(Long usuarioId) {
@@ -57,6 +63,7 @@ public class AuditoriaServiceImpl implements AuditoriaService {
                 .toList();
     }
 
+    /** Lista auditoria filtrada por entidad. */
     @Override
     @Transactional(readOnly = true)
     public List<AuditoriaDTO> listarPorEntidad(String entidad) {

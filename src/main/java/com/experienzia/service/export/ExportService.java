@@ -11,10 +11,17 @@ import java.util.List;
  * listados administrativos. Reutiliza Apache POI y OpenPDF.
  */
 public interface ExportService {
+
+    /** Excel con la lista de asistentes de un evento. */
     byte[] resumenAsistentesExcel(EventoDTO evento, List<AsistenteEventoDTO> asistentes);
+
+    /** PDF con la lista de asistentes de un evento. */
     byte[] resumenAsistentesPdf(EventoDTO evento, List<AsistenteEventoDTO> asistentes);
 
+    /** Excel con listado de eventos. */
     byte[] eventosExcel(List<EventoDTO> eventos);
+
+    /** PDF con listado de eventos. */
     byte[] eventosPdf(List<EventoDTO> eventos);
 
     /** Certificado individual (nombre, curso/evento, duración, código) en PDF. */

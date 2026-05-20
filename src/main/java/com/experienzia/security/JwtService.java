@@ -12,10 +12,17 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Date;
 
+/**
+ * Servicio para crear y validar tokens JWT.
+ * Cuando el usuario hace login, generamos un token que va en el header Authorization.
+ */
 @Service
 public class JwtService {
 
+    /** Clave secreta para firmar los tokens. */
     private final SecretKey key;
+
+    /** Cuanto tiempo dura el token antes de expirar (en milisegundos). */
     private final long expirationMs;
 
     public JwtService(
@@ -49,6 +56,7 @@ public class JwtService {
         }
     }
 
+    /** Genera un token JWT con el id, email y rol del usuario. */
     public String generateToken(Long userId, String email, String rol) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMs);
@@ -62,6 +70,7 @@ public class JwtService {
                 .compact();
     }
 
+    /** Lee y valida el token; devuelve los claims (datos dentro del JWT). */
     public Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(key)
@@ -70,6 +79,7 @@ public class JwtService {
                 .getPayload();
     }
 
+    /** Saca el id del usuario del token. */
     public Long extractUserId(String token) {
         String sub = parseClaims(token).getSubject();
         return Long.parseLong(sub);

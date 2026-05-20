@@ -15,6 +15,11 @@ import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 import { DonutComponent } from '../../shared/donut/donut.component';
 import { ExportService } from '../../core/export/export.service';
 
+/**
+ * Pantalla: Reportes y estadísticas globales.
+ * Rol: ADMIN.
+ * Resumen de plataforma, eventos populares y reporte avanzado por evento (export Excel/PDF).
+ */
 @Component({
   selector: 'app-admin-reportes-page',
   standalone: true,
@@ -51,6 +56,7 @@ export class AdminReportesPage {
   readonly reporteAvanzado = signal<ReporteEventoAvanzado | null>(null);
   readonly vistaPreviaVisible = signal(false);
 
+  // opciones del select de organizador para acotar eventos
   readonly opcionesOrganizadores = computed(() => [
     { label: 'Todos los organizadores', value: null as number | null },
     ...this.organizadores().map((o) => ({
@@ -59,6 +65,7 @@ export class AdminReportesPage {
     }))
   ]);
 
+  // solo eventos activos o finalizados, opcionalmente de un organizador
   readonly eventosFiltrados = computed(() => {
     let list = this.eventos().filter((e) => e.estado === 'ACTIVO' || e.estado === 'FINALIZADO');
     const orgId = this.organizadorFiltro();
@@ -68,6 +75,7 @@ export class AdminReportesPage {
     return [...list].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
   });
 
+  // eventos listos para elegir en el reporte avanzado
   readonly opcionesEventos = computed(() =>
     this.eventosFiltrados().map((e) => ({
       label: `${e.nombre} · ${new Date(e.fecha).toLocaleDateString()}`,
@@ -75,11 +83,13 @@ export class AdminReportesPage {
     }))
   );
 
+  // escala del gráfico de eventos más populares
   readonly maxPopulares = computed(() => {
     const m = Math.max(0, ...this.populares().map((p) => p.totalInscritos));
     return m === 0 ? 1 : m;
   });
 
+  // donut: check-in por QR vs manual
   readonly segmentosCheckIn = computed(() => {
     const r = this.reporteAvanzado();
     if (!r) return [];
@@ -89,6 +99,7 @@ export class AdminReportesPage {
     ];
   });
 
+  // donut: asistieron vs faltaron
   readonly segmentosAsistencia = computed(() => {
     const r = this.reporteAvanzado();
     if (!r) return [];
@@ -98,6 +109,7 @@ export class AdminReportesPage {
     ];
   });
 
+  // tope del gráfico de curva de ingresos/salidas
   readonly maxIngresosSalidas = computed(() => {
     const r = this.reporteAvanzado();
     if (!r || !r.curvaIngreso.length) return 1;
@@ -105,6 +117,7 @@ export class AdminReportesPage {
   });
 
   ngOnInit() {
+    // dashboard, populares, eventos y organizadores activos
     this.cargando.set(true);
     this.reporteApi.dashboardAdmin().subscribe({
       next: (s) => {
@@ -135,6 +148,7 @@ export class AdminReportesPage {
     }
   }
 
+  // pide el reporte detallado del evento seleccionado
   cargarAvanzado() {
     const id = this.eventoSeleccionado();
     if (!id) return;

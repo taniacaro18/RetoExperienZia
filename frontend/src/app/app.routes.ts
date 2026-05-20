@@ -1,7 +1,11 @@
+/**
+ * Mapa de URLs de la app: público, login y zonas por rol (admin, organizador…).
+ */
 import { Routes } from '@angular/router';
 import { authGuard, noAuthGuard, rolGuard } from './core/auth/auth.guards';
 
 export const routes: Routes = [
+  // Catálogo sin login
   {
     path: 'catalogo',
     loadComponent: () =>
@@ -12,7 +16,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/public/detalle-evento-publico.page').then((m) => m.DetalleEventoPublicoPage)
   },
-  // Rutas públicas (auth)
+  // Login y registro (solo si NO hay sesión)
   {
     path: 'login',
     canActivate: [noAuthGuard],
@@ -24,7 +28,7 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth/registro.page').then((m) => m.RegistroPage)
   },
 
-  // App protegida con shell
+  // Zona privada: menú lateral + páginas internas
   {
     path: '',
     canActivate: [authGuard],
@@ -197,5 +201,6 @@ export const routes: Routes = [
       }
     ]
   },
+  // Cualquier ruta desconocida va al catálogo público
   { path: '**', redirectTo: 'catalogo' }
 ];

@@ -24,6 +24,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/**
+ * Controlador REST para inscripciones a eventos, check-in/check-out y gestión de staff.
+ * No tiene una sola URL base: usa rutas como /api/inscripciones y /api/eventos/...
+ * Lo usan asistentes (inscribirse), organizadores (cargar asistentes, asignar staff)
+ * y staff (marcar entrada/salida y ver listas).
+ */
 @RestController
 public class InscripcionController {
 
@@ -35,6 +41,7 @@ public class InscripcionController {
         this.auditoriaService = auditoriaService;
     }
 
+    // Crea una inscripción de un usuario a un evento. Devuelve la inscripción creada con código 201.
     @PostMapping("/api/inscripciones")
     public ResponseEntity<InscripcionDTO> crear(@RequestBody InscripcionDTO dto, HttpServletRequest request) {
         InscripcionDTO ins = inscripcionService.inscribir(dto.getUsuarioId(), dto.getEventoId());
@@ -43,6 +50,7 @@ public class InscripcionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ins);
     }
 
+    // Cancela una inscripción por su id. Devuelve la inscripción actualizada.
     @PutMapping("/api/inscripciones/{id}/cancelar")
     public ResponseEntity<InscripcionDTO> cancelar(@PathVariable Long id, HttpServletRequest request) {
         InscripcionDTO ins = inscripcionService.cancelar(id);
@@ -51,16 +59,19 @@ public class InscripcionController {
         return ResponseEntity.ok(ins);
     }
 
+    // Lista todas las inscripciones de un evento. Devuelve una lista de InscripcionDTO.
     @GetMapping("/api/inscripciones/evento/{eventoId}")
     public ResponseEntity<List<InscripcionDTO>> listarPorEvento(@PathVariable Long eventoId) {
         return ResponseEntity.ok(inscripcionService.listarPorEvento(eventoId));
     }
 
+    // Lista las inscripciones de un usuario. Devuelve una lista de InscripcionDTO.
     @GetMapping("/api/inscripciones/usuario/{usuarioId}")
     public ResponseEntity<List<InscripcionDTO>> listarPorUsuario(@PathVariable Long usuarioId) {
         return ResponseEntity.ok(inscripcionService.listarPorUsuario(usuarioId));
     }
 
+    // Marca check-in manual (el staff indica quién entró). Devuelve la inscripción actualizada.
     @PutMapping("/api/inscripciones/{id}/check-in")
     public ResponseEntity<InscripcionDTO> checkIn(@PathVariable Long id, @RequestBody CheckInDTO body,
                                                     HttpServletRequest request) {
@@ -73,6 +84,7 @@ public class InscripcionController {
         return ResponseEntity.ok(ins);
     }
 
+    // Marca check-out manual (salida del asistente). Devuelve la inscripción actualizada.
     @PutMapping("/api/inscripciones/{id}/check-out")
     public ResponseEntity<InscripcionDTO> checkOut(@PathVariable Long id, @RequestBody CheckInDTO body,
                                                      HttpServletRequest request) {
@@ -85,7 +97,7 @@ public class InscripcionController {
         return ResponseEntity.ok(ins);
     }
 
-    /** HU-015: check-in escaneando el código QR del asistente. */
+    // Check-in leyendo el código QR del asistente. Devuelve la inscripción actualizada.
     @PostMapping("/api/inscripciones/check-in/qr")
     public ResponseEntity<InscripcionDTO> checkInPorQR(@RequestBody CheckInDTO body, HttpServletRequest request) {
         if (body == null || body.getStaffUsuarioId() == null || body.getCodigoQR() == null) {
@@ -97,7 +109,7 @@ public class InscripcionController {
         return ResponseEntity.ok(ins);
     }
 
-    /** HU-017: check-out escaneando el código QR del asistente. */
+    // Check-out leyendo el código QR del asistente. Devuelve la inscripción actualizada.
     @PostMapping("/api/inscripciones/check-out/qr")
     public ResponseEntity<InscripcionDTO> checkOutPorQR(@RequestBody CheckInDTO body, HttpServletRequest request) {
         if (body == null || body.getStaffUsuarioId() == null || body.getCodigoQR() == null) {
@@ -109,6 +121,7 @@ public class InscripcionController {
         return ResponseEntity.ok(ins);
     }
 
+    // Carga asistentes a mano (lista en JSON). Devuelve resumen de cuántos se crearon o fallaron.
     @PostMapping("/api/eventos/{eventoId}/asistentes/carga-manual")
     public ResponseEntity<ResultadoCargaAsistentesDTO> cargaManual(@PathVariable Long eventoId,
                                                                    @RequestBody CargaAsistentesManualDTO body,
@@ -122,6 +135,7 @@ public class InscripcionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(r);
     }
 
+    // Carga asistentes desde un archivo CSV. Devuelve el mismo resumen que la carga manual.
     @PostMapping(path = "/api/eventos/{eventoId}/asistentes/carga-csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResultadoCargaAsistentesDTO> cargaCsv(@PathVariable Long eventoId,
                                                                 @RequestParam Long organizadorId,
@@ -141,6 +155,7 @@ public class InscripcionController {
         }
     }
 
+    // Asigna un usuario staff a un evento con una función. Devuelve vacío con código 201.
     @PostMapping("/api/eventos/{eventoId}/staff/asignacion")
     public ResponseEntity<Void> asignarStaff(@PathVariable Long eventoId, @RequestBody AsignarStaffDTO body,
                                              HttpServletRequest request) {
@@ -154,6 +169,7 @@ public class InscripcionController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    // Cambia la función del staff en el evento. Devuelve los datos del staff actualizado.
     @PutMapping("/api/eventos/{eventoId}/staff/{staffUsuarioId}/funcion")
     public ResponseEntity<StaffAsignadoDTO> cambiarFuncionStaff(@PathVariable Long eventoId,
                                                                 @PathVariable Long staffUsuarioId,
@@ -167,6 +183,7 @@ public class InscripcionController {
         return ResponseEntity.ok(dto);
     }
 
+    // Quita al staff del evento. Devuelve vacío con código 204 (sin contenido).
     @DeleteMapping("/api/eventos/{eventoId}/staff/{staffUsuarioId}")
     public ResponseEntity<Void> desasignarStaff(@PathVariable Long eventoId,
                                                 @PathVariable Long staffUsuarioId,
@@ -178,24 +195,25 @@ public class InscripcionController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Listado plano (compatibilidad anterior). */
+    // Lista solo los ids de staff del evento (versión simple). Devuelve lista de números Long.
     @GetMapping("/api/eventos/{eventoId}/staff/ids")
     public ResponseEntity<List<Long>> listarStaffIds(@PathVariable Long eventoId) {
         return ResponseEntity.ok(inscripcionService.listarStaffIdsPorEvento(eventoId));
     }
 
-    /** Listado enriquecido del staff con su función (vista del organizador). */
+    // Lista el staff del evento con nombre y función. Devuelve lista de StaffAsignadoDTO.
     @GetMapping("/api/eventos/{eventoId}/staff")
     public ResponseEntity<List<StaffAsignadoDTO>> listarStaffAsignados(@PathVariable Long eventoId) {
         return ResponseEntity.ok(inscripcionService.listarStaffPorEvento(eventoId));
     }
 
-    /** Eventos asignados al usuario STAFF (vista del staff). */
+    // Lista los eventos donde trabaja un staff. Devuelve lista de EventoStaffDTO.
     @GetMapping("/api/staff/{staffUsuarioId}/eventos")
     public ResponseEntity<List<EventoStaffDTO>> listarEventosDelStaff(@PathVariable Long staffUsuarioId) {
         return ResponseEntity.ok(inscripcionService.listarEventosDelStaff(staffUsuarioId));
     }
 
+    // Convierte el texto de función a enum; si viene mal, lanza error 400.
     private static FuncionStaff parseFuncion(String texto) {
         if (texto == null || texto.isBlank()) return FuncionStaff.GENERAL;
         try {
@@ -207,6 +225,7 @@ public class InscripcionController {
         }
     }
 
+    // Lista asistentes del evento para que el staff haga check-in (puede filtrar con q). Devuelve lista de asistentes.
     @GetMapping("/api/eventos/{eventoId}/asistentes")
     public ResponseEntity<List<AsistenteEventoDTO>> listarAsistentesParaStaff(@PathVariable Long eventoId,
                                                                               @RequestParam Long staffUsuarioId,
@@ -214,6 +233,7 @@ public class InscripcionController {
         return ResponseEntity.ok(inscripcionService.listarAsistentesParaStaff(eventoId, staffUsuarioId, q));
     }
 
+    // Lista asistentes del evento para el organizador (vista de gestión). Devuelve lista de asistentes.
     @GetMapping("/api/eventos/{eventoId}/asistentes/organizador")
     public ResponseEntity<List<AsistenteEventoDTO>> listarAsistentesParaOrganizador(@PathVariable Long eventoId,
                                                                                     @RequestParam Long organizadorId,
@@ -221,6 +241,7 @@ public class InscripcionController {
         return ResponseEntity.ok(inscripcionService.listarAsistentesParaOrganizador(eventoId, organizadorId, q));
     }
 
+    // Consulta cuánta gente hay dentro del evento en tiempo real. Devuelve AforoEnVivoDTO.
     @GetMapping("/api/eventos/{eventoId}/aforo")
     public ResponseEntity<AforoEnVivoDTO> aforoEnVivo(@PathVariable Long eventoId) {
         return ResponseEntity.ok(inscripcionService.consultarAforoEnVivo(eventoId));

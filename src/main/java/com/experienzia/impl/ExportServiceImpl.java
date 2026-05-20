@@ -61,6 +61,7 @@ public class ExportServiceImpl implements ExportService {
     private static final Color CERT_BG = new Color(167, 139, 250);
     private static final String CERT_URL_VALIDACION = "experienzia.com/validar";
 
+    /** Genera Excel con lista de asistentes. */
     @Override
     public byte[] resumenAsistentesExcel(EventoDTO evento, List<AsistenteEventoDTO> asistentes) {
         try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -95,6 +96,7 @@ public class ExportServiceImpl implements ExportService {
         }
     }
 
+    /** Genera PDF con lista de asistentes. */
     @Override
     public byte[] resumenAsistentesPdf(EventoDTO evento, List<AsistenteEventoDTO> asistentes) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -142,6 +144,7 @@ public class ExportServiceImpl implements ExportService {
         }
     }
 
+    /** Genera Excel con listado de eventos. */
     @Override
     public byte[] eventosExcel(List<EventoDTO> eventos) {
         try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -179,6 +182,7 @@ public class ExportServiceImpl implements ExportService {
         }
     }
 
+    /** Genera PDF con listado de eventos. */
     @Override
     public byte[] eventosPdf(List<EventoDTO> eventos) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -224,6 +228,7 @@ public class ExportServiceImpl implements ExportService {
         }
     }
 
+    /** Genera PDF de un certificado individual. */
     @Override
     public byte[] certificadoPdf(CertificadoDTO c) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {

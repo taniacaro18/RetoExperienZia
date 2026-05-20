@@ -22,6 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Genera y valida certificados de asistencia a eventos.
+ */
 @Service
 @Transactional
 public class CertificadoServiceImpl implements CertificadoService {
@@ -44,6 +47,7 @@ public class CertificadoServiceImpl implements CertificadoService {
         this.modelMapper = modelMapper;
     }
 
+    /** Genera un certificado para una inscripcion. */
     @Override
     public CertificadoDTO generar(Long inscripcionId) {
         Inscripcion ins = inscripcionRepository.findById(inscripcionId)
@@ -58,6 +62,7 @@ public class CertificadoServiceImpl implements CertificadoService {
         return toDto(crearCertificado(ins.getUsuarioId(), ins.getEventoId()));
     }
 
+    /** Genera certificados para todos los que asistieron. */
     @Override
     public List<CertificadoDTO> generarMasivoPorEvento(Long eventoId, Long organizadorId) {
         Evento evento = eventoRepository.findById(eventoId)
@@ -79,18 +84,21 @@ public class CertificadoServiceImpl implements CertificadoService {
         return resultado;
     }
 
+    /** Lista todos los certificados emitidos para un asistente. */
     @Override
     @Transactional(readOnly = true)
     public List<CertificadoDTO> listarPorUsuario(Long usuarioId) {
         return certificadoRepository.findByUsuarioId(usuarioId).stream().map(this::toDto).toList();
     }
 
+    /** Lista los certificados generados para un evento. */
     @Override
     @Transactional(readOnly = true)
     public List<CertificadoDTO> listarPorEvento(Long eventoId) {
         return certificadoRepository.findByEventoId(eventoId).stream().map(this::toDto).toList();
     }
 
+    /** Valida un certificado por codigo unico. */
     @Override
     @Transactional(readOnly = true)
     public CertificadoDTO validarPorCodigo(String codigoUnico) {

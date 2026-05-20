@@ -14,11 +14,17 @@ import { eventoVentanaYaCerro } from '../../shared/evento-catalogo.helpers';
 import { forkJoin } from 'rxjs';
 import * as QRCode from 'qrcode';
 
+/** Fila de la tabla: inscripción + datos del evento (si cargó). */
 interface InscripcionConEvento {
   inscripcion: Inscripcion;
   evento: Evento | null;
 }
 
+/**
+ * Pantalla: Mis inscripciones a eventos.
+ * Rol: ASISTENTE.
+ * Próximos y pasados, QR de entrada y cancelación de inscripción.
+ */
 @Component({
   selector: 'app-mis-inscripciones-page',
   standalone: true,
@@ -47,6 +53,7 @@ export class MisInscripcionesPage {
   readonly qrAbierto = signal<InscripcionConEvento | null>(null);
   readonly qrDataUrl = signal<string | null>(null);
 
+  // inscripciones a eventos que aún no terminaron
   readonly proximas = computed(() =>
     this.items().filter(
       (i) =>
@@ -56,6 +63,7 @@ export class MisInscripcionesPage {
     )
   );
 
+  // canceladas o eventos cuya ventana ya cerró
   readonly pasadas = computed(() =>
     this.items().filter(
       (i) =>
@@ -69,6 +77,7 @@ export class MisInscripcionesPage {
     this.cargar();
   }
 
+  // une inscripciones del usuario con el detalle de cada evento
   cargar() {
     const u = this.auth.usuario();
     if (!u) return;

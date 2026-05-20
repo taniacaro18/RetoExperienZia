@@ -29,6 +29,9 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * Implementacion de usuarios: registro, login, roles, perfil y recuperar password.
+ */
 @Service
 public class UsuarioServiceImpl implements UsuarioService {
 
@@ -55,6 +58,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /** Crea un usuario nuevo (registro publico o por admin). */
     @Override
     public UsuarioDTO registrar(UsuarioDTO dto) {
         validarDatosObligatorios(dto.getNombre(), dto.getEmail(), dto.getPassword());
@@ -86,6 +90,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return toDto(usuarioRepository.save(usuario));
     }
 
+    /** Valida credenciales y devuelve datos del usuario. */
     @Override
     public UsuarioDTO login(LoginDTO dto) {
         if (dto.getEmail() == null || dto.getPassword() == null) {
@@ -110,6 +115,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return toDto(usuario);
     }
 
+    /** Crea un usuario STAFF para un organizador. */
     @Override
     public UsuarioDTO crearStaff(CrearStaffDTO dto) {
         if (dto.getOrganizadorId() == null) {
@@ -142,6 +148,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return toDto(usuarioRepository.save(staff));
     }
 
+    /** Admin aprueba un organizador pendiente. */
     @Override
     public UsuarioDTO aprobarOrganizador(Long id) {
         Usuario u = buscarOFallar(id);
@@ -156,6 +163,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return toDto(usuarioRepository.save(u));
     }
 
+    /** Admin rechaza un organizador pendiente. */
     @Override
     public UsuarioDTO rechazarOrganizador(Long id) {
         Usuario u = buscarOFallar(id);
@@ -170,6 +178,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return toDto(usuarioRepository.save(u));
     }
 
+    /** Desactiva una cuenta de usuario. */
     @Override
     public UsuarioDTO desactivar(Long id) {
         Usuario u = buscarOFallar(id);
@@ -180,6 +189,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return toDto(usuarioRepository.save(u));
     }
 
+    /** Reactiva una cuenta inactiva. */
     @Override
     public UsuarioDTO reactivar(Long id) {
         Usuario u = buscarOFallar(id);
@@ -194,6 +204,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return toDto(usuarioRepository.save(u));
     }
 
+    /** Organizador desactiva su staff. */
     @Override
     public UsuarioDTO desactivarStaffPorOrganizador(Long organizadorId, Long staffId) {
         Usuario staff = validarStaffDelOrganizador(organizadorId, staffId);
@@ -204,6 +215,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return toDto(usuarioRepository.save(staff));
     }
 
+    /** Organizador reactiva su staff. */
     @Override
     public UsuarioDTO reactivarStaffPorOrganizador(Long organizadorId, Long staffId) {
         Usuario staff = validarStaffDelOrganizador(organizadorId, staffId);
@@ -237,6 +249,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return staff;
     }
 
+    /** Admin cambia el rol de un usuario. */
     @Override
     public UsuarioDTO cambiarRol(Long id, String nuevoRol) {
         if (nuevoRol == null || nuevoRol.isBlank()) {
@@ -257,11 +270,13 @@ public class UsuarioServiceImpl implements UsuarioService {
         return toDto(usuarioRepository.save(u));
     }
 
+    /** Busca un registro por id. */
     @Override
     public UsuarioDTO obtenerPorId(Long id) {
         return toDto(buscarOFallar(id));
     }
 
+    /** Actualiza telefono y/o password del perfil. */
     @Override
     public UsuarioDTO actualizarPerfil(Long id, ActualizarPerfilDTO dto) {
         Usuario u = buscarOFallar(id);
@@ -296,6 +311,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         return toDto(usuarioRepository.save(u));
     }
 
+    /** Genera password temporal por email. */
     @Override
     public RecuperarPasswordResponseDTO recuperarPassword(RecuperarPasswordDTO dto) {
         if (dto.getEmail() == null || dto.getEmail().isBlank()) {
@@ -328,6 +344,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 "Se generó una contraseña temporal. Cámbiala desde tu perfil.");
     }
 
+    /** Reenvia credenciales a asistente cargado masivamente. */
     @Override
     public RecuperarPasswordResponseDTO reenviarCredenciales(Long usuarioId) {
         Usuario u = buscarOFallar(usuarioId);
@@ -356,6 +373,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 "Credenciales reenviadas. La contraseña temporal fue notificada al usuario.");
     }
 
+    /** Lista todos los registros. */
     @Override
     public List<UsuarioDTO> listarTodos() {
         return usuarioRepository.findAll().stream()
@@ -363,6 +381,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .collect(Collectors.toList());
     }
 
+    /** Busqueda de usuarios con filtros. */
     @Override
     public List<UsuarioDTO> buscarPorCriterios(UsuarioSearchCriteria c) {
         Specification<Usuario> spec = Specification.where(UsuarioSpecification.hasNombre(c.getNombre()))

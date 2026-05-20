@@ -10,6 +10,11 @@ import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 import { AforoBarComponent } from '../../shared/aforo-bar/aforo-bar.component';
 import { eventoEstadoLabel, eventoEstadoSeverity } from '../../shared/estado.helpers';
 
+/**
+ * Pantalla: Panel del staff.
+ * Rol: STAFF.
+ * Resumen de eventos asignados hoy, próximos y estadísticas rápidas.
+ */
 @Component({
   selector: 'app-staff-dashboard-page',
   standalone: true,
@@ -31,6 +36,7 @@ export class StaffDashboardPage {
   readonly cargando = signal(true);
   readonly eventos = signal<EventoStaff[]>([]);
 
+  // eventos asignados que ocurren hoy
   readonly hoy = computed(() => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -42,6 +48,7 @@ export class StaffDashboardPage {
     });
   });
 
+  // próximos 6 eventos activos ordenados por fecha
   readonly proximos = computed(() => {
     const ahora = new Date();
     return this.eventos()
@@ -50,6 +57,7 @@ export class StaffDashboardPage {
       .slice(0, 6);
   });
 
+  // totales para las tarjetas del dashboard
   readonly stats = computed(() => {
     const items = this.eventos();
     return {

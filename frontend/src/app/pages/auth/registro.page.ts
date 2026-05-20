@@ -57,6 +57,11 @@ function contrasenaFuerte(): ValidatorFn {
   };
 }
 
+/**
+ * Pantalla: Registro de cuenta nueva.
+ * Rol: visitante (elige ASISTENTE u ORGANIZADOR).
+ * Formulario por pasos; el organizador queda PENDIENTE hasta que el admin apruebe.
+ */
 @Component({
   selector: 'app-registro-page',
   standalone: true,
@@ -167,6 +172,7 @@ export class RegistroPage {
     return problemas;
   }
 
+  // valida todo el formulario y llama al API de registro
   enviar() {
     const problemas = this.obtenerProblemas();
     if (problemas.length > 0) {

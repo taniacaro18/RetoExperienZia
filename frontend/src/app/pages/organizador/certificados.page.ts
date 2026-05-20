@@ -21,6 +21,11 @@ interface EventoConCerts {
   estado: 'EN_CURSO' | 'LISTO' | 'ENVIADO' | 'PARCIAL';
 }
 
+/**
+ * Pantalla: Emisión de certificados.
+ * Rol: ORGANIZADOR.
+ * Ve eventos finalizados, genera certificados para quienes asistieron.
+ */
 @Component({
   selector: 'app-org-certificados-page',
   standalone: true,
@@ -53,6 +58,7 @@ export class OrgCertificadosPage {
   readonly cargandoDetalle = signal(false);
   readonly certificadosDetalle = signal<Certificado[]>([]);
 
+  // cuántos eventos en curso / listos / certificados enviados
   readonly stats = computed(() => {
     const items = this.eventosConCerts();
     return {
@@ -66,6 +72,7 @@ export class OrgCertificadosPage {
     this.cargar();
   }
 
+  // carga eventos y cuenta asistencias vs certificados emitidos
   private cargar() {
     const orgId = this.store.usuario()?.id;
     if (!orgId) return;

@@ -29,6 +29,11 @@ interface RegistroLog {
   detalleEvento?: string;
 }
 
+/**
+ * Pantalla: Validador QR (cámara o código manual).
+ * Rol: STAFF.
+ * Escanea QR de inscripciones para check-in o check-out según la función asignada.
+ */
 @Component({
   selector: 'app-staff-validador-qr-page',
   standalone: true,
@@ -66,17 +71,20 @@ export class StaffValidadorQrPage implements OnInit, AfterViewInit, OnDestroy {
   private controls: IScannerControls | null = null;
   private ultimoCodigo: { v: string; t: number } | null = null;
 
+  // función del staff en el evento seleccionado (QR, manual, salida...)
   readonly miFuncion = computed<FuncionStaff | undefined>(() => {
     const id = this.eventoSeleccionado();
     if (!id) return undefined;
     return this.eventos().find((e) => e.eventoId === id)?.funcion;
   });
 
+  // si el rol asignado permite registrar entrada
   readonly puedeCheckIn = computed(() => {
     const f = this.miFuncion();
     return !f || f === 'CHECK_IN_QR' || f === 'CHECK_IN_MANUAL' || f === 'GENERAL';
   });
 
+  // si el rol asignado permite registrar salida
   readonly puedeCheckOut = computed(() => {
     const f = this.miFuncion();
     return !f || f === 'REGISTRO_SALIDA' || f === 'GENERAL';
@@ -95,6 +103,7 @@ export class StaffValidadorQrPage implements OnInit, AfterViewInit, OnDestroy {
   estadoSeverity = inscripcionEstadoSeverity;
 
   ngOnInit() {
+    // carga eventos donde este staff está asignado
     const id = this.store.usuario()?.id;
     if (!id) return;
     this.api.eventosDelStaff(id).subscribe({

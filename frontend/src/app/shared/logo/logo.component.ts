@@ -1,12 +1,13 @@
+/**
+ * Muestra el logo de ExperienZia (imagen en /logo.png).
+ * Puede ser solo decorativo o un enlace con routerLink; sirve en el shell y páginas públicas.
+ */
 import { Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+// Tamaños predefinidos del logo según dónde se use.
 export type LogoSize = 'sm' | 'md' | 'lg' | 'sidebar';
 
-/**
- * Logo oficial ExperienZia (icono + texto con degradado).
- * Sin caja blanca: pensado para fondos violeta del shell y páginas públicas.
- */
 @Component({
   selector: 'app-logo',
   standalone: true,
@@ -42,8 +43,10 @@ export type LogoSize = 'sm' | 'md' | 'lg' | 'sidebar';
 })
 export class LogoComponent {
   @Input() size: LogoSize = 'md';
+  // Ruta interna; si es null el logo no es clickeable.
   @Input() link: string | null = null;
+  // Texto para lectores de pantalla.
   @Input() ariaLabel = 'ExperienZia — inicio';
-  /** Opcional: p. ej. cerrar drawer móvil al pulsar el logo. */
+  // Callback opcional al hacer clic (ej. cerrar el menú móvil).
   @Input() onNavigate?: () => void;
 }

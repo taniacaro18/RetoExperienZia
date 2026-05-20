@@ -9,6 +9,11 @@ import lombok.ToString;
 
 import java.time.LocalDateTime;
 
+/**
+ * Representa la tabla "certificados" en la base de datos.
+ * Guarda el certificado que recibe un asistente después de asistir a un evento.
+ * Sirve en ExperienZia para demostrar participación con un código único verificable.
+ */
 @Entity
 @Table(name = "certificados")
 @Data
@@ -16,14 +21,16 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Certificado {
 
+    // Identificador único del certificado
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Número del usuario que recibió el certificado
     @Column(name = "usuario_id", nullable = false)
     private Long usuarioId;
 
-    /** FK al usuario titular del certificado (solo para BD/ERD). */
+    // Llave foránea hacia la tabla usuarios: la persona titular del certificado
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id",
             referencedColumnName = "id",
@@ -34,10 +41,11 @@ public class Certificado {
     @EqualsAndHashCode.Exclude
     private Usuario usuario;
 
+    // Número del evento por el que se otorgó el certificado
     @Column(name = "evento_id", nullable = false)
     private Long eventoId;
 
-    /** FK al evento al que pertenece el certificado (solo para BD/ERD). */
+    // Llave foránea hacia la tabla eventos: el evento relacionado
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "evento_id",
             referencedColumnName = "id",
@@ -48,9 +56,11 @@ public class Certificado {
     @EqualsAndHashCode.Exclude
     private Evento evento;
 
+    // Momento en que el sistema generó el certificado
     @Column(name = "fecha_generacion", nullable = false)
     private LocalDateTime fechaGeneracion;
 
+    // Código alfanumérico único para validar que el certificado es auténtico
     @Column(name = "codigo_unico", nullable = false, unique = true, length = 100)
     private String codigoUnico;
 }

@@ -11,7 +11,12 @@ import com.experienzia.entity.FuncionStaff;
 
 import java.util.List;
 
+/**
+ * Contrato para inscripciones, check-in/out y gestion de staff en eventos.
+ */
 public interface InscripcionService {
+
+    /** Inscribe a un usuario en un evento si hay cupo. */
     InscripcionDTO inscribir(Long usuarioId, Long eventoId);
 
     /**
@@ -21,19 +26,39 @@ public interface InscripcionService {
      */
     InscripcionDTO inscribirOrganizadorEnSuEvento(Long eventoId);
 
+    /** Cancela la inscripcion de un asistente. */
     InscripcionDTO cancelar(Long inscripcionId);
+
+    /** Registra la entrada manual (staff elige de la lista). */
     InscripcionDTO checkIn(Long inscripcionId, Long staffUsuarioId);
+
+    /** Registra la entrada escaneando el codigo QR. */
     InscripcionDTO checkInPorQR(String codigoQR, Long staffUsuarioId, Long eventoId);
+
+    /** Registra la salida manual. */
     InscripcionDTO checkOut(Long inscripcionId, Long staffUsuarioId);
+
+    /** Registra la salida escaneando QR. */
     InscripcionDTO checkOutPorQR(String codigoQR, Long staffUsuarioId, Long eventoId);
+
+    /** Todas las inscripciones de un evento. */
     List<InscripcionDTO> listarPorEvento(Long eventoId);
+
+    /** Inscripciones de un usuario (mis eventos). */
     List<InscripcionDTO> listarPorUsuario(Long usuarioId);
+
+    /** Lista de asistentes que ve el staff en su panel. */
     List<AsistenteEventoDTO> listarAsistentesParaStaff(Long eventoId, Long staffUsuarioId, String busqueda);
 
     /** Igual que listarAsistentesParaStaff pero validando que quien consulta es el organizador del evento. */
     List<AsistenteEventoDTO> listarAsistentesParaOrganizador(Long eventoId, Long organizadorId, String busqueda);
+    /** Cuenta cuantas personas hay dentro del evento en este momento. */
     AforoEnVivoDTO consultarAforoEnVivo(Long eventoId);
+
+    /** Carga asistentes uno por uno desde una lista manual. */
     ResultadoCargaAsistentesDTO cargarAsistentesManual(Long eventoId, Long organizadorId, List<FilaAsistenteCargaDTO> filas);
+
+    /** Carga asistentes desde un archivo CSV en texto. */
     ResultadoCargaAsistentesDTO cargarAsistentesCsv(Long eventoId, Long organizadorId, String contenidoCsv);
 
     /** Asigna un staff a un evento con una función específica (CHECK_IN_QR, CHECK_IN_MANUAL, REGISTRO_SALIDA, GENERAL). */

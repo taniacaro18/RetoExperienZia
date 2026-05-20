@@ -1,3 +1,7 @@
+/**
+ * Diálogo para consultar si el salón está libre en un mes y un día concreto.
+ * Llama al API de eventos y muestra franjas ocupadas; sirve al crear o editar eventos.
+ */
 import { Component, effect, inject, input, model, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -9,11 +13,13 @@ import { EventoApi } from '../../core/api/evento.api';
 import { DisponibilidadSalon, FranjaOcupacionSalon } from '../../core/models/domain.models';
 import { eventoEstadoLabel, eventoEstadoSeverity } from '../estado.helpers';
 
+// Formato ISO local sin zona horaria rara (para el backend).
 function toLocalDateTimeIso(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
+// Junta la fecha del día con la hora de inicio y fin (si fin < inicio, fin es al día siguiente).
 function ventanaHorariaLocal(
   fecha: Date,
   horaInicio: Date,
@@ -30,6 +36,7 @@ function ventanaHorariaLocal(
   return { inicio, fin };
 }
 
+// Comprueba si dos fechas son el mismo día del calendario.
 function mismoDia(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -47,25 +54,34 @@ function mismoDia(a: Date, b: Date): boolean {
 export class SalonDisponibilidadDialogComponent {
   private readonly eventoApi = inject(EventoApi);
 
+  // Si el modal está abierto o cerrado (two-way binding con el padre).
   readonly visible = model(false);
+  // Nombre del salón a consultar.
   readonly ubicacion = input('Salón principal');
+  // Al editar un evento, no contar su propia ocupación.
   readonly excluirEventoId = input<number | null>(null);
+  // Fecha y horas del formulario del evento (para marcar la propuesta en el API).
   readonly fechaEvento = input<Date | null>(null);
   readonly horaInicio = input<Date | null>(null);
   readonly horaFin = input<Date | null>(null);
 
   readonly cargando = signal(false);
+  // Primer día del mes que estamos viendo en el calendario.
   readonly mesReferencia = signal(new Date());
-  /** Día activo en el panel derecho (se elige en el calendario). */
+  // Día que el usuario eligió en el calendario (panel derecho).
   readonly diaConsulta = signal<Date>(new Date());
+  // Respuesta completa del backend para ese mes.
   readonly datos = signal<DisponibilidadSalon | null>(null);
 
+  // Reutilizamos los helpers de etiquetas de estado de evento.
   estadoLabel = eventoEstadoLabel;
   estadoSeverity = eventoEstadoSeverity;
 
+  // Solo las ocupaciones del día seleccionado.
   readonly ocupacionesDelDia = signal<FranjaOcupacionSalon[]>([]);
 
   constructor() {
+    // Cuando se abre el diálogo, alinea el día con la fecha del formulario y pide datos.
     effect(() => {
       if (this.visible()) {
         const f = this.fechaEvento();
@@ -78,6 +94,7 @@ export class SalonDisponibilidadDialogComponent {
     });
   }
 
+  // El usuario cambió de día en el datepicker.
   onDiaChange(d: Date | null) {
     if (!d) return;
     const normalizado = new Date(d);
@@ -95,6 +112,7 @@ export class SalonDisponibilidadDialogComponent {
     }
   }
 
+  // Pide al backend ocupaciones del mes (y opcionalmente valida la propuesta del formulario).
   cargar() {
     const ref = this.mesReferencia();
     const desde = new Date(ref.getFullYear(), ref.getMonth(), 1, 0, 0, 0);
@@ -133,6 +151,7 @@ export class SalonDisponibilidadDialogComponent {
       });
   }
 
+  // Filtra del mes solo las franjas que caen en diaConsulta.
   actualizarOcupacionesDia() {
     const d = this.datos();
     const fecha = this.diaConsulta();

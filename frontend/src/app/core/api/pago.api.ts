@@ -1,3 +1,6 @@
+/**
+ * Llama al backend de pagos (comprobantes del organizador).
+ */
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
@@ -10,10 +13,7 @@ export class PagoApi {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiUrl + '/api/pagos';
 
-  /**
-   * El organizador sube el comprobante de pago de su evento.
-   * El monto se calcula automáticamente en el backend desde el costo del evento.
-   */
+  // El organizador sube el comprobante; el monto lo calcula el backend.
   registrar(eventoId: number, organizadorId: number, archivo: File): Observable<Pago> {
     const formData = new FormData();
     formData.append('archivo', archivo);
@@ -23,6 +23,7 @@ export class PagoApi {
     return this.http.post<Pago>(this.base, formData, { params });
   }
 
+  // El admin aprueba un pago pendiente.
   aprobar(id: number, aprobadorId?: number): Observable<Pago> {
     const params = aprobadorId
       ? new HttpParams().set('aprobadorId', String(aprobadorId))
@@ -30,6 +31,7 @@ export class PagoApi {
     return this.http.put<Pago>(this.base + '/' + id + '/aprobar', null, { params });
   }
 
+  // El admin rechaza y pone motivo.
   rechazar(id: number, motivo: string, aprobadorId?: number): Observable<Pago> {
     return this.http.put<Pago>(this.base + '/' + id + '/rechazar', {
       motivo,
@@ -37,19 +39,22 @@ export class PagoApi {
     });
   }
 
+  // Lista pagos que esperan revisión.
   listarPendientes(): Observable<Pago[]> {
     return this.http.get<Pago[]>(this.base + '/pendientes');
   }
 
+  // Lista todos los pagos.
   listarTodos(): Observable<Pago[]> {
     return this.http.get<Pago[]>(this.base);
   }
 
+  // Pagos de un organizador concreto.
   listarPorOrganizador(organizadorId: number): Observable<Pago[]> {
     return this.http.get<Pago[]>(this.base + '/organizador/' + organizadorId);
   }
 
-  /** null si el evento aún no tiene fila de pago (404 esperado). */
+  // Pago de un evento; devuelve null si aún no hay fila (404 normal).
   obtenerPorEvento(eventoId: number): Observable<Pago | null> {
     return this.http
       .get<Pago>(this.base + '/evento/' + eventoId, {

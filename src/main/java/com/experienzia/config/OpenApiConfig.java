@@ -8,9 +8,14 @@ import io.swagger.v3.oas.models.info.License;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configuracion de Swagger/OpenAPI para documentar la API REST.
+ * Cuando corres la app puedes ver los endpoints en /swagger-ui.html
+ */
 @Configuration
 public class OpenApiConfig {
 
+    /** Bean que define titulo, descripcion y version de la documentacion. */
     @Bean
     public OpenAPI experienziaOpenAPI() {
         return new OpenAPI()

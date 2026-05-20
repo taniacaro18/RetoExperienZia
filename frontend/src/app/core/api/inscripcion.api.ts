@@ -1,3 +1,6 @@
+/**
+ * Llama al backend de inscripciones, check-in/out, staff y aforo.
+ */
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -12,6 +15,7 @@ import {
   StaffAsignado
 } from '../models/domain.models';
 
+// Una fila del Excel/CSV de carga masiva de asistentes.
 export interface FilaAsistenteCarga {
   nombre: string;
   email: string;
@@ -20,6 +24,7 @@ export interface FilaAsistenteCarga {
   numeroDocumento: string;
 }
 
+// Resumen después de subir asistentes manual o por CSV.
 export interface ResultadoCargaAsistentes {
   cuentasNuevasCreadas: number;
   inscripcionesRegistradas: number;
@@ -32,6 +37,7 @@ export class InscripcionApi {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiUrl;
 
+  // El asistente se inscribe a un evento.
   inscribir(usuarioId: number, eventoId: number): Observable<Inscripcion> {
     return this.http.post<Inscripcion>(this.base + '/api/inscripciones', {
       usuarioId,
@@ -39,18 +45,22 @@ export class InscripcionApi {
     });
   }
 
+  // Cancela la inscripción del asistente.
   cancelarInscripcion(id: number): Observable<Inscripcion> {
     return this.http.put<Inscripcion>(this.base + '/api/inscripciones/' + id + '/cancelar', null);
   }
 
+  // Inscritos de un evento (organizador/staff).
   listarPorEvento(eventoId: number): Observable<Inscripcion[]> {
     return this.http.get<Inscripcion[]>(this.base + '/api/inscripciones/evento/' + eventoId);
   }
 
+  // Mis inscripciones como asistente.
   listarPorUsuario(usuarioId: number): Observable<Inscripcion[]> {
     return this.http.get<Inscripcion[]>(this.base + '/api/inscripciones/usuario/' + usuarioId);
   }
 
+  // Staff marca entrada manual por id de inscripción.
   checkIn(inscripcionId: number, staffUsuarioId: number): Observable<Inscripcion> {
     return this.http.put<Inscripcion>(
       this.base + '/api/inscripciones/' + inscripcionId + '/check-in',
@@ -59,6 +69,7 @@ export class InscripcionApi {
     );
   }
 
+  // Staff marca salida manual.
   checkOut(inscripcionId: number, staffUsuarioId: number): Observable<Inscripcion> {
     return this.http.put<Inscripcion>(
       this.base + '/api/inscripciones/' + inscripcionId + '/check-out',
@@ -67,6 +78,7 @@ export class InscripcionApi {
     );
   }
 
+  // Entrada leyendo código QR.
   checkInQR(codigoQR: string, staffUsuarioId: number, eventoId?: number): Observable<Inscripcion> {
     return this.http.post<Inscripcion>(this.base + '/api/inscripciones/check-in/qr', {
       codigoQR,
@@ -75,6 +87,7 @@ export class InscripcionApi {
     }, { headers: new HttpHeaders().set(SKIP_GLOBAL_TOAST, '1') });
   }
 
+  // Salida leyendo código QR.
   checkOutQR(codigoQR: string, staffUsuarioId: number, eventoId?: number): Observable<Inscripcion> {
     return this.http.post<Inscripcion>(this.base + '/api/inscripciones/check-out/qr', {
       codigoQR,
@@ -83,6 +96,7 @@ export class InscripcionApi {
     }, { headers: new HttpHeaders().set(SKIP_GLOBAL_TOAST, '1') });
   }
 
+  // Organizador pega filas de asistentes en pantalla.
   cargaManual(
     eventoId: number,
     organizadorId: number,
@@ -94,6 +108,7 @@ export class InscripcionApi {
     );
   }
 
+  // Organizador sube archivo CSV de asistentes.
   cargaCsv(eventoId: number, organizadorId: number, archivo: File): Observable<ResultadoCargaAsistentes> {
     const formData = new FormData();
     formData.append('archivo', archivo);
@@ -105,6 +120,7 @@ export class InscripcionApi {
     );
   }
 
+  // Asigna un staff a un evento con una función.
   asignarStaff(
     eventoId: number,
     organizadorId: number,
@@ -118,6 +134,7 @@ export class InscripcionApi {
     });
   }
 
+  // Cambia la función del staff en el evento.
   cambiarFuncionStaff(
     eventoId: number,
     staffUsuarioId: number,
@@ -132,6 +149,7 @@ export class InscripcionApi {
     );
   }
 
+  // Quita al staff del evento.
   desasignarStaff(eventoId: number, staffUsuarioId: number, organizadorId: number): Observable<void> {
     const params = new HttpParams().set('organizadorId', String(organizadorId));
     return this.http.delete<void>(
@@ -140,14 +158,17 @@ export class InscripcionApi {
     );
   }
 
+  // Lista staff asignado a un evento.
   staffDelEvento(eventoId: number): Observable<StaffAsignado[]> {
     return this.http.get<StaffAsignado[]>(this.base + '/api/eventos/' + eventoId + '/staff');
   }
 
+  // Eventos donde trabaja un staff.
   eventosDelStaff(staffUsuarioId: number): Observable<EventoStaff[]> {
     return this.http.get<EventoStaff[]>(this.base + '/api/staff/' + staffUsuarioId + '/eventos');
   }
 
+  // Lista asistentes para el staff (con búsqueda opcional).
   asistentesParaStaff(eventoId: number, staffUsuarioId: number, q?: string): Observable<AsistenteEvento[]> {
     let params = new HttpParams().set('staffUsuarioId', String(staffUsuarioId));
     if (q && q.trim().length > 0) params = params.set('q', q.trim());
@@ -156,6 +177,7 @@ export class InscripcionApi {
     });
   }
 
+  // Lista asistentes para el organizador del evento.
   asistentesParaOrganizador(eventoId: number, organizadorId: number, q?: string): Observable<AsistenteEvento[]> {
     let params = new HttpParams().set('organizadorId', String(organizadorId));
     if (q && q.trim().length > 0) params = params.set('q', q.trim());
@@ -165,6 +187,7 @@ export class InscripcionApi {
     );
   }
 
+  // Contadores de aforo en tiempo real.
   aforoEnVivo(eventoId: number): Observable<AforoEnVivo> {
     return this.http.get<AforoEnVivo>(this.base + '/api/eventos/' + eventoId + '/aforo');
   }

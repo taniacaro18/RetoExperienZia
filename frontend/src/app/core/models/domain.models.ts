@@ -1,6 +1,14 @@
+/**
+ * Tipos e interfaces del dominio ExperienZia (lo que devuelve el API).
+ */
+
+// Rol del usuario en la app.
 export type Rol = 'ADMIN' | 'ORGANIZADOR' | 'ASISTENTE' | 'STAFF';
+// Si la cuenta está activa, pendiente de aprobación, etc.
 export type EstadoUsuario = 'ACTIVO' | 'PENDIENTE' | 'RECHAZADO' | 'INACTIVO';
+// Evento abierto a todos o solo por invitación/carga.
 export type TipoEvento = 'PUBLICO' | 'PRIVADO';
+// Ciclo de vida del evento (pendiente, activo, cancelado…).
 export type EstadoEvento =
   | 'PENDIENTE'
   | 'APROBADO'
@@ -11,30 +19,36 @@ export type EstadoEvento =
   | 'PENDIENTE_REVISION'
   | 'PENDIENTE_SUPLEMENTO'
   | 'PENDIENTE_CANCELACION';
+// Estado de la inscripción del asistente al evento.
 export type EstadoInscripcion = 'INSCRITO' | 'ASISTIO' | 'CANCELADO';
+// Estado del pago del organizador por el evento.
 export type EstadoPago = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO';
+// Tipo de cambio que pidió el organizador (horas, cancelación…).
 export type TipoNovedadEvento =
   | 'EDICION_METADATOS'
   | 'EDICION_TIPO_CATEGORIA'
   | 'AUMENTO_HORAS'
   | 'DISMINUCION_HORAS'
   | 'CANCELACION_SOLICITUD';
+// Si el admin ya resolvió esa novedad.
 export type EstadoNovedadEvento = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO';
+// Qué puede hacer el staff en puerta (QR, manual, salida…).
 export type FuncionStaff = 'CHECK_IN_QR' | 'CHECK_IN_MANUAL' | 'REGISTRO_SALIDA' | 'GENERAL';
+// Tipo visual de la notificación in-app.
 export type TipoNotificacion = 'INFO' | 'ALERTA' | 'ERROR';
 
 export interface Usuario {
-  id: number;
+  id: number; // id en base de datos
   nombre: string;
   email: string;
-  password?: string | null;
+  password?: string | null; // solo en formularios, no suele venir del API
   telefono?: string | null;
-  tipoDocumento?: string | null;
+  tipoDocumento?: string | null; // CC, CE, etc.
   numeroDocumento?: string | null;
   rol: Rol;
   estado: EstadoUsuario;
-  organizadorId?: number | null;
-  tipo?: 'ASISTENTE' | 'ORGANIZADOR';
+  organizadorId?: number | null; // si es STAFF, a quién pertenece
+  tipo?: 'ASISTENTE' | 'ORGANIZADOR'; // en registro público
 }
 
 export interface LoginRequest {
@@ -42,9 +56,9 @@ export interface LoginRequest {
   password: string;
 }
 
-/** Respuesta de POST /api/usuarios/login */
+/** Respuesta del login con JWT y datos del usuario. */
 export interface LoginResponse {
-  accessToken: string;
+  accessToken: string; // token para el interceptor
   usuario: Usuario;
 }
 
@@ -57,16 +71,15 @@ export interface Evento {
   id: number;
   nombre: string;
   descripcion?: string;
-  fecha: string;
+  fecha: string; // inicio ISO
   fechaFin?: string;
-  ubicacion?: string;
+  ubicacion?: string; // salón o sede
   tipoEvento: TipoEvento;
   estado: EstadoEvento;
   aforoMaximo: number;
-  aforoActual: number;
-  costo: number;
+  aforoActual: number; // inscritos o presentes según contexto
+  costo: number; // lo que paga el organizador
   organizadorId: number;
-  /** Expuesto por el API (no en catálogo público anonimizado). */
   organizadorNombre?: string | null;
   organizadorEmail?: string | null;
   imagen?: string | null;
@@ -74,14 +87,12 @@ export interface Evento {
   duracionHoras?: number | null;
   motivoRechazo?: string | null;
   motivoCancelacion?: string | null;
-  /** Texto para el admin: qué cambió en la solicitud de edición. */
-  resumenSolicitudEdicion?: string | null;
+  resumenSolicitudEdicion?: string | null; // texto para el admin
   estadoPrevioRevision?: EstadoEvento | null;
-  /** Mensaje de negocio devuelto por el API al editar (no persistido). */
-  alertaNegocio?: string | null;
+  alertaNegocio?: string | null; // aviso temporal al guardar
 }
 
-/** Historial de solicitudes y cambios del evento (GET /api/eventos/{id}/novedades). */
+/** Historial de cambios pedidos sobre un evento. */
 export interface EventoNovedad {
   id: number;
   eventoId: number;
@@ -91,7 +102,7 @@ export interface EventoNovedad {
   fechaSolicitud: string;
   fechaResolucion?: string | null;
   motivoResolucion?: string | null;
-  detalleJson?: string | null;
+  detalleJson?: string | null; // cambios en JSON
 }
 
 export interface Inscripcion {
@@ -102,9 +113,8 @@ export interface Inscripcion {
   estado: EstadoInscripcion;
   fechaCheckIn?: string | null;
   fechaCheckOut?: string | null;
-  codigoQR?: string | null;
-  /** Solo en respuestas de check-in / check-out (QR o manual). */
-  nombreAsistente?: string | null;
+  codigoQR?: string | null; // para entrada con lector
+  nombreAsistente?: string | null; // en respuestas de check-in
   emailAsistente?: string | null;
   tipoDocumento?: string | null;
   numeroDocumento?: string | null;
@@ -122,7 +132,6 @@ export interface AsistenteEvento {
   telefono?: string;
   tipoDocumento?: string;
   numeroDocumento?: string;
-  /** Código QR de la inscripción (búsqueda y verificación en staff). */
   codigoQR?: string | null;
   estadoInscripcion: EstadoInscripcion;
   fechaInscripcion?: string;
@@ -135,8 +144,8 @@ export interface AforoEnVivo {
   nombreEvento: string;
   aforoMaximo: number;
   inscritos: number;
-  asistencias: number;
-  presentes: number;
+  asistencias: number; // personas que ya hicieron check-in alguna vez
+  presentes: number; // dentro ahora (check-in sin check-out)
   cuposDisponibles: number;
   porcentajeOcupacion: number;
 }
@@ -164,17 +173,16 @@ export interface EventoStaff {
   aforoMaximo: number;
   aforoActual: number;
   organizadorId: number;
-  funcion: FuncionStaff;
+  funcion: FuncionStaff; // qué hace este staff en el evento
 }
 
 export interface Pago {
   id: number;
   eventoId: number;
   organizadorId: number;
-  comprobanteUrl?: string;
+  comprobanteUrl?: string; // ruta del archivo subido
   monto?: number;
-  /** Si existe, el comprobante pendiente es complemento sobre este monto ya aprobado. */
-  saldoAprobadoPrevio?: number | null;
+  saldoAprobadoPrevio?: number | null; // pago complementario
   estado: EstadoPago;
   fecha: string;
   motivoRechazo?: string;
@@ -188,12 +196,11 @@ export interface Pago {
 
 export interface Auditoria {
   id: number;
-  usuarioId?: number | null;
-  accion: string;
-  entidad: string;
+  usuarioId?: number | null; // quién hizo la acción
+  accion: string; // CREATE, UPDATE, LOGIN…
+  entidad: string; // tabla o tipo (EVENTO, USUARIO…)
   entidadId?: number | null;
   fecha: string;
-  /** IP del cliente (auditoría tipo ROOM_911) */
   direccionIp?: string | null;
 }
 
@@ -211,9 +218,8 @@ export interface Certificado {
   inscripcionId: number;
   usuarioId: number;
   eventoId: number;
-  /** API backend (codigoUnico) */
-  codigoUnico?: string;
-  codigo?: string;
+  codigoUnico?: string; // nombre en backend
+  codigo?: string; // alias en algunas respuestas
   fechaGeneracion: string;
   nombreAsistente?: string;
   numeroDocumento?: string;
@@ -225,7 +231,7 @@ export interface Certificado {
 }
 
 export interface PuntoSerie {
-  periodo: string;
+  periodo: string; // mes o etiqueta del eje X
   valor: number;
 }
 
@@ -242,7 +248,7 @@ export interface DisponibilidadSalon {
   ubicacion: string;
   desde: string;
   hasta: string;
-  propuestaDisponible?: boolean | null;
+  propuestaDisponible?: boolean | null; // si el horario nuevo cabe
   mensajePropuesta?: string;
   ocupaciones: FranjaOcupacionSalon[];
 }
@@ -254,8 +260,7 @@ export interface DashboardOrganizador {
   eventosCancelados: number;
   eventosTotales: number;
   totalInscritos: number;
-  /** Límite por evento (no capacidad global del salón). */
-  aforoMaximoPorEvento: number;
+  aforoMaximoPorEvento: number; // tope por evento, no del edificio
   cuposOcupadosEventosActivos: number;
   asistenciasUltimos30Dias: number;
   serieMensualEventos: PuntoSerie[];

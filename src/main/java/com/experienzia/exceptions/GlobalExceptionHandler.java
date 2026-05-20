@@ -8,14 +8,21 @@ import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+/**
+ * Clase global que atrapa errores del backend y los convierte en respuestas HTTP
+ * con un mensaje de texto que Angular puede mostrar en un toast o alerta.
+ * Sin esto, el usuario vería errores técnicos poco claros.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // Errores de negocio que nosotros lanzamos con CustomException.
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<String> handleCustom(CustomException ex) {
         return ResponseEntity.status(ex.getStatus()).body(ex.getMessage());
     }
 
+    // Cuando la base de datos rechaza un dato (columna obligatoria, FK, etc.).
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<String> onDataIntegrityViolation(DataIntegrityViolationException ex) {
         String detalle = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
@@ -28,6 +35,7 @@ public class GlobalExceptionHandler {
                 .body("No se pudo guardar por una restricción de datos. Verifica la información e inténtalo de nuevo.");
     }
 
+    // Si una transacción de base de datos se revierte sin guardar los cambios.
     @ExceptionHandler({ UnexpectedRollbackException.class, TransactionSystemException.class })
     public ResponseEntity<String> onTransactionRollback(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

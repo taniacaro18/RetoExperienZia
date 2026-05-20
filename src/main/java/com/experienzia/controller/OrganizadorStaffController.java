@@ -13,7 +13,11 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** HU-004: el organizador puede activar/desactivar al STAFF que él creó. */
+/**
+ * Controlador REST para que el organizador gestione a su personal (staff).
+ * URL base: /api/organizadores/{organizadorId}/staff
+ * Solo lo usa el rol ORGANIZADOR (desactivar o reactivar cuentas de staff que él creó).
+ */
 @RestController
 @RequestMapping("/api/organizadores/{organizadorId}/staff")
 public class OrganizadorStaffController {
@@ -30,6 +34,7 @@ public class OrganizadorStaffController {
         this.auditoriaService = auditoriaService;
     }
 
+    // Desactiva la cuenta de un staff del organizador. Devuelve el usuario actualizado.
     @PutMapping("/{staffId}/desactivar")
     public ResponseEntity<UsuarioDTO> desactivar(@PathVariable Long organizadorId,
                                                  @PathVariable Long staffId,
@@ -43,6 +48,7 @@ public class OrganizadorStaffController {
         return ResponseEntity.ok(u);
     }
 
+    // Reactiva la cuenta de un staff que estaba desactivado. Devuelve el usuario actualizado.
     @PutMapping("/{staffId}/reactivar")
     public ResponseEntity<UsuarioDTO> reactivar(@PathVariable Long organizadorId,
                                                 @PathVariable Long staffId,

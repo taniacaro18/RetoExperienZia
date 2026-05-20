@@ -28,6 +28,11 @@ import { eventoEstadoLabel, eventoEstadoSeverity } from '../../shared/estado.hel
 type FiltroEstado = 'TODOS' | EstadoEvento;
 type FiltroTipoEvento = 'TODOS' | 'PUBLICO' | 'PRIVADO';
 
+/**
+ * Pantalla: Gestión y aprobación de eventos (admin).
+ * Rol: ADMIN.
+ * Lista eventos, abre detalle, aprueba/rechaza altas, cambios y cancelaciones.
+ */
 @Component({
   selector: 'app-admin-eventos-page',
   standalone: true,
@@ -58,7 +63,9 @@ export class AdminEventosPage {
   private readonly messages = inject(MessageService);
   private readonly sanitizer = inject(DomSanitizer);
 
+  // spinner de la tabla principal
   readonly cargando = signal(true);
+  // todos los eventos de la plataforma
   readonly eventos = signal<Evento[]>([]);
   readonly organizadores = signal<Map<number, Usuario>>(new Map());
   readonly busqueda = signal('');
@@ -89,6 +96,7 @@ export class AdminEventosPage {
 
   estadoLabel = eventoEstadoLabel;
 
+  // datos que le pasamos al diálogo de disponibilidad del salón
   readonly salonContext = computed(() => {
     const ev = this.eventoParaSalon();
     return {
@@ -101,6 +109,7 @@ export class AdminEventosPage {
   });
   estadoSeverity = eventoEstadoSeverity;
 
+  // cuántos eventos hay por cada estado (para las tarjetas de resumen)
   readonly conteo = computed(() => {
     const items = this.eventos();
     return {
@@ -117,6 +126,7 @@ export class AdminEventosPage {
     };
   });
 
+  // lista visible según búsqueda, estado, tipo y fechas
   readonly eventosFiltrados = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
     const f = this.filtroEstado();
@@ -164,6 +174,7 @@ export class AdminEventosPage {
     return lista;
   });
 
+  // lee filtros de la URL (?estado, ?focus, ?q) y carga la lista
   ngOnInit() {
     this.route.queryParamMap.subscribe((qp) => {
       const estado = qp.get('estado') as FiltroEstado | null;
@@ -176,6 +187,7 @@ export class AdminEventosPage {
     this.cargar();
   }
 
+  // pide al API la lista completa de eventos
   cargar() {
     this.cargando.set(true);
     this.eventoApi.listar().subscribe({
@@ -210,6 +222,7 @@ export class AdminEventosPage {
     return this.organizadores().get(id)?.email ?? '';
   }
 
+  // el admin aprueba un evento (o cambios) y queda notificado el organizador
   aprobar(e: Evento) {
     const adminId = this.store.usuario()?.id;
     this.procesando.set(e.id);

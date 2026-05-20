@@ -11,11 +11,9 @@ import { Certificado, Evento, Inscripcion } from '../../core/models/domain.model
 import { StatCardComponent } from '../../shared/stat-card/stat-card.component';
 
 /**
- * Página de inicio (Home) del usuario autenticado.
- * - Si es ORGANIZADOR / STAFF / ADMIN, redirige a su dashboard.
- * - Si es ASISTENTE muestra su mini-dashboard con:
- *   próximo evento, KPIs (inscripciones activas / eventos asistidos / certificados)
- *   y accesos rápidos al catálogo, mis inscripciones y mis certificados.
+ * Pantalla: Inicio / home tras login.
+ * Rol: todos; admin, organizador y staff se redirigen a su dashboard.
+ * El asistente ve resumen: próximo evento, KPIs y eventos sugeridos.
  */
 @Component({
   selector: 'app-inicio-page',
@@ -90,6 +88,7 @@ export class InicioPage {
   });
 
   ngOnInit() {
+    // según rol redirige o carga datos del mini-dashboard del asistente
     const rol = this.store.rol();
     if (rol === 'STAFF') {
       this.router.navigate(['/staff/dashboard'], { replaceUrl: true });

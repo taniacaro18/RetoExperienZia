@@ -22,6 +22,11 @@ import {
 type FiltroEstado = 'TODOS' | EstadoUsuario;
 type FiltroRol = 'TODOS' | Rol;
 
+/**
+ * Pantalla: Administración de usuarios.
+ * Rol: ADMIN.
+ * Aprueba organizadores, cambia roles, activa o desactiva cuentas.
+ */
 @Component({
   selector: 'app-admin-usuarios-page',
   standalone: true,
@@ -48,6 +53,7 @@ export class AdminUsuariosPage {
   private readonly confirm = inject(ConfirmationService);
 
   readonly cargando = signal(true);
+  // todos los usuarios registrados
   readonly usuarios = signal<Usuario[]>([]);
   readonly busqueda = signal('');
   readonly filtroRol = signal<FiltroRol>('TODOS');
@@ -69,6 +75,7 @@ export class AdminUsuariosPage {
   rolSeverity = rolSeverity;
   usuarioEstadoSeverity = usuarioEstadoSeverity;
 
+  // totales por estado y cantidad de organizadores
   readonly conteo = computed(() => {
     const items = this.usuarios();
     return {
@@ -80,6 +87,7 @@ export class AdminUsuariosPage {
     };
   });
 
+  // tabla filtrada por texto, rol y estado
   readonly usuariosFiltrados = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
     const fr = this.filtroRol();
@@ -106,6 +114,7 @@ export class AdminUsuariosPage {
   });
 
   ngOnInit() {
+    // filtros iniciales desde query (?rol, ?estado)
     this.route.queryParamMap.subscribe((qp) => {
       const rol = qp.get('rol') as FiltroRol | null;
       const estado = qp.get('estado') as FiltroEstado | null;
@@ -115,6 +124,7 @@ export class AdminUsuariosPage {
     this.cargar();
   }
 
+  // trae todos los usuarios del sistema
   cargar() {
     this.cargando.set(true);
     this.usuarioApi.listarTodos().subscribe({
@@ -126,6 +136,7 @@ export class AdminUsuariosPage {
     });
   }
 
+  // activa una cuenta de organizador que estaba PENDIENTE
   aprobarOrganizador(u: Usuario) {
     const adminId = this.store.usuario()?.id;
     this.procesando.set(u.id);

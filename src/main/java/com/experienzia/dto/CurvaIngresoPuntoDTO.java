@@ -7,6 +7,10 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+/**
+ * Un punto de la curva de ingreso por hora.
+ * Lo usamos en los controllers para no exponer las entidades directamente.
+ */
 public class CurvaIngresoPuntoDTO {
     /** Hora del día (0-23) relativa a la fecha del evento. */
     private int hora;

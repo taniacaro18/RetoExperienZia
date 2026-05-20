@@ -16,6 +16,11 @@ import { eventoEstadoLabel } from '../../shared/estado.helpers';
 import { AforoBarComponent } from '../../shared/aforo-bar/aforo-bar.component';
 import { destinoRetornoEventoDetalle } from '../../core/navigation/retorno-evento-detalle';
 
+/**
+ * Pantalla: Detalle de un evento (inscripción).
+ * Rol principal: ASISTENTE (también la ven admin/organizador/staff con otro botón volver).
+ * Muestra info del evento, cupos y permite inscribirse o cancelar inscripción.
+ */
 @Component({
   selector: 'app-evento-detalle-page',
   standalone: true,
@@ -43,16 +48,19 @@ export class EventoDetallePage implements OnInit {
 
   readonly cargando = signal(true);
   readonly evento = signal<Evento | null>(null);
+  // inscripción del usuario logueado a este evento (si existe)
   readonly miInscripcion = signal<Inscripcion | null>(null);
   readonly procesando = signal(false);
   /** Clave `retorno` del query (solo valores admitidos en `destinoRetornoEventoDetalle`). */
   readonly retornoKey = signal<string | null>(null);
 
+  // cupos libres = aforo máximo menos ocupados
   readonly cuposDisponibles = computed(() => {
     const e = this.evento();
     return e ? Math.max(0, e.aforoMaximo - e.aforoActual) : 0;
   });
 
+  // porcentaje de aforo usado (para la barra)
   readonly porcentajeOcupacion = computed(() => {
     const e = this.evento();
     if (!e?.aforoMaximo) return 0;
@@ -77,6 +85,7 @@ export class EventoDetallePage implements OnInit {
     return !!(e && u && e.organizadorId === u.id);
   });
 
+  // texto del botón volver según de dónde llegó el usuario
   readonly textoVolver = computed(() => {
     const porQuery = destinoRetornoEventoDetalle(this.retornoKey());
     if (porQuery) return porQuery.label;
@@ -88,6 +97,7 @@ export class EventoDetallePage implements OnInit {
   });
 
   /** Estado mostrado: si ya pasó la ventana y el API aún dice ACTIVO, se muestra como finalizado. */
+  // estado mostrado en la etiqueta (ACTIVO pasado → FINALIZADO)
   readonly estadoBadge = computed(() => {
     const e = this.evento();
     if (!e) return 'PENDIENTE';
@@ -96,6 +106,7 @@ export class EventoDetallePage implements OnInit {
   });
 
   /** Cupos libres y evento activo en ventana → chip «Disponible». */
+  // chip verde «Disponible» si hay cupos y el evento sigue abierto
   readonly mostrarChipDisponible = computed(() => {
     const e = this.evento();
     if (!e || e.estado !== 'ACTIVO') return false;
@@ -106,6 +117,7 @@ export class EventoDetallePage implements OnInit {
   readonly eventoEstadoLabelFn = eventoEstadoLabel;
 
   ngOnInit() {
+    // escucha ?retorno= y el :id de la ruta para cargar el evento
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((qp) => {
       const raw = qp.get('retorno');
       this.retornoKey.set(raw && destinoRetornoEventoDetalle(raw) ? raw : null);

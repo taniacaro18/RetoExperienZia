@@ -6,6 +6,11 @@ import { CertificadoApi } from '../../core/api/certificado.api';
 import { Certificado } from '../../core/models/domain.models';
 import { environment } from '../../../environments/environment';
 
+/**
+ * Pantalla: Modal verificar certificado (catálogo público).
+ * Rol: visitante.
+ * Consulta por código si un certificado es válido y permite descargar PDF.
+ */
 @Component({
   selector: 'app-verificar-certificado-modal',
   standalone: true,
@@ -23,6 +28,7 @@ export class VerificarCertificadoModal {
   readonly cargando = signal(false);
   readonly resultado = signal<Certificado | null>(null);
 
+  // valida el código contra el API
   buscar() {
     const c = this.codigo().trim();
     if (!c) {

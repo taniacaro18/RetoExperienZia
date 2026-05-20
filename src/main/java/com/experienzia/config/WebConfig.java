@@ -8,14 +8,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * Configuración global del módulo Web:
- *  - CORS lo define {@link com.experienzia.config.SecurityConfig} (filtro unificado con JWT).
- *  - Recursos estáticos para servir los comprobantes subidos por el organizador
- *    en /uploads/** desde el directorio físico ./uploads/ del proyecto.
+ * Configuracion web: sirve archivos estaticos de /uploads/** desde la carpeta uploads/.
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
+    /** Mapea la carpeta uploads/ del disco a la URL publica /uploads/** */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // Exponemos el directorio físico "uploads/" como ruta pública "/uploads/**"

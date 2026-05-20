@@ -22,6 +22,11 @@ interface FilaEventoConPago {
   estadoPago: 'NO_PAGADO' | EstadoPago;
 }
 
+/**
+ * Pantalla: Pagos y comprobantes del organizador.
+ * Rol: ORGANIZADOR.
+ * Sube comprobantes de tarifa del salón y consulta estado de aprobación del admin.
+ */
 @Component({
   selector: 'app-org-pagos-page',
   standalone: true,
@@ -58,6 +63,7 @@ export class OrgPagosPage {
   readonly pagoVisible = signal<Pago | null>(null);
 
   /** Monto que debe reflejar el archivo (tarifa completa o solo incremento si hay complemento). */
+  // monto que debe coincidir con el comprobante (total o solo suplemento)
   readonly montoModalSubida = computed(() => {
     const ev = this.eventoSeleccionado();
     if (!ev) return 0;
@@ -79,6 +85,7 @@ export class OrgPagosPage {
     this.cargar();
   }
 
+  // eventos del organizador y sus pagos
   cargar() {
     const orgId = this.store.usuario()?.id;
     if (!orgId) return;
@@ -100,6 +107,7 @@ export class OrgPagosPage {
    * Eventos ya aprobados por admin y visibles en flujo de pago.
    * Se excluyen los de costo $0 (sin tarifa / no requieren comprobante).
    */
+  // filas de la tabla: evento + su pago y estado
   readonly filas = computed<FilaEventoConPago[]>(() => {
     const pagos = this.pagos();
     return this.eventos()
@@ -137,6 +145,7 @@ export class OrgPagosPage {
     this.eventos().filter((e) => e.estado === 'PENDIENTE' || e.estado === 'PENDIENTE_REVISION').length
   );
 
+  // resumen pagados / pendientes / faltan comprobante
   readonly conteo = computed(() => {
     const filas = this.filas();
     return {

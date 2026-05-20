@@ -21,6 +21,11 @@ import { eventoVentanaYaCerro } from '../../shared/evento-catalogo.helpers';
 type FiltroEstado = 'TODOS' | EstadoEvento;
 type Orden = 'FECHA_DESC' | 'FECHA_ASC' | 'NOMBRE' | 'AFORO';
 
+/**
+ * Pantalla: Mis eventos (lista del organizador).
+ * Rol: ORGANIZADOR.
+ * CRUD navegación, filtros, cancelación y acceso a reportes por evento.
+ */
 @Component({
   selector: 'app-org-eventos-lista-page',
   standalone: true,
@@ -56,6 +61,7 @@ export class OrgEventosListaPage {
   readonly cancelandoId = signal<number | null>(null);
   readonly procesandoCancelacion = signal(false);
 
+  // evento que está en el modal de cancelación
   readonly eventoParaCancelar = computed(() => {
     const id = this.cancelandoId();
     if (id == null) return null;
@@ -98,6 +104,7 @@ export class OrgEventosListaPage {
     { label: 'Por % de aforo', value: 'AFORO' }
   ];
 
+  // tarjetas con totales por estado
   readonly conteo = computed(() => {
     const items = this.eventos();
     return {
@@ -110,6 +117,7 @@ export class OrgEventosListaPage {
     };
   });
 
+  // lista visible según búsqueda, estado y orden elegido
   readonly eventosFiltrados = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
     const est = this.filtroEstado();
@@ -147,6 +155,7 @@ export class OrgEventosListaPage {
   estadoSeverity = eventoEstadoSeverity;
 
   ngOnInit() {
+    // ?q= prellena búsqueda; luego carga mis eventos
     this.route.queryParamMap.subscribe((qp) => {
       const q = qp.get('q');
       if (q) this.busqueda.set(q);

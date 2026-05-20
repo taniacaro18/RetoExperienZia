@@ -1,7 +1,11 @@
+/**
+ * Guarda en memoria y localStorage quién está logueado y su token JWT.
+ */
 import { Injectable, computed, effect, signal } from '@angular/core';
 import { Usuario } from '../models/domain.models';
 import { environment } from '../../../environments/environment';
 
+// Formato que guardamos en localStorage al hacer login.
 interface SesionAlmacenada {
   usuario: Usuario;
   accessToken: string;
@@ -25,6 +29,7 @@ export class AuthStore {
   readonly esStaff = computed(() => this.rol() === 'STAFF');
 
   constructor() {
+    // Cada vez que cambia usuario o token, sincroniza con localStorage.
     effect(() => {
       const u = this._usuario();
       const t = this._accessToken();
@@ -37,12 +42,13 @@ export class AuthStore {
     });
   }
 
+  // Guarda sesión completa tras el login.
   setSesion(usuario: Usuario, accessToken: string) {
     this._usuario.set(usuario);
     this._accessToken.set(accessToken);
   }
 
-  /** Actualiza el usuario logueado (p. ej. tras editar perfil); mantiene el token. */
+  // Actualiza datos del usuario sin cambiar el token (ej. editar perfil).
   setUsuario(u: Usuario | null) {
     if (u === null) {
       this.logout();
@@ -51,11 +57,13 @@ export class AuthStore {
     this._usuario.set(u);
   }
 
+  // Borra sesión (logout).
   logout() {
     this._usuario.set(null);
     this._accessToken.set(null);
   }
 
+  // Lee sesión guardada al recargar la página.
   private cargarSesion(): SesionAlmacenada | null {
     try {
       const raw = localStorage.getItem(environment.storageKey);
@@ -74,7 +82,7 @@ export class AuthStore {
           return p;
         }
       }
-      // Formato antiguo (solo usuario): obligar a iniciar sesión de nuevo
+      // Formato viejo sin token: obligamos a volver a loguearse
       localStorage.removeItem(environment.storageKey);
       return null;
     } catch {

@@ -1,3 +1,6 @@
+/**
+ * Componente raíz de la app: muestra toasts, diálogos y el router-outlet.
+ */
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ToastModule } from 'primeng/toast';

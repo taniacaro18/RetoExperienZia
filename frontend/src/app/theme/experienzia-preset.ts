@@ -1,12 +1,14 @@
+/**
+ * Tema visual de PrimeNG para ExperienZia.
+ * Partimos del preset Aura y cambiamos el violeta como color primario de la app.
+ */
 import { definePreset } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
 
-/**
- * Tema ExperienZia: preset Aura de PrimeNG ajustado a la paleta del Figma
- * (violeta como color primario, verde menta como acento informativo).
- */
+// Exportamos el preset para registrarlo en app.config con providePrimeNG.
 export const ExperienziaPreset = definePreset(Aura, {
   semantic: {
+    // Escala de violetas (marca ExperienZia).
     primary: {
       50: '#F5F3FF',
       100: '#EDE9FE',
@@ -22,12 +24,14 @@ export const ExperienziaPreset = definePreset(Aura, {
     },
     colorScheme: {
       light: {
+        // Botones y enlaces principales en modo claro.
         primary: {
           color: '{primary.600}',
           contrastColor: '#ffffff',
           hoverColor: '{primary.700}',
           activeColor: '{primary.800}'
         },
+        // Fondos suaves al enfocar campos o filas seleccionadas.
         highlight: {
           background: '{primary.50}',
           focusBackground: '{primary.100}',

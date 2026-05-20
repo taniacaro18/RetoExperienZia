@@ -11,11 +11,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
+/**
+ * Servicio para guardar y borrar archivos de comprobantes de pago.
+ * No es una interface porque es una clase concreta que usa el sistema de archivos.
+ */
 @Service
 public class FileStorageService {
 
+    /** Carpeta donde se guardan los comprobantes en disco. */
     private static final String UPLOAD_DIR = "uploads/comprobantes/";
 
+    /**
+     * Guarda el archivo del comprobante y devuelve la URL publica.
+     * Solo acepta JPG, PNG, WEBP o PDF.
+     */
     public String guardarComprobante(MultipartFile archivo) {
         if (archivo == null || archivo.isEmpty()) {
             throw new CustomException("El archivo está vacío.", HttpStatus.BAD_REQUEST);

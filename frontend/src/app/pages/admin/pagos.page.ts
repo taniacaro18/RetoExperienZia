@@ -22,6 +22,11 @@ import {
 
 type FiltroEstado = 'TODOS' | EstadoPago;
 
+/**
+ * Pantalla: Validación de pagos de organizadores.
+ * Rol: ADMIN.
+ * Revisa comprobantes, aprueba o rechaza pagos vinculados a eventos.
+ */
 @Component({
   selector: 'app-admin-pagos-page',
   standalone: true,
@@ -59,6 +64,7 @@ export class AdminPagosPage {
 
   estadoSeverity = pagoEstadoSeverity;
 
+  // cuántos pagos hay por estado
   readonly conteo = computed(() => {
     const items = this.pagos();
     return {
@@ -69,6 +75,7 @@ export class AdminPagosPage {
     };
   });
 
+  // lista según filtro PENDIENTE / APROBADO / etc.
   readonly pagosFiltrados = computed(() => {
     const f = this.filtro();
     let lista = [...this.pagos()];
@@ -81,6 +88,7 @@ export class AdminPagosPage {
     this.cargar();
   }
 
+  // lista todos los pagos de la plataforma
   cargar() {
     this.cargando.set(true);
     this.pagoApi.listarTodos().subscribe({
@@ -117,6 +125,7 @@ export class AdminPagosPage {
     this.mostrarModalComprobante.set(true);
   }
 
+  // valida el comprobante y activa el evento asociado
   aprobar(p: Pago) {
     const adminId = this.store.usuario()?.id;
     this.procesando.set(p.id);

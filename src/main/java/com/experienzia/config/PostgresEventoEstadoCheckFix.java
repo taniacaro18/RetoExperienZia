@@ -10,8 +10,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Esquemas antiguos de PostgreSQL pueden tener {@code eventos_estado_check} sin el valor
- * {@code FINALIZADO}, lo que provoca fallos al persistir eventos ya terminados.
+ * Arreglo automatico al iniciar la app para bases PostgreSQL viejas.
+ * Actualiza el CHECK de estado de eventos y las foreign keys de novedades.
  */
 @Component
 @Order(0)
@@ -27,6 +27,7 @@ public class PostgresEventoEstadoCheckFix implements ApplicationRunner {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /** Se ejecuta al arrancar Spring Boot. */
     @Override
     public void run(ApplicationArguments args) {
         if (!Boolean.parseBoolean(environment.getProperty("experienzia.db.fix-eventos-estado-check", "true"))) {

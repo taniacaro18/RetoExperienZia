@@ -1,6 +1,11 @@
+/**
+ * Tarjeta pequeña para mostrar un número o dato importante en los dashboards.
+ * Recibe título, valor, icono opcional y un color según el tipo de dato.
+ */
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 
+// Colores que puede usar el icono de la tarjeta.
 export type StatTone = 'brand' | 'success' | 'warn' | 'danger' | 'info';
 
 @Component({
@@ -30,12 +35,18 @@ export type StatTone = 'brand' | 'success' | 'warn' | 'danger' | 'info';
   `
 })
 export class StatCardComponent {
+  // Texto arriba del número (ej. "Inscripciones").
   @Input() label = '';
+  // Número o texto grande que se muestra en el centro.
   @Input() value: string | number = 0;
+  // Línea extra debajo del valor, si hace falta aclarar algo.
   @Input() sublabel?: string;
+  // Clase de PrimeIcons, por ejemplo pi-users.
   @Input() icon?: string;
+  // Define el color de fondo del icono (éxito, aviso, etc.).
   @Input() tone: StatTone = 'brand';
 
+  // Devuelve las clases de Tailwind según el tono elegido.
   iconClasses(): string {
     switch (this.tone) {
       case 'success': return 'bg-emerald-100 text-emerald-700';

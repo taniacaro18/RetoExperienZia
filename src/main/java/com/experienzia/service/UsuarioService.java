@@ -10,6 +10,9 @@ import com.experienzia.spec.UsuarioSpecification.UsuarioSearchCriteria;
 
 import java.util.List;
 
+/**
+ * Contrato para gestion de usuarios: registro, login, roles, perfil, etc.
+ */
 public interface UsuarioService {
 
     /** HU-001 / HU-002: registro público. dto.tipo decide ASISTENTE u ORGANIZADOR. */

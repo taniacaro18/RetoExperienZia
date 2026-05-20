@@ -10,6 +10,11 @@ import { eventoSigueVigenteEnCatalogoPublico } from '../../shared/evento-catalog
 import { LogoComponent } from '../../shared/logo/logo.component';
 import { VerificarCertificadoModal } from './verificar-certificado.page';
 
+/**
+ * Pantalla: Detalle de evento (vista pública).
+ * Rol: visitante.
+ * Información del evento sin inscripción; solo eventos aún vigentes en catálogo.
+ */
 @Component({
   selector: 'app-detalle-evento-publico-page',
   standalone: true,
@@ -38,6 +43,7 @@ export class DetalleEventoPublicoPage {
   readonly mostrarVerificar = signal(false);
 
   ngOnInit() {
+    // lee :id de la ruta y pide el evento público
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!id) {
       this.error.set('ID de evento no válido.');

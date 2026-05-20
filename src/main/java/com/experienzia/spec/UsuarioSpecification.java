@@ -6,8 +6,14 @@ import com.experienzia.entity.Usuario;
 import lombok.Data;
 import org.springframework.data.jpa.domain.Specification;
 
+/**
+ * Filtros dinámicos para buscar usuarios (panel de administración).
+ * Igual que en eventos: cada método devuelve una "pieza" de consulta
+ * que Spring puede unir con AND cuando hace falta.
+ */
 public class UsuarioSpecification {
 
+    /** Criterios de búsqueda que envía el admin desde la pantalla de usuarios. */
     @Data
     public static class UsuarioSearchCriteria {
         private String nombre;

@@ -21,16 +21,22 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+/**
+ * Configuracion principal de seguridad de Spring Security.
+ * Aqui definimos CORS, JWT, que rutas son publicas y cuales piden login.
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    /** Filtro que valida el token JWT en cada peticion. */
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
+    /** Encripta contrasenas con BCrypt antes de guardarlas en la BD. */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -44,6 +50,7 @@ public class SecurityConfig {
         return new InMemoryUserDetailsManager();
     }
 
+    /** Permite peticiones desde el frontend en localhost (CORS). */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -58,6 +65,7 @@ public class SecurityConfig {
         return source;
     }
 
+    /** Cadena de filtros: que rutas son publicas y donde va el filtro JWT. */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http

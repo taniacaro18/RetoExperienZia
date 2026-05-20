@@ -12,6 +12,11 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { EventoApi, EventoSearchCriteria } from '../../core/api/evento.api';
 import { Evento } from '../../core/models/domain.models';
 
+/**
+ * Pantalla: Catálogo de eventos públicos.
+ * Rol: ASISTENTE (logueado).
+ * Busca eventos activos públicos y abre el detalle para inscribirse.
+ */
 @Component({
   selector: 'app-eventos-catalogo-page',
   standalone: true,
@@ -52,10 +57,11 @@ export class EventosCatalogoPage {
     { label: 'Privados', value: 'PRIVADO' }
   ];
 
+  // por ahora la lista ya viene filtrada del API (solo públicos)
   readonly eventosFiltrados = computed(() => this.eventos());
 
   ngOnInit() {
-    // Si el header pasó un parámetro `q`, lo usamos como filtro inicial de nombre.
+    // si viene ?q= en la URL, prellenamos el nombre y buscamos
     this.route.queryParamMap.subscribe((params) => {
       const q = params.get('q')?.trim();
       if (q) {
@@ -65,6 +71,7 @@ export class EventosCatalogoPage {
     });
   }
 
+  // llama al API con los criterios del formulario de filtros
   buscar() {
     this.cargando.set(true);
     const v = this.filtros.value;

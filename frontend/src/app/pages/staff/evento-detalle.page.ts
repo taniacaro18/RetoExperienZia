@@ -29,6 +29,11 @@ import { inscripcionEstadoSeverity } from '../../shared/estado.helpers';
 
 type FiltroEstado = 'TODOS' | EstadoInscripcion | 'PRESENTES';
 
+/**
+ * Pantalla: Operación en un evento (staff).
+ * Rol: STAFF.
+ * Lista asistentes, check-in manual, check-out y aforo en vivo.
+ */
 @Component({
   selector: 'app-staff-evento-detalle-page',
   standalone: true,
@@ -73,6 +78,7 @@ export class StaffEventoDetallePage implements OnInit {
   readonly procesando = signal<number | null>(null);
   readonly asistenteSeleccionadoId = signal<number | null>(null);
 
+  // KPIs de la lista de asistentes del evento
   readonly stats = computed(() => {
     const items = this.asistentes();
     return {
@@ -83,6 +89,7 @@ export class StaffEventoDetallePage implements OnInit {
     };
   });
 
+  // asistentes según filtro (todos, inscritos, presentes, etc.)
   readonly asistentesFiltrados = computed(() => {
     const f = this.filtro();
     let lista = this.asistentes();
@@ -117,6 +124,7 @@ export class StaffEventoDetallePage implements OnInit {
 
   estadoSeverity = inscripcionEstadoSeverity;
 
+  // carga evento, asignación del staff y lista de asistentes
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!id) {
